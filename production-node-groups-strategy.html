@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on October 20, 2024 | 14 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">693</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">271</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">40</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('production-node-groups-strategy')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('production-node-groups-strategy')">👎 Dislike</button>
+            </div>
             <h2>The Node Group Strategy</h2>
             <p>After running production EKS for 3 years, here's our battle-tested node group architecture that balances cost, reliability, and performance.</p>
 
@@ -573,5 +596,13 @@ spec:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('production-node-groups-strategy');
+            blogStats.incrementRead('production-node-groups-strategy');
+        });
+    </script>
 </body>
 </html>

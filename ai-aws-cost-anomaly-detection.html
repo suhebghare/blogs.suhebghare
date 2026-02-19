@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 8, 2024 | 15 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">777</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">177</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">32</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('ai-aws-cost-anomaly-detection')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('ai-aws-cost-anomaly-detection')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>Real Impact:</strong> Our AI-powered cost anomaly detection caught $45K in unexpected charges within 24 hours and prevented $180K in annual waste by identifying misconfigured resources and zombie infrastructure.
             </div>
@@ -647,5 +670,13 @@ if anomalies:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('ai-aws-cost-anomaly-detection');
+            blogStats.incrementRead('ai-aws-cost-anomaly-detection');
+        });
+    </script>
 </body>
 </html>

@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on November 20, 2023 | 13 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">768</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">222</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">45</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('aws-serverless-architecture')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('aws-serverless-architecture')">👎 Dislike</button>
+            </div>
             <h2>What is Serverless?</h2>
             <p>Serverless doesn't mean no servers—it means you don't manage them. AWS handles infrastructure, scaling, patching, and availability. You focus on code and pay only for what you use.</p>
 
@@ -409,5 +432,13 @@ EC2 (scaled): ~$200/month
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('aws-serverless-architecture');
+            blogStats.incrementRead('aws-serverless-architecture');
+        });
+    </script>
 </body>
 </html>

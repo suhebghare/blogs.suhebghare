@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on April 5, 2024 | 10 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">773</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">154</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">24</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('linux-server-management')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('linux-server-management')">👎 Dislike</button>
+            </div>
             <h2>Why Linux Dominates Server Infrastructure</h2>
             <p>Over 96% of the world's top 1 million servers run Linux. It powers AWS, Google, Facebook, Netflix, and virtually every major internet service. But why?</p>
 
@@ -307,5 +330,13 @@ cat /etc/security/limits.conf</code></pre>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('linux-server-management');
+            blogStats.incrementRead('linux-server-management');
+        });
+    </script>
 </body>
 </html>

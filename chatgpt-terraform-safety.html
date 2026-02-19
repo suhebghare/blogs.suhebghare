@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 4, 2024 | 15 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">763</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">360</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">33</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('chatgpt-terraform-safety')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('chatgpt-terraform-safety')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>Honest Answer:</strong> Yes, with proper guardrails. After 6 months using AI-generated Terraform in production managing $2M+ infrastructure, we've had zero security incidents. But only because we follow strict safety protocols.
             </div>
@@ -546,5 +569,13 @@ if any(r['severity'] == 'critical' for r in risks):
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('chatgpt-terraform-safety');
+            blogStats.incrementRead('chatgpt-terraform-safety');
+        });
+    </script>
 </body>
 </html>

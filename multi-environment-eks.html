@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on September 15, 2024 | 15 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">621</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">233</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">26</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('multi-environment-eks')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('multi-environment-eks')">👎 Dislike</button>
+            </div>
             <h2>The Challenge</h2>
             <p>Running multiple environments (dev, staging, production) on EKS requires careful architecture to ensure isolation, cost efficiency, and operational simplicity. Here's how we designed a production-grade multi-environment setup.</p>
 
@@ -435,5 +458,13 @@ spec:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('multi-environment-eks');
+            blogStats.incrementRead('multi-environment-eks');
+        });
+    </script>
 </body>
 </html>

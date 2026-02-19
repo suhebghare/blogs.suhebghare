@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on August 15, 2024 | 12 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">819</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">327</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">28</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('incident-response-postmortems')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('incident-response-postmortems')">👎 Dislike</button>
+            </div>
             <h2>Incidents Are Inevitable</h2>
             <p>No system is perfect. Servers crash, deployments fail, dependencies break, and humans make mistakes. The difference between good and great engineering teams is how they respond to and learn from incidents.</p>
 
@@ -193,5 +216,13 @@
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('incident-response-postmortems');
+            blogStats.incrementRead('incident-response-postmortems');
+        });
+    </script>
 </body>
 </html>

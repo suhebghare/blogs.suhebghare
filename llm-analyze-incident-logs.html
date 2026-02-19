@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 9, 2024 | 14 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">609</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">138</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">27</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('llm-analyze-incident-logs')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('llm-analyze-incident-logs')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>Real Impact:</strong> LLM-powered log analysis reduced our incident investigation time from 2 hours to 5 minutes, with 95% accuracy in root cause identification across 200+ production incidents.
             </div>
@@ -604,5 +627,13 @@ ESTIMATED RESOLUTION: 5 minutes (rollback)</code></pre>
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('llm-analyze-incident-logs');
+            blogStats.incrementRead('llm-analyze-incident-logs');
+        });
+    </script>
 </body>
 </html>

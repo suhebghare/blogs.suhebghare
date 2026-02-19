@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on May 18, 2024 | 13 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">827</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">217</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">46</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('security-best-practices')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('security-best-practices')">👎 Dislike</button>
+            </div>
             <h2>Why Security Cannot Be an Afterthought</h2>
             <p>The average cost of a data breach in 2023 was $4.45 million. Beyond financial impact, breaches damage reputation, erode customer trust, and can result in regulatory penalties. Security must be built into every layer of your infrastructure and applications from day one.</p>
 
@@ -364,5 +387,13 @@ CMD ["node", "server.js"]</code></pre>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('security-best-practices');
+            blogStats.incrementRead('security-best-practices');
+        });
+    </script>
 </body>
 </html>

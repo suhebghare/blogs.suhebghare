@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 6, 2024 | 17 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">639</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">314</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">20</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('building-ai-agent-infrastructure')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('building-ai-agent-infrastructure')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>Real Implementation:</strong> Our AI infrastructure agent autonomously manages 200+ AWS resources, handles 40 routine tasks daily, and saved 25 hours/week of manual DevOps work while maintaining 99.99% uptime.
             </div>
@@ -600,5 +623,13 @@ def track_action(action_type, status, execution_time, savings=0):
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('building-ai-agent-infrastructure');
+            blogStats.incrementRead('building-ai-agent-infrastructure');
+        });
+    </script>
 </body>
 </html>

@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on July 25, 2023 | 13 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">677</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">232</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">26</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('aws-storage-types')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('aws-storage-types')">👎 Dislike</button>
+            </div>
             <h2>Understanding AWS Storage Services</h2>
             <p>AWS offers multiple storage services, each optimized for different use cases. Choosing the right storage type can reduce costs by 50-80% while improving performance.</p>
 
@@ -236,5 +259,13 @@
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('aws-storage-types');
+            blogStats.incrementRead('aws-storage-types');
+        });
+    </script>
 </body>
 </html>

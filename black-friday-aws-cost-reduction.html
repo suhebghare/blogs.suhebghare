@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on November 28, 2024 | 16 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">850</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">355</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">26</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('black-friday-aws-cost-reduction')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('black-friday-aws-cost-reduction')">👎 Dislike</button>
+            </div>
             <h2>The Challenge</h2>
             <p>Last year's Black Friday cost us $127,000 in AWS spend for 5 days. This year, we handled 3x more traffic for $61,000. Here's exactly how we did it.</p>
 
@@ -587,5 +610,13 @@ resource "aws_vpc_endpoint" "ecr_api" {
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('black-friday-aws-cost-reduction');
+            blogStats.incrementRead('black-friday-aws-cost-reduction');
+        });
+    </script>
 </body>
 </html>

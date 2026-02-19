@@ -75,6 +75,29 @@
                     <div class="metric-label">Abusive Requests</div>
                     <div class="metric-sublabel">3-Day Attack Period</div>
                 </div>
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">762</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">175</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">27</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('api-abuse-prevention-kubernetes')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('api-abuse-prevention-kubernetes')">👎 Dislike</button>
+            </div>
                 <div class="metric-card">
                     <div class="metric-value">99.4%</div>
                     <div class="metric-label">Blocked Successfully</div>
@@ -768,5 +791,13 @@ if __name__ == '__main__':
             <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('api-abuse-prevention-kubernetes');
+            blogStats.incrementRead('api-abuse-prevention-kubernetes');
+        });
+    </script>
 </body>
 </html>

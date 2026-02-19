@@ -489,6 +489,89 @@ main {
     text-decoration: underline;
 }
 
+.blog-stats {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.stat-item .icon {
+    font-size: 1.2rem;
+}
+
+.stat-item .count {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.stat-item .label {
+    color: #666;
+}
+
+.blog-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.blog-actions button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.like-btn {
+    background: #4caf50;
+    color: white;
+}
+
+.like-btn:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.dislike-btn {
+    background: #f44336;
+    color: white;
+}
+
+.dislike-btn:hover {
+    background: #da190b;
+    transform: translateY(-2px);
+}
+
+.blog-card .blog-stats {
+    padding: 0.5rem 0;
+    background: transparent;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.blog-card .stat-item {
+    font-size: 0.85rem;
+}
+
+.blog-card .stat-item .icon {
+    font-size: 1rem;
+}
+
 footer {
     background: #1a1a1a;
     color: #fff;

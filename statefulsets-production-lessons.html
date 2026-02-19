@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on September 28, 2024 | 15 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">855</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">414</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">39</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('statefulsets-production-lessons')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('statefulsets-production-lessons')">👎 Dislike</button>
+            </div>
             <h2>The Hard Truth About StatefulSets</h2>
             <p>After running StatefulSets in production for 2 years (PostgreSQL, Redis, Kafka, Elasticsearch), here are the painful lessons we learned.</p>
 
@@ -576,5 +599,13 @@ spec:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('statefulsets-production-lessons');
+            blogStats.incrementRead('statefulsets-production-lessons');
+        });
+    </script>
 </body>
 </html>

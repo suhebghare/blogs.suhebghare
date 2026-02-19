@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 5, 2024 | 14 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">744</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">175</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">37</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('mcp-servers-devops-automation')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('mcp-servers-devops-automation')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>What is MCP?</strong> Model Context Protocol (MCP) is an open standard that enables AI models to securely connect to external tools and data sources. Think of it as a universal API for AI agents to interact with your infrastructure.
             </div>
@@ -494,5 +517,13 @@ result = await client.call_tool("hello_world", {"name": "DevOps"})</code></pre>
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('mcp-servers-devops-automation');
+            blogStats.incrementRead('mcp-servers-devops-automation');
+        });
+    </script>
 </body>
 </html>

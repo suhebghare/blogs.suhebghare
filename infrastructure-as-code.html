@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on March 12, 2024 | 11 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">765</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">164</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">41</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('infrastructure-as-code')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('infrastructure-as-code')">👎 Dislike</button>
+            </div>
             <h2>The Infrastructure Problem</h2>
             <p>Traditional infrastructure management was manual, error-prone, and didn't scale:</p>
             <ul>
@@ -283,5 +306,13 @@ resource "local_file" "ansible_inventory" {
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('infrastructure-as-code');
+            blogStats.incrementRead('infrastructure-as-code');
+        });
+    </script>
 </body>
 </html>

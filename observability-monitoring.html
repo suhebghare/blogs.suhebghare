@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on January 14, 2024 | 10 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">820</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">202</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">47</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('observability-monitoring')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('observability-monitoring')">👎 Dislike</button>
+            </div>
             <h2>Why Uptime Matters</h2>
             <p>In today's digital economy, downtime is expensive. Every minute of unavailability translates to lost revenue, damaged reputation, and frustrated users. Consider these statistics:</p>
             <ul>
@@ -150,5 +173,13 @@ volumes:
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('observability-monitoring');
+            blogStats.incrementRead('observability-monitoring');
+        });
+    </script>
 </body>
 </html>

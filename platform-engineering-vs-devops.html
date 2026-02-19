@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Engineering vs DevOps – What's the Difference? | Suheb Ghare</title>
+    <meta name="description" content="Clear comparison of Platform Engineering and DevOps with real-world examples and career guidance">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Platform Engineering vs DevOps – What's the Difference?</h1>
+                <div class="blog-meta">Published on December 11, 2024 | 13 min read</div>
+            </div>
+
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">663</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">323</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">20</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('platform-engineering-vs-devops')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('platform-engineering-vs-devops')">👎 Dislike</button>
+            </div>
+            <div class="info-box">
+                <strong>TL;DR:</strong> DevOps is a culture and practice. Platform Engineering is a discipline that builds internal developer platforms to enable DevOps at scale. Platform Engineers are the product team for internal infrastructure.
+            </div>
+
+            <h2>The Confusion</h2>
+            <p>Many companies rebrand DevOps teams as Platform Engineering without changing anything. Others think Platform Engineering replaces DevOps. Both are wrong. Here's the real difference.</p>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">DevOps</div>
+                    <div class="metric-label">Culture & Practice</div>
+                    <div class="metric-sublabel">Break down silos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">Platform Eng</div>
+                    <div class="metric-label">Discipline & Team</div>
+                    <div class="metric-sublabel">Build internal products</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">Together</div>
+                    <div class="metric-label">Complementary</div>
+                    <div class="metric-sublabel">Not Competing</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">Goal</div>
+                    <div class="metric-label">Developer Velocity</div>
+                    <div class="metric-sublabel">Ship Faster, Safely</div>
+                </div>
+            </div>
+
+            <h2>Core Differences</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>DevOps</th>
+                        <th>Platform Engineering</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>What It Is</strong></td>
+                        <td>Culture, practices, philosophy</td>
+                        <td>Discipline, team, product</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Primary Goal</strong></td>
+                        <td>Break down Dev/Ops silos</td>
+                        <td>Build self-service platforms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Who Does It</strong></td>
+                        <td>Everyone (developers + ops)</td>
+                        <td>Dedicated platform team</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Focus</strong></td>
+                        <td>Collaboration, automation, CI/CD</td>
+                        <td>Developer experience, abstractions</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Customers</strong></td>
+                        <td>End users of applications</td>
+                        <td>Internal developers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deliverables</strong></td>
+                        <td>Deployed applications, pipelines</td>
+                        <td>Internal developer platform (IDP)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Metrics</strong></td>
+                        <td>Deployment frequency, MTTR, change fail rate</td>
+                        <td>Developer productivity, time-to-first-deploy, platform adoption</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Real-World Example</h2>
+
+            <h3>Scenario: Deploying a New Microservice</h3>
+
+            <h4>Without Platform Engineering (Traditional DevOps)</h4>
+            <ul>
+                <li>Developer creates Kubernetes manifests (2 hours)</li>
+                <li>Sets up CI/CD pipeline (3 hours)</li>
+                <li>Configures monitoring and logging (2 hours)</li>
+                <li>Sets up secrets management (1 hour)</li>
+                <li>Configures ingress and DNS (1 hour)</li>
+                <li>Reviews security policies (1 hour)</li>
+                <li><strong>Total: 10 hours, repeated for every service</strong></li>
+            </ul>
+
+            <h4>With Platform Engineering</h4>
+            <ul>
+                <li>Developer runs: <code>platform deploy --name my-service --port 8080</code></li>
+                <li>Platform automatically:
+                    <ul>
+                        <li>Creates Kubernetes resources</li>
+                        <li>Sets up CI/CD pipeline</li>
+                        <li>Configures monitoring/logging</li>
+                        <li>Manages secrets</li>
+                        <li>Sets up ingress/DNS</li>
+                        <li>Applies security policies</li>
+                    </ul>
+                </li>
+                <li><strong>Total: 15 minutes</strong></li>
+            </ul>
+
+            <h2>The Evolution</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-title">2000s: Ops Team</div>
+                    <div class="flow-content">Devs throw code over the wall to Ops</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">2010s: DevOps Culture</div>
+                    <div class="flow-content">Devs and Ops collaborate, shared responsibility</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">2015s: DevOps Teams</div>
+                    <div class="flow-content">Dedicated teams build CI/CD, manage infrastructure</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">2020s: Platform Engineering</div>
+                    <div class="flow-content">Build internal platforms, treat devs as customers</div>
+                </div>
+            </div>
+
+            <h2>What Platform Engineers Build</h2>
+
+            <h3>Internal Developer Platform (IDP) Components</h3>
+            <ul>
+                <li><strong>Self-Service Portal:</strong> Web UI for deploying services, viewing logs, managing resources</li>
+                <li><strong>Golden Paths:</strong> Opinionated templates for common use cases (REST API, background job, cron)</li>
+                <li><strong>CI/CD Pipelines:</strong> Automated build, test, deploy workflows</li>
+                <li><strong>Infrastructure Abstractions:</strong> Hide Kubernetes complexity, expose simple interfaces</li>
+                <li><strong>Observability:</strong> Pre-configured monitoring, logging, tracing</li>
+                <li><strong>Security Guardrails:</strong> Automatic secret management, network policies, RBAC</li>
+                <li><strong>Developer Docs:</strong> Comprehensive guides, runbooks, troubleshooting</li>
+            </ul>
+
+            <h2>Team Structure</h2>
+
+            <h3>Traditional DevOps Team</h3>
+            <pre><code>Engineering Org (500 engineers)
+├── Product Teams (50 teams)
+│   ├── Frontend Devs
+│   ├── Backend Devs
+│   └── DevOps Engineers (embedded)
+└── Central DevOps Team (10 people)
+    ├── CI/CD maintenance
+    ├── Infrastructure management
+    └── On-call support</code></pre>
+
+            <h3>Platform Engineering Team</h3>
+            <pre><code>Engineering Org (500 engineers)
+├── Product Teams (50 teams)
+│   └── Full-stack Devs (self-service via platform)
+└── Platform Engineering Team (15 people)
+    ├── Platform Product Manager
+    ├── Platform Engineers (build IDP)
+    ├── Developer Experience Engineers
+    └── SREs (platform reliability)</code></pre>
+
+            <h2>Key Principles of Platform Engineering</h2>
+
+            <h3>1. Treat Developers as Customers</h3>
+            <ul>
+                <li>Gather requirements through surveys and interviews</li>
+                <li>Measure developer satisfaction (NPS scores)</li>
+                <li>Iterate based on feedback</li>
+                <li>Provide excellent documentation and support</li>
+            </ul>
+
+            <h3>2. Build Products, Not Projects</h3>
+            <ul>
+                <li>Long-term ownership and maintenance</li>
+                <li>Roadmap driven by user needs</li>
+                <li>Versioning and backward compatibility</li>
+                <li>Deprecation policies</li>
+            </ul>
+
+            <h3>3. Enable Self-Service</h3>
+            <ul>
+                <li>Developers deploy without tickets</li>
+                <li>Automated provisioning of resources</li>
+                <li>Clear error messages and troubleshooting guides</li>
+                <li>Escape hatches for advanced users</li>
+            </ul>
+
+            <h3>4. Provide Golden Paths</h3>
+            <ul>
+                <li>Opinionated defaults for 80% use cases</li>
+                <li>Easy to start, possible to customize</li>
+                <li>Security and best practices baked in</li>
+                <li>Regular updates and improvements</li>
+            </ul>
+
+            <h2>When Do You Need Platform Engineering?</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Company Size</th>
+                        <th>Recommendation</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>&lt;50 Engineers</strong></td>
+                        <td>DevOps practices only</td>
+                        <td>Too small for dedicated platform team</td>
+                    </tr>
+                    <tr>
+                        <td><strong>50-200 Engineers</strong></td>
+                        <td>Start with 2-3 platform engineers</td>
+                        <td>Build core IDP components</td>
+                    </tr>
+                    <tr>
+                        <td><strong>200-500 Engineers</strong></td>
+                        <td>Dedicated platform team (5-10 people)</td>
+                        <td>Full IDP with self-service portal</td>
+                    </tr>
+                    <tr>
+                        <td><strong>500+ Engineers</strong></td>
+                        <td>Multiple platform teams (15+ people)</td>
+                        <td>Specialized teams for compute, data, security</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Common Mistakes</h2>
+
+            <h3>❌ Rebranding Without Change</h3>
+            <p>Renaming "DevOps Team" to "Platform Engineering Team" without changing responsibilities or building an IDP.</p>
+
+            <h3>❌ Building Everything Custom</h3>
+            <p>Reinventing the wheel instead of using existing tools (Backstage, Crossplane, ArgoCD).</p>
+
+            <h3>❌ Ignoring Developer Feedback</h3>
+            <p>Building what you think developers need instead of what they actually need.</p>
+
+            <h3>❌ No Product Management</h3>
+            <p>Treating platform as a side project instead of a product with roadmap and metrics.</p>
+
+            <h3>❌ Over-Abstraction</h3>
+            <p>Hiding so much complexity that developers can't debug or customize when needed.</p>
+
+            <h2>Success Metrics</h2>
+
+            <h3>Platform Engineering Metrics</h3>
+            <ul>
+                <li><strong>Time to First Deploy:</strong> How long for new developer to deploy their first service</li>
+                <li><strong>Platform Adoption:</strong> % of teams using the platform</li>
+                <li><strong>Developer Satisfaction:</strong> NPS score from internal surveys</li>
+                <li><strong>Self-Service Rate:</strong> % of deployments without platform team involvement</li>
+                <li><strong>Ticket Volume:</strong> Number of support tickets (should decrease)</li>
+                <li><strong>Deployment Frequency:</strong> Deployments per day across all teams</li>
+            </ul>
+
+            <h3>DevOps Metrics (Still Important)</h3>
+            <ul>
+                <li><strong>Deployment Frequency:</strong> How often code is deployed</li>
+                <li><strong>Lead Time:</strong> Time from commit to production</li>
+                <li><strong>MTTR:</strong> Mean time to recovery from incidents</li>
+                <li><strong>Change Fail Rate:</strong> % of deployments causing incidents</li>
+            </ul>
+
+            <h2>Career Path</h2>
+
+            <h3>DevOps Engineer → Platform Engineer</h3>
+            <p>Natural progression. Platform Engineers need DevOps skills plus:</p>
+            <ul>
+                <li>Product thinking and user empathy</li>
+                <li>API design and developer experience</li>
+                <li>Documentation and communication</li>
+                <li>Long-term maintenance and support</li>
+            </ul>
+
+            <h3>Skills for Platform Engineers</h3>
+            <ul>
+                <li><strong>Technical:</strong> Kubernetes, Terraform, CI/CD, APIs, scripting</li>
+                <li><strong>Product:</strong> User research, roadmap planning, prioritization</li>
+                <li><strong>Communication:</strong> Documentation, presentations, support</li>
+                <li><strong>Systems Thinking:</strong> Abstractions, interfaces, scalability</li>
+            </ul>
+
+            <h2>The Future</h2>
+
+            <p>Platform Engineering is not replacing DevOps. It's the natural evolution of DevOps at scale. As companies grow, they need dedicated teams to build internal platforms that enable DevOps practices across hundreds of teams.</p>
+
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-title">DevOps Culture</div>
+                    <div class="flow-content">Collaboration, automation, shared responsibility</div>
+                </div>
+                <div class="flow-arrow">+</div>
+                <div class="flow-step">
+                    <div class="flow-title">Platform Engineering</div>
+                    <div class="flow-content">Self-service platforms, golden paths, developer experience</div>
+                </div>
+                <div class="flow-arrow">=</div>
+                <div class="flow-step">
+                    <div class="flow-title">DevOps at Scale</div>
+                    <div class="flow-content">Fast, safe, autonomous teams</div>
+                </div>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <ul>
+                <li>DevOps is a culture; Platform Engineering is a discipline</li>
+                <li>Platform Engineers build internal products for developers</li>
+                <li>Platform Engineering enables DevOps at scale (200+ engineers)</li>
+                <li>Treat developers as customers with product management approach</li>
+                <li>Self-service platforms reduce time-to-deploy from hours to minutes</li>
+                <li>Golden paths provide opinionated defaults for common use cases</li>
+                <li>Platform Engineering complements DevOps, doesn't replace it</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>Bottom Line:</strong> If you have 50+ engineers and they're spending more time on infrastructure than features, you need Platform Engineering. Start small with 2-3 engineers building core IDP components. Measure developer satisfaction and iterate.
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('platform-engineering-vs-devops');
+            blogStats.incrementRead('platform-engineering-vs-devops');
+        });
+    </script>
+</body>
+</html>

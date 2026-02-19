@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on October 5, 2024 | 14 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">821</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">355</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">39</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('karpenter-vs-cluster-autoscaler')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('karpenter-vs-cluster-autoscaler')">👎 Dislike</button>
+            </div>
             <h2>The Scaling Challenge</h2>
             <p>We ran Cluster Autoscaler for 2 years before migrating to Karpenter. Here's what we learned from running both in production with real traffic patterns.</p>
 
@@ -427,5 +450,13 @@ spec:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('karpenter-vs-cluster-autoscaler');
+            blogStats.incrementRead('karpenter-vs-cluster-autoscaler');
+        });
+    </script>
 </body>
 </html>

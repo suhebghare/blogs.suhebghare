@@ -37,6 +37,29 @@
                     <div class="metric-label">Attack Traffic Blocked</div>
                     <div class="metric-sublabel">Combined Strategy</div>
                 </div>
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">624</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">254</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">18</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('geo-blocking-vs-rate-limiting')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('geo-blocking-vs-rate-limiting')">👎 Dislike</button>
+            </div>
                 <div class="metric-card">
                     <div class="metric-value">0.01%</div>
                     <div class="metric-label">False Positive Rate</div>
@@ -426,5 +449,13 @@
             <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('geo-blocking-vs-rate-limiting');
+            blogStats.incrementRead('geo-blocking-vs-rate-limiting');
+        });
+    </script>
 </body>
 </html>

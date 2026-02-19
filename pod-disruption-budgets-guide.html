@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on October 12, 2024 | 12 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">700</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">237</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">36</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('pod-disruption-budgets-guide')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('pod-disruption-budgets-guide')">👎 Dislike</button>
+            </div>
             <h2>The Silent Killer of Kubernetes Availability</h2>
             <p>PodDisruptionBudgets (PDBs) are one of the most misunderstood Kubernetes features. Here's why 80% of teams get them wrong and how to fix it.</p>
 
@@ -551,5 +574,13 @@ kubectl get pdb -o json | jq -r '.items[] |
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('pod-disruption-budgets-guide');
+            blogStats.incrementRead('pod-disruption-budgets-guide');
+        });
+    </script>
 </body>
 </html>

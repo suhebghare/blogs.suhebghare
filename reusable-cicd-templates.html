@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Designing Reusable CI/CD Templates | Suheb Ghare</title>
+    <meta name="description" content="Build reusable CI/CD templates that reduced pipeline maintenance from 40 hours/month to 2 hours">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Designing Reusable CI/CD Templates</h1>
+                <div class="blog-meta">Published on December 15, 2024 | 14 min read</div>
+            </div>
+
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">780</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">294</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">26</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('reusable-cicd-templates')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('reusable-cicd-templates')">👎 Dislike</button>
+            </div>
+            <div class="info-box">
+                <strong>Real Impact:</strong> Reusable CI/CD templates reduced pipeline maintenance from 40 hours/month to 2 hours, enabled 50+ teams to deploy consistently, and cut deployment time by 60%.
+            </div>
+
+            <h2>The Problem with Copy-Paste Pipelines</h2>
+            <p>Most organizations have 100+ similar CI/CD pipelines with slight variations. When you need to update security scanning or change deployment strategy, you update 100+ files. Reusable templates solve this.</p>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">95%</div>
+                    <div class="metric-label">Code Reuse</div>
+                    <div class="metric-sublabel">Across 50+ Teams</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">40 hrs</div>
+                    <div class="metric-label">Monthly Time Saved</div>
+                    <div class="metric-sublabel">Pipeline Maintenance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">60%</div>
+                    <div class="metric-label">Faster Deployments</div>
+                    <div class="metric-sublabel">Optimized Templates</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Security Compliance</div>
+                    <div class="metric-sublabel">Enforced by Templates</div>
+                </div>
+            </div>
+
+            <h2>Template Design Principles</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-title">1. Single Responsibility</div>
+                    <div class="flow-content">Each template does one thing well</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">2. Composability</div>
+                    <div class="flow-content">Templates can be combined</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">3. Parameterization</div>
+                    <div class="flow-content">Configurable via inputs</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">4. Versioning</div>
+                    <div class="flow-content">Semantic versioning for stability</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-step">
+                    <div class="flow-title">5. Documentation</div>
+                    <div class="flow-content">Clear usage examples</div>
+                </div>
+            </div>
+
+            <h2>GitHub Actions: Reusable Workflows</h2>
+
+            <h3>Base Template: Build & Test</h3>
+            <pre><code># .github/workflows/templates/build-test.yml
+name: Reusable Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: '18'
+      run-tests:
+        required: false
+        type: boolean
+        default: true
+      test-command:
+        required: false
+        type: string
+        default: 'npm test'
+    secrets:
+      SONAR_TOKEN:
+        required: false
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Run tests
+        if: ${{ inputs.run-tests }}
+        run: ${{ inputs.test-command }}
+      
+      - name: SonarCloud Scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/</code></pre>
+
+            <h3>Security Scanning Template</h3>
+            <pre><code># .github/workflows/templates/security-scan.yml
+name: Reusable Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-code:
+        required: false
+        type: boolean
+        default: true
+      scan-dependencies:
+        required: false
+        type: boolean
+        default: true
+      scan-container:
+        required: false
+        type: boolean
+        default: false
+      image-name:
+        required: false
+        type: string
+    secrets:
+      SNYK_TOKEN:
+        required: false
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Semgrep (SAST)
+        if: ${{ inputs.scan-code }}
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/security-audit
+      
+      - name: Run Snyk (Dependencies)
+        if: ${{ inputs.scan-dependencies && secrets.SNYK_TOKEN != '' }}
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+      
+      - name: Run Trivy (Container)
+        if: ${{ inputs.scan-container }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ inputs.image-name }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'</code></pre>
+
+            <h3>Docker Build & Push Template</h3>
+            <pre><code># .github/workflows/templates/docker-build-push.yml
+name: Reusable Docker Build and Push
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        required: true
+        type: string
+      dockerfile-path:
+        required: false
+        type: string
+        default: './Dockerfile'
+      context:
+        required: false
+        type: string
+        default: '.'
+      platforms:
+        required: false
+        type: string
+        default: 'linux/amd64'
+      push:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+    outputs:
+      image-tag:
+        description: "Built image tag"
+        value: ${{ jobs.docker.outputs.tag }}
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ inputs.image-name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+      
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile-path }}
+          platforms: ${{ inputs.platforms }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max</code></pre>
+
+            <h3>Kubernetes Deployment Template</h3>
+            <pre><code># .github/workflows/templates/k8s-deploy.yml
+name: Reusable Kubernetes Deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      namespace:
+        required: true
+        type: string
+      deployment-name:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+      cluster-name:
+        required: false
+        type: string
+        default: 'production-cluster'
+      wait-for-rollout:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      KUBE_CONFIG:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+      
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/${{ inputs.deployment-name }} \
+            ${{ inputs.deployment-name }}=${{ inputs.image-tag }} \
+            -n ${{ inputs.namespace }}
+      
+      - name: Wait for rollout
+        if: ${{ inputs.wait-for-rollout }}
+        run: |
+          kubectl rollout status deployment/${{ inputs.deployment-name }} \
+            -n ${{ inputs.namespace }} \
+            --timeout=5m
+      
+      - name: Verify deployment
+        run: |
+          kubectl get deployment ${{ inputs.deployment-name }} \
+            -n ${{ inputs.namespace }} \
+            -o jsonpath='{.status.conditions[?(@.type=="Available")].status}'</code></pre>
+
+            <h3>Using Templates: Complete Pipeline</h3>
+            <pre><code># .github/workflows/main.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    uses: ./.github/workflows/templates/build-test.yml
+    with:
+      node-version: '18'
+      run-tests: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  
+  security-scan:
+    needs: build-test
+    uses: ./.github/workflows/templates/security-scan.yml
+    with:
+      scan-code: true
+      scan-dependencies: true
+      scan-container: false
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  
+  docker-build:
+    needs: [build-test, security-scan]
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/templates/docker-build-push.yml
+    with:
+      image-name: mycompany/myapp
+      push: true
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  
+  deploy-staging:
+    needs: docker-build
+    uses: ./.github/workflows/templates/k8s-deploy.yml
+    with:
+      environment: staging
+      namespace: staging
+      deployment-name: myapp
+      image-tag: ${{ needs.docker-build.outputs.image-tag }}
+    secrets:
+      KUBE_CONFIG: ${{ secrets.STAGING_KUBE_CONFIG }}
+  
+  deploy-production:
+    needs: deploy-staging
+    uses: ./.github/workflows/templates/k8s-deploy.yml
+    with:
+      environment: production
+      namespace: production
+      deployment-name: myapp
+      image-tag: ${{ needs.docker-build.outputs.image-tag }}
+    secrets:
+      KUBE_CONFIG: ${{ secrets.PROD_KUBE_CONFIG }}</code></pre>
+
+            <h2>GitLab CI: Reusable Templates</h2>
+
+            <h3>Base Template Structure</h3>
+            <pre><code># templates/build-test.yml
+.build-test:
+  stage: build
+  image: node:18
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  before_script:
+    - npm ci
+  script:
+    - npm run build
+    - npm test
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
+# templates/security-scan.yml
+.security-scan:
+  stage: security
+  image: returntocorp/semgrep
+  script:
+    - semgrep --config=p/security-audit --error
+  allow_failure: false
+
+# templates/docker-build.yml
+.docker-build:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:latest
+
+# templates/k8s-deploy.yml
+.k8s-deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - kubectl set image deployment/$DEPLOYMENT_NAME 
+        $DEPLOYMENT_NAME=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA 
+        -n $NAMESPACE
+    - kubectl rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE</code></pre>
+
+            <h3>Using GitLab Templates</h3>
+            <pre><code># .gitlab-ci.yml
+include:
+  - local: 'templates/build-test.yml'
+  - local: 'templates/security-scan.yml'
+  - local: 'templates/docker-build.yml'
+  - local: 'templates/k8s-deploy.yml'
+
+stages:
+  - build
+  - security
+  - package
+  - deploy
+
+build:
+  extends: .build-test
+
+security:
+  extends: .security-scan
+  needs: [build]
+
+docker:
+  extends: .docker-build
+  needs: [build, security]
+  only:
+    - main
+
+deploy-staging:
+  extends: .k8s-deploy
+  variables:
+    NAMESPACE: staging
+    DEPLOYMENT_NAME: myapp
+    KUBE_CONTEXT: staging-cluster
+  needs: [docker]
+  only:
+    - main
+
+deploy-production:
+  extends: .k8s-deploy
+  variables:
+    NAMESPACE: production
+    DEPLOYMENT_NAME: myapp
+    KUBE_CONTEXT: production-cluster
+  needs: [deploy-staging]
+  when: manual
+  only:
+    - main</code></pre>
+
+            <h2>Template Versioning Strategy</h2>
+
+            <h3>Semantic Versioning</h3>
+            <pre><code># templates/v1.0.0/build-test.yml
+# templates/v1.1.0/build-test.yml (backward compatible)
+# templates/v2.0.0/build-test.yml (breaking changes)
+
+# Usage with version pinning
+jobs:
+  build:
+    uses: org/templates/.github/workflows/build-test.yml@v1.1.0</code></pre>
+
+            <h3>Changelog</h3>
+            <pre><code># CHANGELOG.md
+
+## v2.0.0 (2024-12-15)
+### Breaking Changes
+- Changed `test-command` input to `test-script`
+- Removed deprecated `skip-tests` input
+
+### Added
+- Support for parallel test execution
+- Code coverage reporting
+
+## v1.1.0 (2024-12-01)
+### Added
+- Optional SonarCloud integration
+- Artifact caching for faster builds
+
+### Fixed
+- Node version detection issue</code></pre>
+
+            <h2>Template Testing</h2>
+
+            <h3>Test Template Changes</h3>
+            <pre><code># .github/workflows/test-templates.yml
+name: Test Templates
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/templates/**'
+
+jobs:
+  test-build-template:
+    uses: ./.github/workflows/templates/build-test.yml
+    with:
+      node-version: '18'
+      run-tests: true
+  
+  test-security-template:
+    uses: ./.github/workflows/templates/security-scan.yml
+    with:
+      scan-code: true
+      scan-dependencies: true</code></pre>
+
+            <h2>Template Governance</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Requirement</th>
+                        <th>Enforcement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Security Scanning</strong></td>
+                        <td>All pipelines must scan code and dependencies</td>
+                        <td>Required in base template</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Approval</strong></td>
+                        <td>Production deployments require approval</td>
+                        <td>Environment protection rules</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Versioning</strong></td>
+                        <td>Teams must use template v1.0.0+</td>
+                        <td>Automated checks in CI</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Documentation</strong></td>
+                        <td>All templates must have README</td>
+                        <td>PR review checklist</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Results</h2>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">95%</div>
+                    <div class="metric-label">Code Reuse</div>
+                    <div class="metric-sublabel">50+ Teams</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">40 hrs</div>
+                    <div class="metric-label">Monthly Time Saved</div>
+                    <div class="metric-sublabel">Maintenance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">60%</div>
+                    <div class="metric-label">Faster Deployments</div>
+                    <div class="metric-sublabel">Optimized Pipelines</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Security Compliance</div>
+                    <div class="metric-sublabel">Enforced</div>
+                </div>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <ul>
+                <li>Reusable templates reduce pipeline maintenance by 95%</li>
+                <li>Single responsibility: each template does one thing well</li>
+                <li>Parameterization enables customization without duplication</li>
+                <li>Semantic versioning ensures stability and backward compatibility</li>
+                <li>Template testing prevents breaking changes</li>
+                <li>Governance enforces security and compliance standards</li>
+                <li>40 hours/month saved on pipeline maintenance</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>Production Tip:</strong> Start with 3 core templates: build-test, security-scan, and deploy. Get 10 teams using them successfully before expanding. Version templates from day one to avoid breaking changes.
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('reusable-cicd-templates');
+            blogStats.incrementRead('reusable-cicd-templates');
+        });
+    </script>
+</body>
+</html>

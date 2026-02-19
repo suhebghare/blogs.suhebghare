@@ -36,6 +36,29 @@
                     <div class="metric-label">Uptime SLA</div>
                     <div class="metric-sublabel">4.38 minutes downtime/month</div>
                 </div>
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">809</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">359</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">24</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('secure-ecommerce-architecture')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('secure-ecommerce-architecture')">👎 Dislike</button>
+            </div>
                 <div class="metric-card">
                     <div class="metric-value">0</div>
                     <div class="metric-label">Security Breaches</div>
@@ -724,5 +747,13 @@ resource "aws_securityhub_standards_subscription" "pci_dss" {
             <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('secure-ecommerce-architecture');
+            blogStats.incrementRead('secure-ecommerce-architecture');
+        });
+    </script>
 </body>
 </html>

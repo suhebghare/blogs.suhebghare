@@ -28,6 +28,29 @@
                 <div class="blog-meta">Published on December 10, 2024 | 16 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">710</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">347</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">25</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('ai-reduce-alert-fatigue')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('ai-reduce-alert-fatigue')">👎 Dislike</button>
+            </div>
             <div class="info-box">
                 <strong>Real Impact:</strong> Our SRE team reduced alert volume from 2,000+ alerts/week to 50 actionable alerts using AI-powered alert correlation and anomaly detection. Mean time to resolution dropped from 45 minutes to 8 minutes.
             </div>
@@ -635,5 +658,13 @@ class AlertPrioritizer:
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('ai-reduce-alert-fatigue');
+            blogStats.incrementRead('ai-reduce-alert-fatigue');
+        });
+    </script>
 </body>
 </html>

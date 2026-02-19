@@ -27,6 +27,29 @@
                 <div class="blog-meta">Published on December 5, 2024 | 14 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">777</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">240</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">38</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('waf-rules-bot-protection')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('waf-rules-bot-protection')">👎 Dislike</button>
+            </div>
             <h2>The Bot Problem</h2>
             <p>Bots account for 40% of all web traffic. Bad bots scrape content, abuse APIs, and launch attacks. Here's how we built WAF rules that blocked 99.7% of malicious bots while allowing legitimate traffic.</p>
 
@@ -499,5 +522,13 @@ curl -X POST https://api.example.com/comment \
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('waf-rules-bot-protection');
+            blogStats.incrementRead('waf-rules-bot-protection');
+        });
+    </script>
 </body>
 </html>

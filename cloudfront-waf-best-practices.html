@@ -37,6 +37,29 @@
                     <div class="metric-label">Cache Hit Rate</div>
                     <div class="metric-sublabel">Reduced Origin Load by 96%</div>
                 </div>
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">837</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">180</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">37</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('cloudfront-waf-best-practices')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('cloudfront-waf-best-practices')">👎 Dislike</button>
+            </div>
                 <div class="metric-card">
                     <div class="metric-value">45ms</div>
                     <div class="metric-label">P95 Latency</div>
@@ -782,5 +805,13 @@ resource "aws_cloudwatch_metric_alarm" "waf_attack_detected" {
             <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('cloudfront-waf-best-practices');
+            blogStats.incrementRead('cloudfront-waf-best-practices');
+        });
+    </script>
 </body>
 </html>

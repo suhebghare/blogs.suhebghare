@@ -26,6 +26,29 @@
                 <div class="blog-meta">Published on June 10, 2024 | 12 min read</div>
             </div>
 
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">900</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">294</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">40</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('devops-automation')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('devops-automation')">👎 Dislike</button>
+            </div>
             <h2>The DevOps Revolution</h2>
             <p>DevOps broke down the wall between development and operations. Instead of throwing code over the fence, teams now collaborate throughout the entire software lifecycle. Automation is the engine that makes this possible.</p>
 
@@ -412,5 +435,13 @@ npm run docs:generate
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('devops-automation');
+            blogStats.incrementRead('devops-automation');
+        });
+    </script>
 </body>
 </html>

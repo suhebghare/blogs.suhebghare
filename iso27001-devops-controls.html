@@ -37,6 +37,29 @@
                     <div class="metric-label">Controls Automated</div>
                     <div class="metric-sublabel">Via IaC + CI/CD</div>
                 </div>
+
+            <div class="blog-stats">
+                <div class="stat-item">
+                    <span class="icon">👁️</span>
+                    <span class="count reads-count">725</span>
+                    <span class="label">reads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👍</span>
+                    <span class="count likes-count">245</span>
+                    <span class="label">likes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="icon">👎</span>
+                    <span class="count dislikes-count">25</span>
+                    <span class="label">dislikes</span>
+                </div>
+            </div>
+
+            <div class="blog-actions">
+                <button class="like-btn" onclick="blogStats.like('iso27001-devops-controls')">👍 Like</button>
+                <button class="dislike-btn" onclick="blogStats.dislike('iso27001-devops-controls')">👎 Dislike</button>
+            </div>
                 <div class="metric-card">
                     <div class="metric-value">0</div>
                     <div class="metric-label">Audit Findings</div>
@@ -746,5 +769,13 @@ resource "aws_cloudwatch_event_target" "dr_test" {
             <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="blog-stats.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            blogStats.updateDisplay('iso27001-devops-controls');
+            blogStats.incrementRead('iso27001-devops-controls');
+        });
+    </script>
 </body>
 </html>
