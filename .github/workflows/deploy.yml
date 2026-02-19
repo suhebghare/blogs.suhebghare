@@ -20,7 +20,7 @@ jobs:
       
       - name: Sync to S3
         run: |
-          aws s3 sync . s3://blogs.suhebghare.tech \
+          aws s3 sync . s3://${{ secrets.S3_BUCKET }} \
             --exclude ".git/*" \
             --exclude ".github/*" \
             --exclude "README.md" \
