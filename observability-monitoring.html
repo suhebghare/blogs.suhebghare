@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observability & Monitoring - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Observability & Monitoring: The Foundation of Uptime</h1>
+                <div class="blog-meta">Published on January 14, 2024 | 10 min read</div>
+            </div>
+
+            <h2>Why Uptime Matters</h2>
+            <p>In today's digital economy, downtime is expensive. Every minute of unavailability translates to lost revenue, damaged reputation, and frustrated users. Consider these statistics:</p>
+            <ul>
+                <li>99.9% uptime = 8.76 hours of downtime per year</li>
+                <li>99.99% uptime = 52.56 minutes of downtime per year</li>
+                <li>99.999% uptime = 5.26 minutes of downtime per year</li>
+            </ul>
+            <p>Achieving high availability requires proactive monitoring and observability. You can't fix what you can't see.</p>
+
+            <h2>Observability vs Monitoring</h2>
+            <p><strong>Monitoring</strong> tells you when something is wrong. It's about collecting predefined metrics and alerting on thresholds.</p>
+            <p><strong>Observability</strong> tells you why something is wrong. It's about understanding system behavior through logs, metrics, and traces.</p>
+
+            <h2>Setting Up Grafana for Observability</h2>
+            
+            <h3>1. The Monitoring Stack</h3>
+            <p>A complete observability platform typically includes:</p>
+            <ul>
+                <li><strong>Prometheus</strong> - Metrics collection and storage</li>
+                <li><strong>Grafana</strong> - Visualization and dashboards</li>
+                <li><strong>Loki</strong> - Log aggregation</li>
+                <li><strong>Alertmanager</strong> - Alert routing and management</li>
+            </ul>
+
+            <h3>2. Quick Setup with Docker</h3>
+            <pre><code>version: '3'
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+volumes:
+  grafana-storage:</code></pre>
+
+            <h3>3. Key Metrics to Monitor</h3>
+            <ul>
+                <li><strong>Golden Signals</strong>: Latency, Traffic, Errors, Saturation</li>
+                <li><strong>System Metrics</strong>: CPU, Memory, Disk I/O, Network</li>
+                <li><strong>Application Metrics</strong>: Request rate, Response time, Error rate</li>
+                <li><strong>Business Metrics</strong>: User signups, Transactions, Revenue</li>
+            </ul>
+
+            <h3>4. Creating Effective Dashboards</h3>
+            <p>Good dashboards should:</p>
+            <ul>
+                <li>Show the most critical metrics at a glance</li>
+                <li>Use appropriate visualization types (graphs, gauges, heatmaps)</li>
+                <li>Include context with annotations and thresholds</li>
+                <li>Be organized by service or team ownership</li>
+            </ul>
+
+            <h2>Alert Configuration Best Practices</h2>
+            
+            <h3>Alert Fatigue is Real</h3>
+            <p>Too many alerts lead to ignored alerts. Follow these principles:</p>
+            <ul>
+                <li><strong>Alert on symptoms, not causes</strong> - Alert when users are affected</li>
+                <li><strong>Make alerts actionable</strong> - Every alert should require human action</li>
+                <li><strong>Use appropriate severity levels</strong> - Critical, Warning, Info</li>
+                <li><strong>Include runbooks</strong> - Link to documentation on how to respond</li>
+            </ul>
+
+            <h3>Sample Alert Rules</h3>
+            <pre><code>groups:
+  - name: uptime_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} requests/sec"
+      
+      - alert: ServiceDown
+        expr: up{job="api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"</code></pre>
+
+            <h2>Implementing SLOs and SLIs</h2>
+            <p><strong>SLI (Service Level Indicator)</strong>: A quantitative measure of service level (e.g., request latency, error rate)</p>
+            <p><strong>SLO (Service Level Objective)</strong>: Target value for an SLI (e.g., 99.9% of requests complete in < 200ms)</p>
+            <p><strong>Error Budget</strong>: The allowed amount of downtime before violating SLO</p>
+
+            <div class="highlight">
+                <strong>Pro Tip:</strong> Start with simple SLOs and iterate. A 99.9% availability SLO gives you 43 minutes of downtime per month to work with.
+            </div>
+
+            <h2>Distributed Tracing</h2>
+            <p>For microservices architectures, distributed tracing is essential. Tools like Jaeger or Tempo help you:</p>
+            <ul>
+                <li>Track requests across multiple services</li>
+                <li>Identify bottlenecks in the request path</li>
+                <li>Understand service dependencies</li>
+                <li>Debug complex failure scenarios</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>Observability is not a one-time setup—it's an ongoing practice. Start with basic monitoring, gradually add more sophisticated observability tools, and continuously refine your alerts and dashboards based on real incidents. Remember: the goal is not to collect all possible data, but to have the right data when you need it most.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Best Practices - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Security Best Practices for Modern Applications</h1>
+                <div class="blog-meta">Published on May 18, 2024 | 13 min read</div>
+            </div>
+
+            <h2>Why Security Cannot Be an Afterthought</h2>
+            <p>The average cost of a data breach in 2023 was $4.45 million. Beyond financial impact, breaches damage reputation, erode customer trust, and can result in regulatory penalties. Security must be built into every layer of your infrastructure and applications from day one.</p>
+
+            <h2>The Security Mindset</h2>
+            <ul>
+                <li><strong>Defense in Depth</strong>: Multiple layers of security controls</li>
+                <li><strong>Least Privilege</strong>: Grant minimum necessary permissions</li>
+                <li><strong>Zero Trust</strong>: Never trust, always verify</li>
+                <li><strong>Assume Breach</strong>: Plan for when, not if, you're compromised</li>
+            </ul>
+
+            <h2>Protecting Web Applications</h2>
+
+            <h3>OWASP Top 10 Vulnerabilities</h3>
+
+            <h4>1. Broken Access Control</h4>
+            <p>Users can access resources they shouldn't. Always validate permissions server-side:</p>
+            <pre><code># Bad - trusting client-side data
+if request.user_id == resource.owner_id:
+    return resource
+
+# Good - proper authorization check
+if has_permission(request.user, 'read', resource):
+    return resource</code></pre>
+
+            <h4>2. Cryptographic Failures</h4>
+            <p>Sensitive data exposed due to weak encryption or lack thereof:</p>
+            <ul>
+                <li>Use TLS 1.3 for data in transit</li>
+                <li>Encrypt sensitive data at rest (AES-256)</li>
+                <li>Never store passwords in plain text—use bcrypt, Argon2, or scrypt</li>
+                <li>Rotate encryption keys regularly</li>
+            </ul>
+
+            <h4>3. Injection Attacks</h4>
+            <p>SQL injection, command injection, LDAP injection:</p>
+            <pre><code># SQL Injection - VULNERABLE
+query = f"SELECT * FROM users WHERE username = '{username}'"
+
+# SQL Injection - SAFE (parameterized query)
+query = "SELECT * FROM users WHERE username = ?"
+cursor.execute(query, (username,))
+
+# Command Injection - VULNERABLE
+os.system(f"ping {user_input}")
+
+# Command Injection - SAFE
+subprocess.run(['ping', '-c', '1', user_input], check=True)</code></pre>
+
+            <h4>4. Insecure Design</h4>
+            <p>Security flaws in architecture. Use threat modeling during design phase.</p>
+
+            <h4>5. Security Misconfiguration</h4>
+            <ul>
+                <li>Disable default accounts and passwords</li>
+                <li>Remove unnecessary features and frameworks</li>
+                <li>Keep software updated</li>
+                <li>Implement proper error handling (don't leak stack traces)</li>
+            </ul>
+
+            <h3>Web Application Firewall (WAF)</h3>
+            <p>Deploy a WAF to filter malicious traffic:</p>
+            <ul>
+                <li>AWS WAF for applications on AWS</li>
+                <li>Cloudflare WAF for edge protection</li>
+                <li>ModSecurity for self-hosted solutions</li>
+            </ul>
+
+            <h3>Content Security Policy (CSP)</h3>
+            <pre><code>Content-Security-Policy: 
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://trusted-cdn.com; 
+    style-src 'self' 'unsafe-inline'; 
+    img-src 'self' data: https:; 
+    font-src 'self' data:; 
+    connect-src 'self' https://api.example.com;</code></pre>
+
+            <h3>Security Headers</h3>
+            <pre><code># Prevent clickjacking
+X-Frame-Options: DENY
+
+# XSS protection
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+
+# HTTPS enforcement
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Referrer policy
+Referrer-Policy: strict-origin-when-cross-origin</code></pre>
+
+            <h2>Protecting Backend Applications</h2>
+
+            <h3>API Security</h3>
+
+            <h4>Authentication & Authorization</h4>
+            <pre><code># JWT token validation
+def validate_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationError("Token expired")
+    except jwt.InvalidTokenError:
+        raise AuthenticationError("Invalid token")
+
+# Rate limiting
+@rate_limit(max_requests=100, window=60)
+def api_endpoint():
+    pass</code></pre>
+
+            <h4>Input Validation</h4>
+            <pre><code># Validate all inputs
+from pydantic import BaseModel, validator
+
+class UserInput(BaseModel):
+    email: str
+    age: int
+    
+    @validator('email')
+    def validate_email(cls, v):
+        if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', v):
+            raise ValueError('Invalid email')
+        return v
+    
+    @validator('age')
+    def validate_age(cls, v):
+        if v < 0 or v > 150:
+            raise ValueError('Invalid age')
+        return v</code></pre>
+
+            <h3>Secrets Management</h3>
+            <p>Never hardcode secrets in code or config files:</p>
+            <ul>
+                <li><strong>AWS Secrets Manager</strong>: Managed secrets with rotation</li>
+                <li><strong>HashiCorp Vault</strong>: Enterprise secrets management</li>
+                <li><strong>Environment Variables</strong>: Minimum viable approach</li>
+            </ul>
+
+            <pre><code># Bad - hardcoded secret
+API_KEY = "sk_live_abc123xyz"
+
+# Good - from secrets manager
+import boto3
+client = boto3.client('secretsmanager')
+secret = client.get_secret_value(SecretId='api-key')
+API_KEY = secret['SecretString']</code></pre>
+
+            <h3>Database Security</h3>
+            <ul>
+                <li>Use parameterized queries (prevent SQL injection)</li>
+                <li>Encrypt sensitive columns</li>
+                <li>Enable audit logging</li>
+                <li>Restrict network access (VPC, security groups)</li>
+                <li>Regular backups with encryption</li>
+                <li>Principle of least privilege for database users</li>
+            </ul>
+
+            <h2>Infrastructure Security</h2>
+
+            <h3>Network Segmentation</h3>
+            <pre><code># Terraform example - multi-tier VPC
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+}
+
+# Public subnet - load balancers
+resource "aws_subnet" "public" {
+  cidr_block = "10.0.1.0/24"
+}
+
+# Private subnet - application servers
+resource "aws_subnet" "private_app" {
+  cidr_block = "10.0.2.0/24"
+}
+
+# Private subnet - databases
+resource "aws_subnet" "private_db" {
+  cidr_block = "10.0.3.0/24"
+}</code></pre>
+
+            <h3>Security Groups & Firewalls</h3>
+            <pre><code># Principle of least privilege
+resource "aws_security_group" "web" {
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "database" {
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+}</code></pre>
+
+            <h3>Container Security</h3>
+            <ul>
+                <li>Use minimal base images (Alpine, Distroless)</li>
+                <li>Scan images for vulnerabilities (Trivy, Snyk)</li>
+                <li>Run containers as non-root users</li>
+                <li>Use read-only file systems where possible</li>
+                <li>Implement Pod Security Standards in Kubernetes</li>
+            </ul>
+
+            <pre><code># Dockerfile security best practices
+FROM node:18-alpine
+
+# Run as non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+WORKDIR /app
+COPY --chown=nodejs:nodejs . .
+
+USER nodejs
+
+CMD ["node", "server.js"]</code></pre>
+
+            <h2>Security Mitigation Plan</h2>
+
+            <h3>Incident Response Plan</h3>
+            <ol>
+                <li><strong>Preparation</strong>: Define roles, tools, and procedures</li>
+                <li><strong>Detection</strong>: Monitor for security events</li>
+                <li><strong>Containment</strong>: Isolate affected systems</li>
+                <li><strong>Eradication</strong>: Remove threat from environment</li>
+                <li><strong>Recovery</strong>: Restore systems to normal operation</li>
+                <li><strong>Lessons Learned</strong>: Post-incident review and improvements</li>
+            </ol>
+
+            <h3>Backup and Recovery</h3>
+            <ul>
+                <li>Automated daily backups</li>
+                <li>Test restore procedures regularly</li>
+                <li>Store backups in separate region/account</li>
+                <li>Encrypt backups</li>
+                <li>Implement versioning and retention policies</li>
+            </ul>
+
+            <h3>Disaster Recovery</h3>
+            <pre><code># RTO (Recovery Time Objective): How quickly to recover
+# RPO (Recovery Point Objective): How much data loss is acceptable
+
+# Example DR strategy
+- Critical systems: RTO < 1 hour, RPO < 15 minutes
+- Important systems: RTO < 4 hours, RPO < 1 hour
+- Standard systems: RTO < 24 hours, RPO < 24 hours</code></pre>
+
+            <h2>Important Security Points</h2>
+
+            <h3>1. Patch Management</h3>
+            <p>Keep all systems updated. Automate patching where possible. Test patches in staging first.</p>
+
+            <h3>2. Access Control</h3>
+            <ul>
+                <li>Implement MFA for all accounts</li>
+                <li>Use SSO with SAML/OIDC</li>
+                <li>Regular access reviews</li>
+                <li>Disable unused accounts immediately</li>
+            </ul>
+
+            <h3>3. Logging and Monitoring</h3>
+            <pre><code># Log security events
+- Failed login attempts
+- Privilege escalations
+- Configuration changes
+- API access patterns
+- Network traffic anomalies
+
+# Centralize logs
+- Use SIEM (Splunk, ELK, AWS Security Hub)
+- Set up alerts for suspicious activity
+- Retain logs for compliance (typically 90+ days)</code></pre>
+
+            <h3>4. Vulnerability Management</h3>
+            <ul>
+                <li>Regular vulnerability scans</li>
+                <li>Penetration testing (annual minimum)</li>
+                <li>Bug bounty programs</li>
+                <li>Dependency scanning in CI/CD</li>
+            </ul>
+
+            <h3>5. Compliance</h3>
+            <p>Understand applicable regulations:</p>
+            <ul>
+                <li><strong>GDPR</strong>: EU data protection</li>
+                <li><strong>HIPAA</strong>: Healthcare data in US</li>
+                <li><strong>PCI DSS</strong>: Payment card data</li>
+                <li><strong>SOC 2</strong>: Service organization controls</li>
+            </ul>
+
+            <h3>6. Security Training</h3>
+            <p>Regular security awareness training for all employees. Phishing simulations. Secure coding training for developers.</p>
+
+            <div class="highlight">
+                <strong>Critical:</strong> Security is everyone's responsibility. Build a security-first culture where every team member understands their role in protecting systems and data.
+            </div>
+
+            <h2>Security Checklist</h2>
+            <ul>
+                <li>✓ All data encrypted in transit (TLS 1.3)</li>
+                <li>✓ Sensitive data encrypted at rest</li>
+                <li>✓ MFA enabled for all accounts</li>
+                <li>✓ Least privilege access implemented</li>
+                <li>✓ Security headers configured</li>
+                <li>✓ WAF deployed</li>
+                <li>✓ Regular vulnerability scans</li>
+                <li>✓ Automated backups tested</li>
+                <li>✓ Incident response plan documented</li>
+                <li>✓ Security monitoring and alerting active</li>
+                <li>✓ Secrets managed securely (no hardcoded credentials)</li>
+                <li>✓ Container images scanned</li>
+                <li>✓ Network segmentation implemented</li>
+                <li>✓ Patch management process in place</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>Security is a continuous process, not a one-time implementation. Threats evolve, and your defenses must evolve with them. Start with the fundamentals: encryption, authentication, authorization, and monitoring. Build security into your development lifecycle. Regularly test your defenses. And most importantly, foster a culture where security is everyone's priority. The cost of prevention is always less than the cost of a breach.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

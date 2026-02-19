@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Response & Postmortems - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Incident Response & Postmortems: Learning from Failure</h1>
+                <div class="blog-meta">Published on August 15, 2024 | 12 min read</div>
+            </div>
+
+            <h2>Incidents Are Inevitable</h2>
+            <p>No system is perfect. Servers crash, deployments fail, dependencies break, and humans make mistakes. The difference between good and great engineering teams is how they respond to and learn from incidents.</p>
+
+            <h2>The Incident Response Lifecycle</h2>
+
+            <h3>1. Detection</h3>
+            <p>The faster you detect issues, the less impact they have:</p>
+            <ul>
+                <li>Automated monitoring alerts trigger before users notice</li>
+                <li>User reports via support tickets or social media</li>
+                <li>Internal discovery by team members</li>
+            </ul>
+
+            <h3>2. Response</h3>
+            <p>Immediate actions to mitigate impact:</p>
+            <ul>
+                <li>Acknowledge the incident</li>
+                <li>Assess severity and impact</li>
+                <li>Assemble response team</li>
+                <li>Establish communication channels</li>
+            </ul>
+
+            <h3>3. Mitigation</h3>
+            <ul>
+                <li>Rollback problematic changes</li>
+                <li>Scale resources</li>
+                <li>Failover to backup systems</li>
+                <li>Apply temporary fixes</li>
+            </ul>
+
+            <h3>4. Resolution</h3>
+            <ul>
+                <li>Identify root cause</li>
+                <li>Implement proper fix</li>
+                <li>Verify system stability</li>
+                <li>Monitor for recurrence</li>
+            </ul>
+
+            <h3>5. Postmortem</h3>
+            <ul>
+                <li>Document what happened</li>
+                <li>Identify contributing factors</li>
+                <li>Create action items</li>
+                <li>Share learnings</li>
+            </ul>
+
+            <h2>Incident Severity Levels</h2>
+
+            <h3>SEV-1 (Critical)</h3>
+            <p>Complete service outage, data loss, or security breach. Response: Immediate, all hands on deck.</p>
+
+            <h3>SEV-2 (High)</h3>
+            <p>Major feature unavailable, significant performance degradation. Response: Within 15 minutes.</p>
+
+            <h3>SEV-3 (Medium)</h3>
+            <p>Minor feature issues, small user impact, workaround available. Response: Within 1 hour.</p>
+
+            <h3>SEV-4 (Low)</h3>
+            <p>Cosmetic issues, no user impact. Response: Next business day.</p>
+
+            <h2>Incident Response Roles</h2>
+
+            <h3>Incident Commander</h3>
+            <p>Leads the response, makes decisions, coordinates team. Declares severity, assigns roles, and ensures communication.</p>
+
+            <h3>Technical Lead</h3>
+            <p>Investigates and implements fixes. Diagnoses root cause, proposes solutions, and verifies resolution.</p>
+
+            <h3>Communications Lead</h3>
+            <p>Manages internal and external communication. Updates status page, notifies stakeholders, responds to inquiries.</p>
+
+            <h3>Scribe</h3>
+            <p>Documents everything: timeline, actions taken, decisions made, key observations.</p>
+
+            <h2>Writing Effective Postmortems</h2>
+
+            <h3>Blameless Culture</h3>
+            <p>Focus on systems and processes, not individuals. Humans make mistakes—systems should prevent those mistakes from causing incidents.</p>
+
+            <h3>Postmortem Structure</h3>
+            <ul>
+                <li>Summary: Brief description of what happened</li>
+                <li>Impact: Duration, users affected, revenue impact</li>
+                <li>Timeline: Chronological sequence of events</li>
+                <li>Root Cause: Technical explanation</li>
+                <li>Contributing Factors: What made it worse</li>
+                <li>What Went Well: Positive aspects of response</li>
+                <li>What Went Wrong: Areas for improvement</li>
+                <li>Action Items: Specific, assigned, with deadlines</li>
+                <li>Lessons Learned: Key takeaways</li>
+            </ul>
+
+            <h2>Incident Prevention</h2>
+
+            <h3>Chaos Engineering</h3>
+            <p>Proactively inject failures to test resilience. Use tools like Chaos Monkey to randomly terminate instances, or simulate region failures to verify disaster recovery procedures.</p>
+
+            <h3>Game Days</h3>
+            <p>Scheduled exercises to practice incident response. Simulate realistic failure scenarios, test runbooks, train team members, and identify gaps.</p>
+
+            <h3>Pre-Mortems</h3>
+            <p>Before launching, ask what could go wrong. Identify potential failure modes, plan mitigation strategies, and prepare rollback procedures.</p>
+
+            <h2>Incident Metrics</h2>
+
+            <h3>MTTR (Mean Time To Recovery)</h3>
+            <p>Average time from incident start to resolution. Target: less than 1 hour for SEV-2.</p>
+
+            <h3>MTTD (Mean Time To Detection)</h3>
+            <p>Average time from incident start to detection. Target: less than 5 minutes.</p>
+
+            <h3>MTBF (Mean Time Between Failures)</h3>
+            <p>Average time between incidents. Higher is better.</p>
+
+            <h2>On-Call Best Practices</h2>
+
+            <h3>Rotation Schedule</h3>
+            <ul>
+                <li>Weekly rotations (not daily—too disruptive)</li>
+                <li>Primary and secondary on-call</li>
+                <li>Clear escalation paths</li>
+                <li>Compensate on-call time (time off or pay)</li>
+            </ul>
+
+            <h3>Runbooks</h3>
+            <p>Document common issues and solutions. Include symptoms, investigation steps, common causes, resolution steps, and escalation procedures.</p>
+
+            <div class="highlight">
+                <strong>Remember:</strong> The goal of incident response is not perfection—it's continuous improvement. Every incident is an opportunity to make your systems more resilient.
+            </div>
+
+            <h2>Tools for Incident Management</h2>
+
+            <h3>Incident Management Platforms</h3>
+            <ul>
+                <li>PagerDuty: On-call scheduling, alerting, incident tracking</li>
+                <li>Opsgenie: Alert management and on-call</li>
+                <li>Incident.io: Incident response workflow automation</li>
+            </ul>
+
+            <h3>Communication Tools</h3>
+            <ul>
+                <li>Slack: Dedicated incident channels</li>
+                <li>Zoom: War room video calls</li>
+                <li>Statuspage.io: External status communication</li>
+            </ul>
+
+            <h2>Building a Learning Culture</h2>
+
+            <h3>Share Postmortems Widely</h3>
+            <p>Make postmortems public (internally or externally). Transparency builds trust and spreads knowledge.</p>
+
+            <h3>Celebrate Learning</h3>
+            <p>Reward teams for thorough postmortems and implementing improvements, not for avoiding incidents.</p>
+
+            <h3>Track Action Items</h3>
+            <p>Postmortems are worthless if action items are not completed. Track and prioritize them rigorously.</p>
+
+            <h2>Conclusion</h2>
+            <p>Effective incident response separates reliable systems from fragile ones. Build clear processes, define roles, practice regularly, and always learn from failures. A mature engineering organization responds to incidents faster, learns from them better, and prevents similar issues in the future. Invest in your incident response capabilities, and your systems will be more resilient for it.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes in Modern Infrastructure - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Kubernetes: The Operating System of the Cloud</h1>
+                <div class="blog-meta">Published on February 28, 2024 | 12 min read</div>
+            </div>
+
+            <h2>Why Kubernetes Matters Today</h2>
+            <p>Kubernetes (K8s) has become the de facto standard for container orchestration. It's not just a trend—it's a fundamental shift in how we deploy and manage applications. Over 5.6 million developers use Kubernetes globally, and 96% of organizations are either using or evaluating it.</p>
+
+            <h2>The Problems Kubernetes Solved</h2>
+
+            <h3>1. Container Orchestration at Scale</h3>
+            <p>Before Kubernetes, managing containers across multiple hosts was complex:</p>
+            <ul>
+                <li>Manual container placement and scheduling</li>
+                <li>No automatic recovery from failures</li>
+                <li>Difficult service discovery and load balancing</li>
+                <li>Complex networking between containers</li>
+            </ul>
+
+            <h3>2. Infrastructure Abstraction</h3>
+            <p>Kubernetes provides a consistent API across different cloud providers and on-premises infrastructure. Write once, deploy anywhere—whether it's AWS, GCP, Azure, or your own data center.</p>
+
+            <h3>3. Declarative Configuration</h3>
+            <p>Instead of imperative scripts, you declare the desired state, and Kubernetes makes it happen:</p>
+            <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"</code></pre>
+
+            <h3>4. Self-Healing Systems</h3>
+            <p>Kubernetes automatically:</p>
+            <ul>
+                <li>Restarts failed containers</li>
+                <li>Replaces and reschedules containers when nodes die</li>
+                <li>Kills containers that don't respond to health checks</li>
+                <li>Doesn't advertise containers to clients until they're ready</li>
+            </ul>
+
+            <h2>Core Kubernetes Concepts</h2>
+
+            <h3>Pods</h3>
+            <p>The smallest deployable unit in Kubernetes. A pod can contain one or more containers that share storage and network resources.</p>
+
+            <h3>Services</h3>
+            <p>An abstract way to expose an application running on a set of pods. Services provide stable networking and load balancing.</p>
+
+            <h3>Deployments</h3>
+            <p>Manage the desired state of your application. Handle rolling updates, rollbacks, and scaling.</p>
+
+            <h3>ConfigMaps and Secrets</h3>
+            <p>Decouple configuration from container images. ConfigMaps for non-sensitive data, Secrets for sensitive information.</p>
+
+            <h3>Namespaces</h3>
+            <p>Virtual clusters within a physical cluster. Useful for multi-tenancy and environment separation (dev, staging, prod).</p>
+
+            <h2>The Kubernetes Ecosystem Growth</h2>
+
+            <h3>CNCF Landscape</h3>
+            <p>The Cloud Native Computing Foundation hosts Kubernetes and hundreds of related projects:</p>
+            <ul>
+                <li><strong>Service Mesh</strong>: Istio, Linkerd</li>
+                <li><strong>Monitoring</strong>: Prometheus, Grafana</li>
+                <li><strong>CI/CD</strong>: Argo CD, Flux</li>
+                <li><strong>Security</strong>: Falco, OPA</li>
+                <li><strong>Storage</strong>: Rook, Longhorn</li>
+            </ul>
+
+            <h3>Managed Kubernetes Services</h3>
+            <p>Every major cloud provider offers managed Kubernetes:</p>
+            <ul>
+                <li><strong>AWS</strong>: EKS (Elastic Kubernetes Service)</li>
+                <li><strong>Google Cloud</strong>: GKE (Google Kubernetes Engine)</li>
+                <li><strong>Azure</strong>: AKS (Azure Kubernetes Service)</li>
+                <li><strong>DigitalOcean</strong>: DOKS</li>
+            </ul>
+
+            <h2>Real-World Use Cases</h2>
+
+            <h3>Microservices Architecture</h3>
+            <p>Kubernetes excels at managing microservices with independent scaling, deployment, and lifecycle management for each service.</p>
+
+            <h3>Batch Processing</h3>
+            <p>Use Jobs and CronJobs for batch workloads, data processing pipelines, and scheduled tasks.</p>
+
+            <h3>Machine Learning</h3>
+            <p>Kubeflow and other ML platforms leverage Kubernetes for training and serving models at scale.</p>
+
+            <h3>Edge Computing</h3>
+            <p>Lightweight distributions like K3s bring Kubernetes to edge devices and IoT scenarios.</p>
+
+            <h2>Best Practices</h2>
+
+            <h3>Resource Management</h3>
+            <pre><code># Always set resource requests and limits
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "500m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"</code></pre>
+
+            <h3>Health Checks</h3>
+            <pre><code>livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5</code></pre>
+
+            <h3>Security Hardening</h3>
+            <ul>
+                <li>Use RBAC for access control</li>
+                <li>Enable Pod Security Standards</li>
+                <li>Run containers as non-root users</li>
+                <li>Use Network Policies to restrict traffic</li>
+                <li>Regularly scan images for vulnerabilities</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Important:</strong> Kubernetes is powerful but complex. Start small, learn the fundamentals, and gradually adopt advanced features as your needs grow.
+            </div>
+
+            <h2>The Future of Kubernetes</h2>
+            <p>Kubernetes continues to evolve:</p>
+            <ul>
+                <li><strong>Serverless</strong>: Knative brings serverless capabilities to Kubernetes</li>
+                <li><strong>GitOps</strong>: Declarative infrastructure management through Git</li>
+                <li><strong>Multi-cluster</strong>: Federation and service mesh for cross-cluster communication</li>
+                <li><strong>WebAssembly</strong>: Running Wasm workloads alongside containers</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>Kubernetes has transformed how we build and operate applications. It solved critical problems around container orchestration, infrastructure abstraction, and application lifecycle management. While it has a learning curve, the investment pays off in operational efficiency, reliability, and portability. Whether you're running a startup or an enterprise, Kubernetes provides the foundation for modern cloud-native applications.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Compute Types & Cost Optimization - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>AWS Compute Types & Cost Optimization</h1>
+                <div class="blog-meta">Published on September 8, 2023 | 14 min read</div>
+            </div>
+
+            <h2>Understanding AWS Compute Options</h2>
+            <p>AWS offers multiple compute services. Choosing the right type and pricing model can reduce costs by 50-90%.</p>
+
+            <h2>Amazon EC2 Instance Types</h2>
+
+            <h3>General Purpose (T, M series)</h3>
+            <p>Balanced compute, memory, and networking. Use for web servers, small databases, dev environments.</p>
+            <ul>
+                <li><strong>T3/T4g</strong>: Burstable performance, cost-effective for variable workloads</li>
+                <li><strong>M5/M6i</strong>: Steady performance for general workloads</li>
+            </ul>
+
+            <h3>Compute Optimized (C series)</h3>
+            <p>High-performance processors. Use for batch processing, media transcoding, gaming servers, scientific modeling.</p>
+            <ul>
+                <li><strong>C5/C6i</strong>: High compute-to-memory ratio</li>
+                <li><strong>C7g</strong>: Graviton3 processors, best price-performance</li>
+            </ul>
+
+            <h3>Memory Optimized (R, X series)</h3>
+            <p>Large memory for data-intensive workloads. Use for in-memory databases, real-time big data analytics.</p>
+            <ul>
+                <li><strong>R5/R6i</strong>: Memory-intensive applications</li>
+                <li><strong>X2i</strong>: Highest memory per vCPU ratio</li>
+            </ul>
+
+            <h3>Storage Optimized (I, D series)</h3>
+            <p>High sequential read/write to local storage. Use for NoSQL databases, data warehouses, distributed file systems.</p>
+
+            <h3>Accelerated Computing (P, G, F series)</h3>
+            <p>GPU or FPGA instances. Use for machine learning, graphics rendering, video encoding.</p>
+
+            <h2>EC2 Pricing Models</h2>
+
+            <h3>On-Demand Instances</h3>
+            <p>Pay per hour/second. No commitment. Use for short-term, unpredictable workloads.</p>
+            <pre><code># Example: t3.medium
+- On-Demand: $0.0416/hour
+- Annual cost: ~$365</code></pre>
+
+            <h3>Reserved Instances (RI)</h3>
+            <p>1 or 3-year commitment for 40-60% discount.</p>
+
+            <h4>Standard RI</h4>
+            <p>Highest discount (up to 72%). Fixed instance type, region, OS.</p>
+            <pre><code># t3.medium Standard RI (3-year, all upfront)
+- On-Demand: $0.0416/hour = $365/year
+- Reserved: $0.0166/hour = $145/year
+- Savings: 60% ($220/year)</code></pre>
+
+            <h4>Convertible RI</h4>
+            <p>Lower discount (up to 54%). Can change instance family, OS, tenancy.</p>
+
+            <h4>When to Use Reserved Instances</h4>
+            <ul>
+                <li>Steady-state workloads running 24/7</li>
+                <li>Production databases</li>
+                <li>Always-on web servers</li>
+                <li>Predictable usage patterns</li>
+            </ul>
+
+            <h4>RI Best Practices</h4>
+            <ul>
+                <li>Start with 1-year commitments</li>
+                <li>Analyze usage for 3+ months before purchasing</li>
+                <li>Use Convertible RIs for flexibility</li>
+                <li>Purchase RIs for base capacity, use On-Demand for peaks</li>
+            </ul>
+
+            <h3>Savings Plans</h3>
+            <p>Flexible pricing model. Commit to $/hour spend for 1 or 3 years.</p>
+
+            <h4>Compute Savings Plans</h4>
+            <p>Up to 66% discount. Apply to any EC2 instance, Fargate, Lambda.</p>
+
+            <h4>EC2 Instance Savings Plans</h4>
+            <p>Up to 72% discount. Apply to specific instance family in a region.</p>
+
+            <h4>Savings Plans vs Reserved Instances</h4>
+            <ul>
+                <li><strong>Savings Plans</strong>: More flexible, covers Lambda/Fargate</li>
+                <li><strong>Reserved Instances</strong>: Slightly higher discount, less flexible</li>
+            </ul>
+
+            <h2>Spot Instances</h2>
+
+            <h3>What Are Spot Instances?</h3>
+            <p>Unused EC2 capacity at up to 90% discount. AWS can reclaim with 2-minute notice.</p>
+
+            <h3>Spot Instance Pricing</h3>
+            <pre><code># Example: m5.large
+- On-Demand: $0.096/hour
+- Spot: $0.029/hour (70% savings)
+
+# Spot price fluctuates based on supply/demand
+# Set max price to control costs</code></pre>
+
+            <h3>Workloads Suitable for Spot Instances</h3>
+
+            <h4>Perfect for Spot</h4>
+            <ul>
+                <li><strong>Batch processing</strong>: Data analysis, ETL jobs</li>
+                <li><strong>CI/CD builds</strong>: Jenkins agents, GitHub Actions runners</li>
+                <li><strong>Big data</strong>: Hadoop, Spark clusters</li>
+                <li><strong>Container workloads</strong>: Stateless microservices</li>
+                <li><strong>Machine learning training</strong>: Can checkpoint and resume</li>
+                <li><strong>Rendering</strong>: Video encoding, 3D rendering</li>
+                <li><strong>Web crawling</strong>: Distributed scraping</li>
+                <li><strong>Testing environments</strong>: Load testing, QA</li>
+            </ul>
+
+            <h4>NOT Suitable for Spot</h4>
+            <ul>
+                <li>Databases (unless read replicas)</li>
+                <li>Stateful applications without checkpointing</li>
+                <li>Real-time processing requiring guaranteed capacity</li>
+                <li>Applications that cannot handle interruptions</li>
+            </ul>
+
+            <h3>Spot Instance Best Practices</h3>
+
+            <h4>1. Use Spot Fleet</h4>
+            <pre><code># Request multiple instance types
+aws ec2 request-spot-fleet --spot-fleet-request-config '{
+  "AllocationStrategy": "lowestPrice",
+  "TargetCapacity": 10,
+  "LaunchSpecifications": [
+    {"InstanceType": "m5.large"},
+    {"InstanceType": "m5a.large"},
+    {"InstanceType": "m5n.large"}
+  ]
+}'</code></pre>
+
+            <h4>2. Diversify Instance Types</h4>
+            <p>Request multiple instance types and AZs to reduce interruption risk.</p>
+
+            <h4>3. Handle Interruptions Gracefully</h4>
+            <pre><code># Monitor for interruption notice
+while true; do
+  if curl -s http://169.254.169.254/latest/meta-data/spot/instance-action | grep -q action; then
+    echo "Spot interruption detected, graceful shutdown"
+    # Save state, checkpoint work
+    shutdown -h now
+  fi
+  sleep 5
+done</code></pre>
+
+            <h4>4. Use Spot with Auto Scaling</h4>
+            <pre><code># Mixed instances policy
+resource "aws_autoscaling_group" "app" {
+  mixed_instances_policy {
+    instances_distribution {
+      on_demand_base_capacity = 2
+      on_demand_percentage_above_base_capacity = 20
+      spot_allocation_strategy = "capacity-optimized"
+    }
+    
+    launch_template {
+      launch_template_specification {
+        launch_template_id = aws_launch_template.app.id
+      }
+      
+      override {
+        instance_type = "m5.large"
+      }
+      override {
+        instance_type = "m5a.large"
+      }
+    }
+  }
+}</code></pre>
+
+            <h4>5. Kubernetes with Spot</h4>
+            <pre><code># Node group with spot instances
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: my-cluster
+nodeGroups:
+  - name: spot-workers
+    instancesDistribution:
+      instanceTypes:
+        - m5.large
+        - m5a.large
+        - m5n.large
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    minSize: 2
+    maxSize: 10
+    labels:
+      lifecycle: spot
+    taints:
+      - key: spot
+        value: "true"
+        effect: NoSchedule</code></pre>
+
+            <h2>Other Compute Options</h2>
+
+            <h3>AWS Lambda</h3>
+            <p>Serverless compute. Pay per request and execution time. Use for event-driven workloads, APIs, data processing.</p>
+            <pre><code># Lambda pricing
+- $0.20 per 1M requests
+- $0.0000166667 per GB-second
+- First 1M requests free monthly</code></pre>
+
+            <h3>AWS Fargate</h3>
+            <p>Serverless containers. No EC2 management. Use for microservices, batch jobs.</p>
+
+            <h3>AWS Batch</h3>
+            <p>Managed batch processing. Automatically provisions Spot/On-Demand. Use for large-scale batch workloads.</p>
+
+            <h2>Cost Optimization Strategies</h2>
+
+            <h3>1. Right-Size Instances</h3>
+            <pre><code># Use CloudWatch to analyze utilization
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 \
+  --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=i-xxxxx \
+  --start-time 2024-01-01T00:00:00Z \
+  --end-time 2024-01-31T23:59:59Z \
+  --period 3600 \
+  --statistics Average
+
+# Downsize if CPU < 30% consistently</code></pre>
+
+            <h3>2. Use Graviton Instances</h3>
+            <p>ARM-based processors. 40% better price-performance than x86.</p>
+            <ul>
+                <li>t4g instead of t3</li>
+                <li>m6g instead of m5</li>
+                <li>c7g instead of c6i</li>
+            </ul>
+
+            <h3>3. Schedule Start/Stop</h3>
+            <pre><code># Stop dev instances at night
+aws ec2 stop-instances --instance-ids i-xxxxx
+
+# Lambda to automate
+import boto3
+ec2 = boto3.client('ec2')
+
+def lambda_handler(event, context):
+    # Stop instances tagged Environment=dev
+    instances = ec2.describe_instances(
+        Filters=[{'Name': 'tag:Environment', 'Values': ['dev']}]
+    )
+    ids = [i['InstanceId'] for r in instances['Reservations'] for i in r['Instances']]
+    if ids:
+        ec2.stop_instances(InstanceIds=ids)</code></pre>
+
+            <h3>4. Use Spot for Non-Critical Workloads</h3>
+            <p>70-90% savings for fault-tolerant workloads.</p>
+
+            <h3>5. Purchase Reserved Instances</h3>
+            <p>40-60% savings for steady-state workloads.</p>
+
+            <h3>6. Delete Idle Resources</h3>
+            <ul>
+                <li>Stopped instances still incur EBS costs</li>
+                <li>Terminate unused instances</li>
+                <li>Delete old AMIs and snapshots</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Cost Optimization Formula:</strong> Reserved Instances for base capacity + Spot Instances for variable workloads + Auto Scaling = Maximum savings with reliability.
+            </div>
+
+            <h2>Compute Decision Matrix</h2>
+
+            <h3>Use On-Demand When:</h3>
+            <ul>
+                <li>Short-term workloads</li>
+                <li>Unpredictable usage</li>
+                <li>Testing new applications</li>
+                <li>Peak capacity beyond RI coverage</li>
+            </ul>
+
+            <h3>Use Reserved Instances When:</h3>
+            <ul>
+                <li>Steady-state production workloads</li>
+                <li>Running 24/7 for 1+ years</li>
+                <li>Predictable capacity needs</li>
+                <li>Want maximum discount</li>
+            </ul>
+
+            <h3>Use Spot Instances When:</h3>
+            <ul>
+                <li>Fault-tolerant workloads</li>
+                <li>Flexible start/end times</li>
+                <li>Batch processing</li>
+                <li>Can handle interruptions</li>
+                <li>Want maximum savings</li>
+            </ul>
+
+            <h3>Use Lambda When:</h3>
+            <ul>
+                <li>Event-driven workloads</li>
+                <li>Sporadic traffic</li>
+                <li>Short execution times</li>
+                <li>Want zero infrastructure management</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>AWS compute optimization requires matching workload characteristics to pricing models. Use Reserved Instances for predictable workloads (40-60% savings), Spot Instances for fault-tolerant batch processing (70-90% savings), and On-Demand for variable capacity. The optimal strategy combines all three: RIs for base capacity, Spot for cost-effective scaling, and On-Demand as a safety net. Start by analyzing your usage patterns, right-sizing instances, and gradually adopting Spot for suitable workloads. These strategies can reduce compute costs by 50-70% without compromising reliability.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Automation & CI/CD - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>DevOps Automation & CI/CD Pipelines</h1>
+                <div class="blog-meta">Published on June 10, 2024 | 12 min read</div>
+            </div>
+
+            <h2>The DevOps Revolution</h2>
+            <p>DevOps broke down the wall between development and operations. Instead of throwing code over the fence, teams now collaborate throughout the entire software lifecycle. Automation is the engine that makes this possible.</p>
+
+            <h2>Why CI/CD Matters</h2>
+
+            <h3>Continuous Integration (CI)</h3>
+            <p>Automatically build and test code changes. Catch bugs early when they're cheap to fix.</p>
+            <ul>
+                <li>Developers commit code multiple times per day</li>
+                <li>Automated builds verify each commit</li>
+                <li>Tests run automatically</li>
+                <li>Fast feedback on code quality</li>
+            </ul>
+
+            <h3>Continuous Delivery/Deployment (CD)</h3>
+            <p>Automatically deploy code to production (or make it ready to deploy).</p>
+            <ul>
+                <li><strong>Continuous Delivery</strong>: Code is always deployable, manual approval for production</li>
+                <li><strong>Continuous Deployment</strong>: Every change that passes tests goes to production automatically</li>
+            </ul>
+
+            <h2>Building a CI/CD Pipeline</h2>
+
+            <h3>Pipeline Stages</h3>
+            <ol>
+                <li><strong>Source</strong>: Code commit triggers pipeline</li>
+                <li><strong>Build</strong>: Compile code, create artifacts</li>
+                <li><strong>Test</strong>: Unit tests, integration tests, security scans</li>
+                <li><strong>Deploy to Staging</strong>: Deploy to staging environment</li>
+                <li><strong>Test Staging</strong>: Smoke tests, E2E tests</li>
+                <li><strong>Deploy to Production</strong>: Blue-green or canary deployment</li>
+                <li><strong>Monitor</strong>: Track metrics and errors</li>
+            </ol>
+
+            <h3>GitHub Actions Example</h3>
+            <pre><code>name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Security scan
+        run: npm audit
+  
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Deploy to S3
+        run: |
+          npm run build
+          aws s3 sync dist/ s3://my-bucket --delete
+      
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_ID }} \
+            --paths "/*"</code></pre>
+
+            <h3>GitLab CI Example</h3>
+            <pre><code>stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t $DOCKER_IMAGE .
+    - docker push $DOCKER_IMAGE
+
+test:
+  stage: test
+  image: $DOCKER_IMAGE
+  script:
+    - npm test
+    - npm run test:integration
+
+deploy-staging:
+  stage: deploy
+  image: alpine/k8s:latest
+  script:
+    - kubectl set image deployment/app app=$DOCKER_IMAGE -n staging
+    - kubectl rollout status deployment/app -n staging
+  environment:
+    name: staging
+    url: https://staging.example.com
+
+deploy-production:
+  stage: deploy
+  image: alpine/k8s:latest
+  script:
+    - kubectl set image deployment/app app=$DOCKER_IMAGE -n production
+    - kubectl rollout status deployment/app -n production
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  only:
+    - main</code></pre>
+
+            <h2>Deployment Strategies</h2>
+
+            <h3>Blue-Green Deployment</h3>
+            <p>Two identical environments. Deploy to inactive (green), test, then switch traffic.</p>
+            <pre><code># AWS ECS Blue-Green with CodeDeploy
+{
+  "version": 1,
+  "Resources": [
+    {
+      "TargetService": {
+        "Type": "AWS::ECS::Service",
+        "Properties": {
+          "TaskDefinition": "arn:aws:ecs:region:account:task-definition/app:2",
+          "LoadBalancerInfo": {
+            "ContainerName": "app",
+            "ContainerPort": 80
+          }
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+            <h3>Canary Deployment</h3>
+            <p>Gradually roll out to a subset of users. Monitor metrics, then proceed or rollback.</p>
+            <pre><code># Kubernetes canary with Flagger
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: app
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app
+  service:
+    port: 80
+  analysis:
+    interval: 1m
+    threshold: 5
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 99
+      - name: request-duration
+        thresholdRange:
+          max: 500</code></pre>
+
+            <h3>Rolling Deployment</h3>
+            <p>Update instances one at a time or in batches. Zero downtime, gradual rollout.</p>
+
+            <h2>Testing Automation</h2>
+
+            <h3>Test Pyramid</h3>
+            <ul>
+                <li><strong>Unit Tests</strong> (70%): Fast, isolated, test individual functions</li>
+                <li><strong>Integration Tests</strong> (20%): Test component interactions</li>
+                <li><strong>E2E Tests</strong> (10%): Test complete user workflows</li>
+            </ul>
+
+            <h3>Automated Testing in Pipeline</h3>
+            <pre><code># Jest unit tests
+npm test -- --coverage --ci
+
+# Cypress E2E tests
+cypress run --record --parallel
+
+# Load testing with k6
+k6 run --vus 100 --duration 30s load-test.js
+
+# Security testing
+npm audit
+snyk test
+trivy image myapp:latest</code></pre>
+
+            <h2>Infrastructure Automation</h2>
+
+            <h3>GitOps with ArgoCD</h3>
+            <p>Git as single source of truth for infrastructure and applications.</p>
+            <pre><code>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/myorg/myapp
+    targetRevision: HEAD
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true</code></pre>
+
+            <h3>Automated Scaling</h3>
+            <pre><code># Kubernetes HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70</code></pre>
+
+            <h2>Monitoring and Observability in CI/CD</h2>
+
+            <h3>Pipeline Metrics</h3>
+            <ul>
+                <li><strong>Deployment Frequency</strong>: How often you deploy</li>
+                <li><strong>Lead Time</strong>: Time from commit to production</li>
+                <li><strong>MTTR</strong>: Mean time to recovery</li>
+                <li><strong>Change Failure Rate</strong>: % of deployments causing issues</li>
+            </ul>
+
+            <h3>Automated Rollback</h3>
+            <pre><code># Rollback on high error rate
+if error_rate > threshold:
+    kubectl rollout undo deployment/app
+    send_alert("Deployment rolled back due to high error rate")</code></pre>
+
+            <h2>Secrets Management in CI/CD</h2>
+
+            <h3>Best Practices</h3>
+            <ul>
+                <li>Never commit secrets to Git</li>
+                <li>Use CI/CD platform's secret management</li>
+                <li>Rotate secrets regularly</li>
+                <li>Use short-lived credentials when possible</li>
+            </ul>
+
+            <h3>GitHub Actions Secrets</h3>
+            <pre><code>steps:
+  - name: Deploy
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    run: ./deploy.sh</code></pre>
+
+            <h2>Advanced Automation</h2>
+
+            <h3>Automated Dependency Updates</h3>
+            <pre><code># Dependabot configuration
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "devops-team"</code></pre>
+
+            <h3>Automated Code Quality</h3>
+            <pre><code># SonarQube in pipeline
+sonar-scanner \
+  -Dsonar.projectKey=myapp \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=$SONAR_URL \
+  -Dsonar.login=$SONAR_TOKEN
+
+# Fail build on quality gate
+if [ $? -ne 0 ]; then
+  echo "Quality gate failed"
+  exit 1
+fi</code></pre>
+
+            <h3>Automated Documentation</h3>
+            <pre><code># Generate API docs
+npm run docs:generate
+
+# Deploy to GitHub Pages
+- name: Deploy docs
+  uses: peaceiris/actions-gh-pages@v3
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    publish_dir: ./docs</code></pre>
+
+            <div class="highlight">
+                <strong>Golden Rule:</strong> If you do it more than twice, automate it. Manual processes don't scale and are error-prone.
+            </div>
+
+            <h2>CI/CD Best Practices</h2>
+
+            <h3>1. Keep Pipelines Fast</h3>
+            <ul>
+                <li>Parallel execution where possible</li>
+                <li>Cache dependencies</li>
+                <li>Optimize Docker builds with multi-stage builds</li>
+                <li>Run expensive tests only when necessary</li>
+            </ul>
+
+            <h3>2. Make Pipelines Reliable</h3>
+            <ul>
+                <li>Idempotent operations</li>
+                <li>Retry transient failures</li>
+                <li>Clear error messages</li>
+                <li>Fail fast on critical errors</li>
+            </ul>
+
+            <h3>3. Security in Pipelines</h3>
+            <ul>
+                <li>Scan dependencies for vulnerabilities</li>
+                <li>Static code analysis</li>
+                <li>Container image scanning</li>
+                <li>Secrets scanning</li>
+            </ul>
+
+            <h3>4. Observability</h3>
+            <ul>
+                <li>Log all pipeline activities</li>
+                <li>Track metrics (build time, success rate)</li>
+                <li>Alert on failures</li>
+                <li>Visualize pipeline performance</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>DevOps automation and CI/CD transform software delivery from a manual, error-prone process to a reliable, repeatable system. Start with basic CI (build and test on every commit), then gradually add CD capabilities. Focus on making your pipeline fast, reliable, and secure. Remember: the goal isn't to automate everything immediately—it's to continuously improve your delivery process. Every manual step you automate is time saved and errors prevented. Build your automation incrementally, measure the impact, and keep iterating.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

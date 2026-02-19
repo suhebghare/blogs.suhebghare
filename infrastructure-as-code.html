@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure as Code - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Infrastructure as Code: Terraform & Ansible</h1>
+                <div class="blog-meta">Published on March 12, 2024 | 11 min read</div>
+            </div>
+
+            <h2>The Infrastructure Problem</h2>
+            <p>Traditional infrastructure management was manual, error-prone, and didn't scale:</p>
+            <ul>
+                <li>Clicking through web consoles to provision resources</li>
+                <li>Inconsistent configurations across environments</li>
+                <li>No version control for infrastructure changes</li>
+                <li>Difficult to replicate environments</li>
+                <li>Long provisioning times</li>
+            </ul>
+            <p>Infrastructure as Code (IaC) solved these problems by treating infrastructure like software.</p>
+
+            <h2>Why Infrastructure as Code?</h2>
+
+            <h3>Version Control</h3>
+            <p>Track every infrastructure change in Git. Know who changed what, when, and why. Roll back problematic changes instantly.</p>
+
+            <h3>Reproducibility</h3>
+            <p>Spin up identical environments for dev, staging, and production. No more "works on my machine" for infrastructure.</p>
+
+            <h3>Automation</h3>
+            <p>Provision entire environments with a single command. Integrate with CI/CD pipelines for automated deployments.</p>
+
+            <h3>Documentation</h3>
+            <p>Your code IS your documentation. No more outdated wiki pages describing infrastructure.</p>
+
+            <h2>Terraform: Infrastructure Provisioning</h2>
+
+            <h3>What Terraform Does</h3>
+            <p>Terraform provisions and manages infrastructure across multiple cloud providers using a declarative configuration language (HCL).</p>
+
+            <h3>Key Concepts</h3>
+            <ul>
+                <li><strong>Providers</strong>: Plugins for cloud platforms (AWS, Azure, GCP, etc.)</li>
+                <li><strong>Resources</strong>: Infrastructure components (VMs, networks, databases)</li>
+                <li><strong>State</strong>: Terraform's record of managed infrastructure</li>
+                <li><strong>Modules</strong>: Reusable infrastructure components</li>
+            </ul>
+
+            <h3>Example: AWS Infrastructure</h3>
+            <pre><code>terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+  
+  tags = {
+    Name = "main-vpc"
+    Environment = "production"
+  }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.1.0/24"
+  
+  tags = {
+    Name = "public-subnet"
+  }
+}
+
+resource "aws_instance" "web" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t3.micro"
+  subnet_id     = aws_subnet.public.id
+  
+  tags = {
+    Name = "web-server"
+  }
+}
+
+output "instance_ip" {
+  value = aws_instance.web.public_ip
+}</code></pre>
+
+            <h3>Terraform Workflow</h3>
+            <pre><code># Initialize providers and modules
+terraform init
+
+# Preview changes
+terraform plan
+
+# Apply changes
+terraform apply
+
+# Destroy infrastructure
+terraform destroy</code></pre>
+
+            <h3>Terraform Best Practices</h3>
+            <ul>
+                <li><strong>Remote State</strong>: Store state in S3/Azure Blob with locking</li>
+                <li><strong>Workspaces</strong>: Separate environments (dev, staging, prod)</li>
+                <li><strong>Modules</strong>: Create reusable components</li>
+                <li><strong>Variables</strong>: Parameterize configurations</li>
+                <li><strong>Outputs</strong>: Export values for other tools</li>
+            </ul>
+
+            <h2>Ansible: Configuration Management</h2>
+
+            <h3>What Ansible Does</h3>
+            <p>Ansible configures and manages existing infrastructure. It's agentless, using SSH to execute tasks on remote systems.</p>
+
+            <h3>Key Concepts</h3>
+            <ul>
+                <li><strong>Playbooks</strong>: YAML files defining automation tasks</li>
+                <li><strong>Inventory</strong>: List of managed hosts</li>
+                <li><strong>Modules</strong>: Reusable units of work (copy files, install packages, etc.)</li>
+                <li><strong>Roles</strong>: Organized collections of playbooks and files</li>
+            </ul>
+
+            <h3>Example: Web Server Setup</h3>
+            <pre><code>---
+- name: Configure web servers
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+    
+    - name: Copy nginx config
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify: Restart nginx
+    
+    - name: Ensure nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+    
+    - name: Deploy application
+      copy:
+        src: app/
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+  
+  handlers:
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted</code></pre>
+
+            <h3>Inventory File</h3>
+            <pre><code>[webservers]
+web1.example.com
+web2.example.com
+
+[databases]
+db1.example.com
+
+[production:children]
+webservers
+databases
+
+[production:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/prod.pem</code></pre>
+
+            <h3>Running Ansible</h3>
+            <pre><code># Run a playbook
+ansible-playbook -i inventory.ini webserver.yml
+
+# Run ad-hoc commands
+ansible webservers -i inventory.ini -m ping
+
+# Check mode (dry run)
+ansible-playbook playbook.yml --check</code></pre>
+
+            <h2>Terraform vs Ansible: When to Use What</h2>
+
+            <h3>Use Terraform For:</h3>
+            <ul>
+                <li>Provisioning cloud infrastructure (VPCs, instances, databases)</li>
+                <li>Managing infrastructure lifecycle</li>
+                <li>Multi-cloud deployments</li>
+                <li>Infrastructure that needs to be created/destroyed frequently</li>
+            </ul>
+
+            <h3>Use Ansible For:</h3>
+            <ul>
+                <li>Configuring servers and applications</li>
+                <li>Application deployment</li>
+                <li>Orchestrating complex workflows</li>
+                <li>Managing existing infrastructure</li>
+            </ul>
+
+            <h3>Use Both Together</h3>
+            <p>The most powerful approach: Terraform provisions infrastructure, Ansible configures it.</p>
+            <pre><code># Terraform creates instances and outputs IPs
+# Ansible uses those IPs to configure servers
+
+# terraform output
+output "web_server_ips" {
+  value = aws_instance.web[*].public_ip
+}
+
+# Generate Ansible inventory from Terraform
+resource "local_file" "ansible_inventory" {
+  content = templatefile("inventory.tpl", {
+    web_ips = aws_instance.web[*].public_ip
+  })
+  filename = "inventory.ini"
+}</code></pre>
+
+            <h2>Problems IaC Solved</h2>
+
+            <h3>Configuration Drift</h3>
+            <p>Manual changes cause environments to diverge. IaC ensures consistency by reapplying desired state.</p>
+
+            <h3>Disaster Recovery</h3>
+            <p>Rebuild entire infrastructure from code in minutes, not days.</p>
+
+            <h3>Compliance and Auditing</h3>
+            <p>Every change is tracked in version control with approval workflows.</p>
+
+            <h3>Scaling</h3>
+            <p>Provision 100 servers as easily as 1 server.</p>
+
+            <div class="highlight">
+                <strong>Golden Rule:</strong> Never make manual changes to infrastructure. If it's not in code, it doesn't exist.
+            </div>
+
+            <h2>Advanced Patterns</h2>
+
+            <h3>GitOps</h3>
+            <p>Use Git as the single source of truth. Pull requests for infrastructure changes. Automated deployments on merge.</p>
+
+            <h3>Immutable Infrastructure</h3>
+            <p>Never update servers—replace them. Build new images with changes, deploy new instances, destroy old ones.</p>
+
+            <h3>Policy as Code</h3>
+            <p>Use tools like Sentinel or OPA to enforce policies (cost limits, security requirements, naming conventions).</p>
+
+            <h2>Conclusion</h2>
+            <p>Infrastructure as Code transformed operations from manual, error-prone processes to automated, reliable workflows. Terraform and Ansible are essential tools in the modern DevOps toolkit. Terraform excels at provisioning infrastructure, while Ansible handles configuration management. Together, they enable teams to manage infrastructure at scale with the same rigor as application code. Start small, automate incrementally, and soon you'll wonder how you ever managed infrastructure manually.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

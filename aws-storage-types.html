@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Storage Types & Optimization - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>AWS Storage Types & Cost Optimization</h1>
+                <div class="blog-meta">Published on July 25, 2023 | 13 min read</div>
+            </div>
+
+            <h2>Understanding AWS Storage Services</h2>
+            <p>AWS offers multiple storage services, each optimized for different use cases. Choosing the right storage type can reduce costs by 50-80% while improving performance.</p>
+
+            <h2>Amazon S3 (Simple Storage Service)</h2>
+
+            <h3>What It Is</h3>
+            <p>Object storage for any type of data. Highly durable (99.999999999%), scalable, and accessible via HTTP/HTTPS.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>Static website hosting</li>
+                <li>Backup and archival</li>
+                <li>Data lakes and analytics</li>
+                <li>Media storage (images, videos)</li>
+                <li>Application assets and logs</li>
+            </ul>
+
+            <h3>S3 Storage Classes</h3>
+
+            <h4>S3 Standard</h4>
+            <p>Frequently accessed data. $0.023/GB/month. Use for active data, websites, content distribution.</p>
+
+            <h4>S3 Intelligent-Tiering</h4>
+            <p>Automatically moves data between access tiers. $0.0025/1000 objects monitoring fee. Use when access patterns are unpredictable.</p>
+
+            <h4>S3 Standard-IA (Infrequent Access)</h4>
+            <p>Less frequently accessed data. $0.0125/GB/month + retrieval fee. Use for backups, disaster recovery data accessed monthly.</p>
+
+            <h4>S3 One Zone-IA</h4>
+            <p>Single AZ storage. $0.01/GB/month. Use for reproducible data, secondary backups.</p>
+
+            <h4>S3 Glacier Instant Retrieval</h4>
+            <p>Archive with millisecond retrieval. $0.004/GB/month. Use for archived data needing immediate access.</p>
+
+            <h4>S3 Glacier Flexible Retrieval</h4>
+            <p>Archive with 1-5 minute retrieval. $0.0036/GB/month. Use for long-term backups accessed quarterly.</p>
+
+            <h4>S3 Glacier Deep Archive</h4>
+            <p>Lowest cost archive. $0.00099/GB/month, 12-hour retrieval. Use for compliance archives, data retained for 7-10 years.</p>
+
+            <h3>S3 Cost Optimization</h3>
+            <pre><code>{
+  "Rules": [{
+    "Id": "Move to IA after 30 days",
+    "Status": "Enabled",
+    "Transitions": [
+      {"Days": 30, "StorageClass": "STANDARD_IA"},
+      {"Days": 90, "StorageClass": "GLACIER_IR"},
+      {"Days": 180, "StorageClass": "GLACIER"},
+      {"Days": 365, "StorageClass": "DEEP_ARCHIVE"}
+    ],
+    "Expiration": {"Days": 2555}
+  }]
+}</code></pre>
+
+            <h2>Amazon EBS (Elastic Block Store)</h2>
+
+            <h3>What It Is</h3>
+            <p>Block storage for EC2 instances. Persistent storage that survives instance termination.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>EC2 instance boot volumes</li>
+                <li>Database storage</li>
+                <li>Applications requiring low-latency access</li>
+                <li>File systems</li>
+            </ul>
+
+            <h3>EBS Volume Types</h3>
+
+            <h4>gp3 (General Purpose SSD)</h4>
+            <p>$0.08/GB/month. 3,000 IOPS baseline. Use for most workloads, boot volumes.</p>
+
+            <h4>gp2 (Previous Gen)</h4>
+            <p>$0.10/GB/month. Migrate to gp3 for 20% cost savings.</p>
+
+            <h4>io2 (Provisioned IOPS SSD)</h4>
+            <p>$0.125/GB/month + IOPS cost. Use for critical databases.</p>
+
+            <h4>st1 (Throughput Optimized HDD)</h4>
+            <p>$0.045/GB/month. Use for big data, data warehouses.</p>
+
+            <h4>sc1 (Cold HDD)</h4>
+            <p>$0.015/GB/month. Lowest cost for infrequently accessed data.</p>
+
+            <h3>EBS Cost Optimization</h3>
+            <ul>
+                <li>Use gp3 instead of gp2 (20% cheaper)</li>
+                <li>Delete unattached volumes</li>
+                <li>Delete old snapshots</li>
+                <li>Right-size volumes</li>
+            </ul>
+
+            <h2>Amazon EFS (Elastic File System)</h2>
+
+            <h3>What It Is</h3>
+            <p>Managed NFS file system. Automatically scales, shared across multiple EC2 instances.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>Shared file storage across multiple instances</li>
+                <li>Content management systems</li>
+                <li>Container storage</li>
+                <li>Home directories</li>
+            </ul>
+
+            <h3>EFS Storage Classes</h3>
+            <p>EFS Standard: $0.30/GB/month. EFS IA: $0.025/GB/month (92% savings).</p>
+
+            <h2>Storage Decision Matrix</h2>
+
+            <h3>Choose S3 When:</h3>
+            <ul>
+                <li>Storing objects (images, videos, backups)</li>
+                <li>Need unlimited scalability</li>
+                <li>Static website hosting</li>
+                <li>Data lakes</li>
+            </ul>
+
+            <h3>Choose EBS When:</h3>
+            <ul>
+                <li>EC2 instance storage</li>
+                <li>Database volumes</li>
+                <li>Low-latency block storage</li>
+                <li>Single instance access</li>
+            </ul>
+
+            <h3>Choose EFS When:</h3>
+            <ul>
+                <li>Multiple instances need shared access</li>
+                <li>NFS file system required</li>
+                <li>Automatic scaling needed</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Cost Optimization Rule:</strong> Use the coldest storage tier that meets your access requirements. Moving from S3 Standard to Glacier Deep Archive saves 96% on storage costs.
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>AWS offers diverse storage options for every use case. The key to cost optimization is matching storage type to access patterns. Use S3 for objects, EBS for instance storage, EFS for shared file systems, and implement lifecycle policies to automatically tier data. Regular audits to delete unused resources can reduce costs by 40-60%.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

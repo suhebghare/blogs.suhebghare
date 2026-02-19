@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Serverless Architecture - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>AWS Serverless Architecture & Cost Optimization</h1>
+                <div class="blog-meta">Published on November 20, 2023 | 13 min read</div>
+            </div>
+
+            <h2>What is Serverless?</h2>
+            <p>Serverless doesn't mean no servers—it means you don't manage them. AWS handles infrastructure, scaling, patching, and availability. You focus on code and pay only for what you use.</p>
+
+            <h3>Benefits of Serverless</h3>
+            <ul>
+                <li><strong>No infrastructure management</strong>: No servers to provision or maintain</li>
+                <li><strong>Automatic scaling</strong>: From zero to thousands of requests</li>
+                <li><strong>Pay per use</strong>: No cost when idle</li>
+                <li><strong>High availability</strong>: Built-in redundancy</li>
+                <li><strong>Faster time to market</strong>: Focus on business logic</li>
+            </ul>
+
+            <h2>AWS Lambda</h2>
+
+            <h3>What It Is</h3>
+            <p>Run code without provisioning servers. Supports multiple languages: Python, Node.js, Java, Go, .NET, Ruby.</p>
+
+            <h3>When to Use Lambda</h3>
+            <ul>
+                <li>REST APIs (with API Gateway)</li>
+                <li>Event processing (S3, DynamoDB, SQS)</li>
+                <li>Scheduled tasks (cron jobs)</li>
+                <li>Data transformation</li>
+                <li>Real-time file processing</li>
+                <li>IoT backends</li>
+                <li>Chatbots and Alexa skills</li>
+            </ul>
+
+            <h3>Lambda Pricing</h3>
+            <pre><code># Pricing components
+- Requests: $0.20 per 1M requests
+- Duration: $0.0000166667 per GB-second
+- Free tier: 1M requests + 400,000 GB-seconds/month
+
+# Example calculation
+Function: 512 MB memory, 200ms execution
+Monthly invocations: 10 million
+
+Requests: 10M * $0.20/1M = $2.00
+Duration: 10M * 0.2s * 0.5GB * $0.0000166667 = $16.67
+Total: $18.67/month
+
+# Compare to EC2 t3.small (24/7)
+EC2 cost: ~$15/month (but always running)</code></pre>
+
+            <h3>Lambda Best Practices</h3>
+            <ul>
+                <li>Right-size memory allocation (affects CPU)</li>
+                <li>Minimize cold starts (keep functions warm)</li>
+                <li>Use environment variables for configuration</li>
+                <li>Implement proper error handling and retries</li>
+                <li>Use Lambda Layers for shared dependencies</li>
+                <li>Set appropriate timeout values</li>
+            </ul>
+
+            <h3>Lambda Example</h3>
+            <pre><code>import json
+import boto3
+
+s3 = boto3.client('s3')
+
+def lambda_handler(event, context):
+    # Process S3 event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    
+    # Get object
+    response = s3.get_object(Bucket=bucket, Key=key)
+    data = response['Body'].read()
+    
+    # Process data
+    result = process_data(data)
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps(result)
+    }</code></pre>
+
+            <h2>AWS API Gateway</h2>
+
+            <h3>What It Is</h3>
+            <p>Fully managed API service. Create, publish, and manage REST and WebSocket APIs.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>RESTful APIs for web/mobile apps</li>
+                <li>WebSocket APIs for real-time communication</li>
+                <li>API versioning and staging</li>
+                <li>Request/response transformation</li>
+                <li>API throttling and caching</li>
+            </ul>
+
+            <h3>API Gateway Pricing</h3>
+            <pre><code># REST API
+- $3.50 per million requests
+- Data transfer: $0.09/GB
+
+# HTTP API (cheaper alternative)
+- $1.00 per million requests
+- 70% cheaper than REST API
+
+# WebSocket API
+- $1.00 per million messages
+- $0.25 per million connection minutes</code></pre>
+
+            <h3>API Gateway + Lambda Example</h3>
+            <pre><code># Serverless REST API
+resource "aws_api_gateway_rest_api" "api" {
+  name = "my-api"
+}
+
+resource "aws_api_gateway_resource" "users" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "users"
+}
+
+resource "aws_api_gateway_method" "get_users" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.users.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.users.id
+  http_method = aws_api_gateway_method.get_users.http_method
+  
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
+}</code></pre>
+
+            <h2>AWS DynamoDB</h2>
+
+            <h3>What It Is</h3>
+            <p>Fully managed NoSQL database. Single-digit millisecond latency at any scale.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>High-traffic web applications</li>
+                <li>Gaming leaderboards</li>
+                <li>IoT data storage</li>
+                <li>Session management</li>
+                <li>Real-time analytics</li>
+            </ul>
+
+            <h3>DynamoDB Pricing Models</h3>
+
+            <h4>On-Demand Mode</h4>
+            <pre><code># Pay per request
+- Write: $1.25 per million requests
+- Read: $0.25 per million requests
+- Storage: $0.25/GB/month
+
+# Use when: Unpredictable traffic, new applications</code></pre>
+
+            <h4>Provisioned Mode</h4>
+            <pre><code># Pay for provisioned capacity
+- Write: $0.00065 per WCU-hour
+- Read: $0.00013 per RCU-hour
+- Storage: $0.25/GB/month
+
+# Use when: Predictable traffic, cost optimization</code></pre>
+
+            <h3>DynamoDB Cost Optimization</h3>
+            <ul>
+                <li>Use on-demand for unpredictable workloads</li>
+                <li>Use provisioned with auto-scaling for predictable workloads</li>
+                <li>Enable DynamoDB Streams only when needed</li>
+                <li>Use Global Secondary Indexes sparingly</li>
+                <li>Implement TTL to auto-delete old data</li>
+                <li>Use DynamoDB Accelerator (DAX) for caching</li>
+            </ul>
+
+            <h2>AWS S3 + CloudFront</h2>
+
+            <h3>Serverless Static Websites</h3>
+            <p>Host static websites on S3, deliver via CloudFront CDN.</p>
+
+            <h3>Pricing</h3>
+            <pre><code># S3
+- Storage: $0.023/GB/month
+- Requests: $0.0004/1000 GET requests
+
+# CloudFront
+- Data transfer: $0.085/GB (first 10TB)
+- Requests: $0.0075/10,000 HTTPS requests
+
+# Example: 100GB storage, 1M requests/month
+S3: $2.30 + $0.40 = $2.70
+CloudFront: $8.50 + $0.75 = $9.25
+Total: ~$12/month</code></pre>
+
+            <h2>AWS Step Functions</h2>
+
+            <h3>What It Is</h3>
+            <p>Orchestrate Lambda functions and AWS services into workflows.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>Multi-step workflows</li>
+                <li>Order processing</li>
+                <li>Data pipelines</li>
+                <li>ETL jobs</li>
+                <li>Microservices orchestration</li>
+            </ul>
+
+            <h3>Pricing</h3>
+            <pre><code># Standard workflows
+- $0.025 per 1,000 state transitions
+
+# Express workflows (high-volume)
+- $1.00 per 1M requests
+- $0.00001667 per GB-second</code></pre>
+
+            <h2>AWS EventBridge</h2>
+
+            <h3>What It Is</h3>
+            <p>Serverless event bus. Connect applications using events.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>Event-driven architectures</li>
+                <li>SaaS integration</li>
+                <li>Scheduled events</li>
+                <li>Cross-account event routing</li>
+            </ul>
+
+            <h3>Pricing</h3>
+            <pre><code># Custom events
+- $1.00 per million events
+
+# Schema registry
+- $0.10 per million ingested events</code></pre>
+
+            <h2>AWS Fargate</h2>
+
+            <h3>What It Is</h3>
+            <p>Serverless containers. Run containers without managing EC2 instances.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>Containerized microservices</li>
+                <li>Batch processing</li>
+                <li>Long-running applications</li>
+                <li>Applications requiring specific runtime environments</li>
+            </ul>
+
+            <h3>Pricing</h3>
+            <pre><code># Per vCPU and memory
+- vCPU: $0.04048 per vCPU-hour
+- Memory: $0.004445 per GB-hour
+
+# Example: 0.5 vCPU, 1GB memory, 24/7
+Monthly: (0.5 * $0.04048 + 1 * $0.004445) * 730 = $18.00</code></pre>
+
+            <h2>AWS AppSync</h2>
+
+            <h3>What It Is</h3>
+            <p>Managed GraphQL service. Real-time data synchronization.</p>
+
+            <h3>When to Use</h3>
+            <ul>
+                <li>GraphQL APIs</li>
+                <li>Real-time applications</li>
+                <li>Offline data sync</li>
+                <li>Mobile/web backends</li>
+            </ul>
+
+            <h3>Pricing</h3>
+            <pre><code># Query and data modification
+- $4.00 per million requests
+
+# Real-time updates
+- $2.00 per million minutes</code></pre>
+
+            <h2>Serverless Architecture Patterns</h2>
+
+            <h3>Pattern 1: REST API</h3>
+            <pre><code>API Gateway → Lambda → DynamoDB
+
+# Use case: CRUD operations, user management</code></pre>
+
+            <h3>Pattern 2: Event Processing</h3>
+            <pre><code>S3 → Lambda → DynamoDB
+SQS → Lambda → S3
+
+# Use case: File processing, data transformation</code></pre>
+
+            <h3>Pattern 3: Scheduled Tasks</h3>
+            <pre><code>EventBridge (cron) → Lambda → RDS
+
+# Use case: Backups, reports, cleanup jobs</code></pre>
+
+            <h3>Pattern 4: Stream Processing</h3>
+            <pre><code>Kinesis → Lambda → S3/DynamoDB
+
+# Use case: Real-time analytics, log processing</code></pre>
+
+            <h2>Serverless Cost Optimization</h2>
+
+            <h3>1. Optimize Lambda Memory</h3>
+            <pre><code># Use AWS Lambda Power Tuning
+# Find optimal memory configuration
+# Higher memory = faster execution = lower cost</code></pre>
+
+            <h3>2. Use HTTP APIs Instead of REST APIs</h3>
+            <p>70% cheaper for simple use cases.</p>
+
+            <h3>3. Implement Caching</h3>
+            <ul>
+                <li>API Gateway caching</li>
+                <li>DynamoDB DAX</li>
+                <li>CloudFront caching</li>
+            </ul>
+
+            <h3>4. Use Reserved Capacity</h3>
+            <p>DynamoDB and Lambda support reserved capacity for predictable workloads.</p>
+
+            <h3>5. Minimize Cold Starts</h3>
+            <ul>
+                <li>Use provisioned concurrency for critical functions</li>
+                <li>Keep functions warm with scheduled pings</li>
+                <li>Optimize package size</li>
+            </ul>
+
+            <h3>6. Right-Size Resources</h3>
+            <ul>
+                <li>Lambda memory allocation</li>
+                <li>DynamoDB capacity units</li>
+                <li>API Gateway throttling limits</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Serverless Cost Rule:</strong> Serverless is cheaper for variable workloads. For constant high-traffic applications, traditional servers may be more cost-effective.
+            </div>
+
+            <h2>When NOT to Use Serverless</h2>
+
+            <h3>Avoid Serverless For:</h3>
+            <ul>
+                <li>Long-running processes (Lambda 15-minute limit)</li>
+                <li>Constant high-traffic (may be cheaper with EC2)</li>
+                <li>Applications requiring specific OS/kernel</li>
+                <li>Stateful applications with complex state management</li>
+                <li>Workloads with strict latency requirements (cold starts)</li>
+            </ul>
+
+            <h2>Serverless vs Traditional Comparison</h2>
+
+            <h3>Cost Comparison Example</h3>
+            <pre><code># Scenario: API with 1M requests/month, 200ms avg execution
+
+Serverless (Lambda + API Gateway):
+- Lambda: $2.00 (requests) + $3.33 (duration) = $5.33
+- API Gateway: $3.50
+- Total: $8.83/month
+
+Traditional (EC2 t3.small 24/7):
+- Instance: $15.18/month
+- Load Balancer: $16.20/month
+- Total: $31.38/month
+
+Savings: 72% with serverless
+
+# But at 100M requests/month:
+Serverless: ~$550/month
+EC2 (scaled): ~$200/month
+
+# Serverless wins for low-medium traffic
+# Traditional wins for constant high traffic</code></pre>
+
+            <h2>Conclusion</h2>
+            <p>AWS serverless architecture eliminates infrastructure management and scales automatically. Lambda, API Gateway, DynamoDB, and other serverless services enable rapid development with pay-per-use pricing. Serverless is ideal for event-driven workloads, APIs with variable traffic, and applications requiring automatic scaling. Cost optimization comes from right-sizing resources, using appropriate pricing models, and implementing caching. For low to medium traffic applications, serverless typically reduces costs by 50-80% compared to traditional infrastructure. However, for constant high-traffic workloads, evaluate carefully—traditional servers may be more cost-effective.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

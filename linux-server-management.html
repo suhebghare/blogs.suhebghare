@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux for Server Management - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Linux: The Backbone of Modern Infrastructure</h1>
+                <div class="blog-meta">Published on April 5, 2024 | 10 min read</div>
+            </div>
+
+            <h2>Why Linux Dominates Server Infrastructure</h2>
+            <p>Over 96% of the world's top 1 million servers run Linux. It powers AWS, Google, Facebook, Netflix, and virtually every major internet service. But why?</p>
+
+            <h3>Open Source Freedom</h3>
+            <p>No licensing costs, full source code access, and the ability to modify anything. This transparency builds trust and enables customization.</p>
+
+            <h3>Stability and Reliability</h3>
+            <p>Linux servers routinely run for years without rebooting. The kernel is battle-tested and continuously improved by thousands of developers.</p>
+
+            <h3>Security</h3>
+            <p>Rapid security patches, granular permission systems, and a security-first design philosophy make Linux inherently more secure.</p>
+
+            <h3>Performance</h3>
+            <p>Minimal overhead, efficient resource usage, and optimized for server workloads. Linux squeezes maximum performance from hardware.</p>
+
+            <h2>Essential Linux Skills for DevOps</h2>
+
+            <h3>File System Navigation</h3>
+            <pre><code># Navigate directories
+cd /var/log
+pwd
+ls -lah
+
+# Find files
+find /etc -name "*.conf"
+locate nginx.conf
+
+# File operations
+cp source.txt destination.txt
+mv old.txt new.txt
+rm unwanted.txt</code></pre>
+
+            <h3>Process Management</h3>
+            <pre><code># View processes
+ps aux | grep nginx
+top
+htop
+
+# Manage processes
+kill -9 <pid>
+killall process_name
+systemctl status nginx
+systemctl restart nginx
+
+# Background jobs
+command &
+nohup long_running_command &
+jobs
+fg %1</code></pre>
+
+            <h3>System Monitoring</h3>
+            <pre><code># CPU and memory
+free -h
+vmstat 1
+mpstat -P ALL
+
+# Disk usage
+df -h
+du -sh /var/log/*
+iostat -x 1
+
+# Network
+netstat -tulpn
+ss -tulpn
+iftop
+tcpdump -i eth0</code></pre>
+
+            <h3>Log Analysis</h3>
+            <pre><code># View logs
+tail -f /var/log/syslog
+journalctl -u nginx -f
+less /var/log/application.log
+
+# Search logs
+grep "ERROR" /var/log/app.log
+grep -r "connection refused" /var/log/
+awk '{print $1}' access.log | sort | uniq -c
+
+# Log rotation
+logrotate -f /etc/logrotate.conf</code></pre>
+
+            <h2>Linux Distributions for Servers</h2>
+
+            <h3>Ubuntu Server</h3>
+            <p>Most popular for cloud deployments. Great documentation, large community, regular LTS releases.</p>
+
+            <h3>Red Hat Enterprise Linux (RHEL) / CentOS / Rocky Linux</h3>
+            <p>Enterprise-grade stability. Long support cycles. Preferred in corporate environments.</p>
+
+            <h3>Debian</h3>
+            <p>Rock-solid stability. Conservative package updates. Powers Ubuntu.</p>
+
+            <h3>Amazon Linux</h3>
+            <p>Optimized for AWS. Tight integration with AWS services. Free to use on EC2.</p>
+
+            <h2>Package Management</h2>
+
+            <h3>APT (Debian/Ubuntu)</h3>
+            <pre><code># Update package lists
+apt update
+
+# Upgrade packages
+apt upgrade
+
+# Install packages
+apt install nginx
+
+# Remove packages
+apt remove nginx
+apt purge nginx
+
+# Search packages
+apt search web server</code></pre>
+
+            <h3>YUM/DNF (RHEL/CentOS)</h3>
+            <pre><code># Install packages
+yum install nginx
+dnf install nginx
+
+# Update packages
+yum update
+
+# Remove packages
+yum remove nginx
+
+# Search packages
+yum search nginx</code></pre>
+
+            <h2>User and Permission Management</h2>
+
+            <h3>User Management</h3>
+            <pre><code># Create user
+useradd -m -s /bin/bash username
+passwd username
+
+# Modify user
+usermod -aG sudo username
+
+# Delete user
+userdel -r username
+
+# Switch user
+su - username
+sudo -u username command</code></pre>
+
+            <h3>File Permissions</h3>
+            <pre><code># Change permissions
+chmod 755 script.sh
+chmod u+x script.sh
+
+# Change ownership
+chown user:group file.txt
+chown -R www-data:www-data /var/www
+
+# View permissions
+ls -l file.txt</code></pre>
+
+            <h2>Networking Essentials</h2>
+
+            <h3>Network Configuration</h3>
+            <pre><code># View network interfaces
+ip addr show
+ifconfig
+
+# Configure static IP (netplan on Ubuntu)
+cat /etc/netplan/01-netcfg.yaml
+
+# Test connectivity
+ping google.com
+traceroute google.com
+mtr google.com
+
+# DNS lookup
+nslookup example.com
+dig example.com</code></pre>
+
+            <h3>Firewall Management</h3>
+            <pre><code># UFW (Ubuntu)
+ufw enable
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw status
+
+# iptables
+iptables -L
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+# firewalld (RHEL/CentOS)
+firewall-cmd --add-service=http --permanent
+firewall-cmd --reload</code></pre>
+
+            <h2>Systemd Service Management</h2>
+            <pre><code># Service operations
+systemctl start nginx
+systemctl stop nginx
+systemctl restart nginx
+systemctl reload nginx
+systemctl status nginx
+
+# Enable/disable on boot
+systemctl enable nginx
+systemctl disable nginx
+
+# View logs
+journalctl -u nginx
+journalctl -u nginx --since today
+
+# Create custom service
+cat /etc/systemd/system/myapp.service</code></pre>
+
+            <h2>Shell Scripting for Automation</h2>
+            <pre><code>#!/bin/bash
+
+# Backup script example
+BACKUP_DIR="/backup"
+DATE=$(date +%Y%m%d)
+
+# Create backup
+tar -czf $BACKUP_DIR/backup-$DATE.tar.gz /var/www/html
+
+# Delete old backups (older than 7 days)
+find $BACKUP_DIR -name "backup-*.tar.gz" -mtime +7 -delete
+
+# Send notification
+if [ $? -eq 0 ]; then
+    echo "Backup completed successfully" | mail -s "Backup Status" admin@example.com
+else
+    echo "Backup failed" | mail -s "Backup FAILED" admin@example.com
+fi</code></pre>
+
+            <h2>Performance Tuning</h2>
+
+            <h3>Kernel Parameters</h3>
+            <pre><code># View parameters
+sysctl -a
+
+# Modify parameters
+sysctl -w net.ipv4.tcp_fin_timeout=30
+
+# Persistent changes
+echo "net.ipv4.tcp_fin_timeout=30" >> /etc/sysctl.conf
+sysctl -p</code></pre>
+
+            <h3>Resource Limits</h3>
+            <pre><code># View limits
+ulimit -a
+
+# Set limits
+ulimit -n 65536
+
+# Persistent limits
+cat /etc/security/limits.conf</code></pre>
+
+            <div class="highlight">
+                <strong>Pro Tip:</strong> Master the command line. GUI tools are convenient, but CLI skills are essential for automation, troubleshooting, and managing remote servers.
+            </div>
+
+            <h2>Why Linux Won the Server War</h2>
+
+            <h3>Cloud Native</h3>
+            <p>Every major cloud platform is built on Linux. Containers, Kubernetes, and modern infrastructure tools are Linux-first.</p>
+
+            <h3>Developer Friendly</h3>
+            <p>Package managers, scripting languages, and development tools are first-class citizens on Linux.</p>
+
+            <h3>Cost Effective</h3>
+            <p>No licensing fees means more budget for hardware and services. Scale without per-server costs.</p>
+
+            <h3>Community Support</h3>
+            <p>Millions of users, extensive documentation, and active forums mean help is always available.</p>
+
+            <h2>Conclusion</h2>
+            <p>Linux revolutionized server-side computing by providing a stable, secure, and cost-effective platform. Its dominance in cloud infrastructure, containers, and DevOps tooling is no accident—it's the result of decades of refinement and community collaboration. Whether you're managing a single VPS or thousands of cloud instances, Linux skills are fundamental to modern infrastructure management. Invest time in learning Linux deeply; it's knowledge that will serve you throughout your career.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+        <p>Hosted on AWS S3 + CloudFront</p>
+    </footer>
+</body>
+</html>

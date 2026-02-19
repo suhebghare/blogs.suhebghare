@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Cost Optimization - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Cloud Cost Optimization: Doing More with Less</h1>
+                <div class="blog-meta">Published on July 22, 2024 | 11 min read</div>
+            </div>
+
+            <h2>The Cloud Cost Challenge</h2>
+            <p>Cloud spending is growing 20-30% annually for most organizations. Without proper governance, costs spiral out of control. Most companies can reduce cloud costs by 30-50% without impacting performance.</p>
+
+            <h2>Understanding Your Cloud Bill</h2>
+            <p>Major cost drivers: Compute (40-50%), Storage (15-25%), Data Transfer (10-15%), Databases (10-20%).</p>
+
+            <h2>Compute Optimization</h2>
+
+            <h3>Right-Sizing Instances</h3>
+            <p>Monitor actual usage and downsize instances with less than 30% average utilization.</p>
+
+            <h3>Reserved Instances & Savings Plans</h3>
+            <p>Commit to 1 or 3 years for 40-70% savings on predictable workloads.</p>
+
+            <h3>Spot Instances</h3>
+            <p>Save up to 90% for fault-tolerant workloads like batch processing, CI/CD, and testing.</p>
+
+            <h3>Auto-Scaling</h3>
+            <p>Scale based on demand, not peak capacity. Automatically adjust resources.</p>
+
+            <h2>Storage Optimization</h2>
+
+            <h3>S3 Lifecycle Policies</h3>
+            <p>Automatically transition data to cheaper storage tiers based on age.</p>
+
+            <h3>Delete Unused Resources</h3>
+            <ul>
+                <li>Unattached EBS volumes</li>
+                <li>Old snapshots</li>
+                <li>Unused Elastic IPs</li>
+                <li>Idle load balancers</li>
+            </ul>
+
+            <h2>Network Cost Optimization</h2>
+            <ul>
+                <li>Keep resources in same region/AZ</li>
+                <li>Use VPC endpoints for AWS services</li>
+                <li>Use CloudFront CDN to reduce origin requests</li>
+                <li>Compress data before transfer</li>
+            </ul>
+
+            <h2>Monitoring and Alerting</h2>
+            <p>Set up cost anomaly detection and budget alerts. Review costs weekly and analyze trends monthly.</p>
+
+            <div class="highlight">
+                <strong>Pro Tip:</strong> Make cost optimization a team responsibility. Include cost metrics in dashboards and celebrate cost savings.
+            </div>
+
+            <h2>Cost Optimization Best Practices</h2>
+            <ul>
+                <li>Implement tagging strategy for all resources</li>
+                <li>Regular cost reviews (weekly/monthly/quarterly)</li>
+                <li>Delete unused resources</li>
+                <li>Optimize data transfer</li>
+                <li>Use native AWS cost tools</li>
+            </ul>
+
+            <h2>Conclusion</h2>
+            <p>Cloud cost optimization is an ongoing practice. Start with visibility, then optimize systematically: right-size instances, leverage committed use discounts, automate scaling, and eliminate waste. With proper governance and automation, you can reduce costs while improving performance and reliability.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>
