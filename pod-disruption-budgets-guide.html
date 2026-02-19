@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PodDisruptionBudgets Misconfiguration - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>PodDisruptionBudgets: Why Most Teams Misconfigure Them</h1>
+                <div class="blog-meta">Published on October 12, 2024 | 12 min read</div>
+            </div>
+
+            <h2>The Silent Killer of Kubernetes Availability</h2>
+            <p>PodDisruptionBudgets (PDBs) are one of the most misunderstood Kubernetes features. Here's why 80% of teams get them wrong and how to fix it.</p>
+
+            <div class="info-box danger">
+                <strong>The Problem:</strong> Without proper PDBs, node drains can take down your entire application. With wrong PDBs, your cluster updates get stuck for hours.
+            </div>
+
+            <h2>What is a PodDisruptionBudget?</h2>
+
+            <p>A PDB limits the number of pods that can be down simultaneously during voluntary disruptions (node drains, updates, scaling down).</p>
+
+            <div class="diagram">
+                <h4>How PDB Works</h4>
+                <div class="flow-step">Node Drain Initiated</div>
+                <div class="flow-step">Check PDB</div>
+                <div class="flow-step">Evict Allowed Pods</div>
+                <div class="flow-step">Wait for Pods Ready</div>
+                <div class="flow-step">Continue</div>
+            </div>
+
+            <h2>Common Misconfiguration #1: No PDB at All</h2>
+
+            <div class="info-box warning">
+                <strong>The Incident:</strong> Node drain evicted all 5 API pods simultaneously. 3-minute complete outage.
+            </div>
+
+            <h3>Without PDB</h3>
+
+            <pre><code># Deployment without PDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: api
+        image: api:latest
+
+# During node drain: ALL 5 pods evicted at once!
+# Result: Complete service outage</code></pre>
+
+            <h3>With Proper PDB</h3>
+
+            <pre><code>apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: api
+
+# During node drain: Only 2 pods evicted at a time
+# 3 pods always running = No outage</code></pre>
+
+            <h2>Common Misconfiguration #2: minAvailable vs maxUnavailable</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Configuration</th>
+                        <th>Meaning</th>
+                        <th>Use Case</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>minAvailable: 3</td>
+                        <td>Always keep 3 pods running</td>
+                        <td>Fixed capacity requirement</td>
+                        <td><span class="cost-badge low">Low</span></td>
+                    </tr>
+                    <tr>
+                        <td>minAvailable: 80%</td>
+                        <td>Keep 80% of replicas running</td>
+                        <td>Scales with replica count</td>
+                        <td><span class="cost-badge low">Low</span></td>
+                    </tr>
+                    <tr>
+                        <td>maxUnavailable: 1</td>
+                        <td>Max 1 pod can be down</td>
+                        <td>Conservative updates</td>
+                        <td><span class="cost-badge medium">Medium</span></td>
+                    </tr>
+                    <tr>
+                        <td>maxUnavailable: 50%</td>
+                        <td>Max 50% pods can be down</td>
+                        <td>Fast updates</td>
+                        <td><span class="cost-badge high">High</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>The Trap: Using Both</h3>
+
+            <pre><code># WRONG: Cannot use both minAvailable and maxUnavailable
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb-wrong
+spec:
+  minAvailable: 3
+  maxUnavailable: 1  # ERROR: Only one allowed
+  selector:
+    matchLabels:
+      app: api</code></pre>
+
+            <h2>Common Misconfiguration #3: Wrong Selector</h2>
+
+            <div class="info-box danger">
+                <strong>The Bug:</strong> PDB selector didn't match any pods. PDB was silently ignored.
+            </div>
+
+            <h3>Mismatched Selector</h3>
+
+            <pre><code># Deployment labels
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  selector:
+    matchLabels:
+      app: api-service  # Label: api-service
+  template:
+    metadata:
+      labels:
+        app: api-service
+---
+# PDB with wrong selector
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: api  # Looking for: api (WRONG!)
+
+# Result: PDB doesn't protect any pods!</code></pre>
+
+            <h3>How to Verify</h3>
+
+            <pre><code># Check if PDB is protecting pods
+kubectl get pdb api-pdb -o yaml
+
+# Look for status.currentHealthy
+status:
+  currentHealthy: 5  # Should match your replica count
+  desiredHealthy: 3
+  disruptionsAllowed: 2
+  expectedPods: 5
+
+# If currentHealthy is 0, your selector is wrong!</code></pre>
+
+            <h2>Common Misconfiguration #4: Too Restrictive PDB</h2>
+
+            <div class="info-box warning">
+                <strong>The Problem:</strong> Node drain stuck for 2 hours because PDB was too restrictive
+            </div>
+
+            <h3>The Stuck Drain Scenario</h3>
+
+            <pre><code># 3 replicas with minAvailable: 3
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 3  # Requires ALL 3 pods running
+  selector:
+    matchLabels:
+      app: api
+
+# Problem: If 2 pods are on node being drained,
+# drain will wait forever because it can't evict
+# both pods while keeping 3 running!</code></pre>
+
+            <h3>The Fix</h3>
+
+            <pre><code># Allow at least 1 pod to be down
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 2  # Or maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: api
+
+# Now drain can proceed by evicting 1 pod at a time</code></pre>
+
+            <h2>Common Misconfiguration #5: Percentage Pitfalls</h2>
+
+            <h3>The Rounding Problem</h3>
+
+            <div class="grid-2">
+                <div class="info-box warning">
+                    <h4>Scenario 1: 5 Replicas</h4>
+                    <pre><code>minAvailable: 80%
+# 80% of 5 = 4
+# Allows 1 pod down ✓</code></pre>
+                </div>
+                <div class="info-box danger">
+                    <h4>Scenario 2: 3 Replicas</h4>
+                    <pre><code>minAvailable: 80%
+# 80% of 3 = 2.4 → rounds up to 3
+# Allows 0 pods down ✗
+# Drain gets stuck!</code></pre>
+                </div>
+            </div>
+
+            <h3>Safe Percentage Rules</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Replicas</th>
+                        <th>minAvailable: 80%</th>
+                        <th>Pods Down Allowed</th>
+                        <th>Safe?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2</td>
+                        <td>2 (100%)</td>
+                        <td>0</td>
+                        <td><span class="cost-badge high">No</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>3 (100%)</td>
+                        <td>0</td>
+                        <td><span class="cost-badge high">No</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>4 (80%)</td>
+                        <td>1</td>
+                        <td><span class="cost-badge low">Yes</span></td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>8 (80%)</td>
+                        <td>2</td>
+                        <td><span class="cost-badge low">Yes</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box success">
+                <strong>Rule of Thumb:</strong> Use absolute numbers (minAvailable: 3) for small deployments. Use percentages for large deployments (50+ replicas).
+            </div>
+
+            <h2>Common Misconfiguration #6: Forgetting StatefulSets</h2>
+
+            <h3>StatefulSet PDB Requirements</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  replicas: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+spec:
+  minAvailable: 2  # Keep quorum
+  selector:
+    matchLabels:
+      app: postgres
+
+# Critical: StatefulSets need PDBs even more than Deployments
+# because they have stable identities and persistent storage</code></pre>
+
+            <h2>Production-Ready PDB Patterns</h2>
+
+            <h3>Pattern 1: High-Availability API</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 10
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  minAvailable: 8  # 80% capacity maintained
+  selector:
+    matchLabels:
+      app: api
+      tier: frontend</code></pre>
+
+            <h3>Pattern 2: Database Cluster</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  replicas: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+spec:
+  minAvailable: 2  # Maintain quorum
+  selector:
+    matchLabels:
+      app: postgres</code></pre>
+
+            <h3>Pattern 3: Background Workers</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 20
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker-pdb
+spec:
+  maxUnavailable: 50%  # Can tolerate more disruption
+  selector:
+    matchLabels:
+      app: worker</code></pre>
+
+            <h3>Pattern 4: Single Replica (Special Case)</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-panel
+spec:
+  replicas: 1
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admin-panel-pdb
+spec:
+  minAvailable: 0  # Allow disruption
+  selector:
+    matchLabels:
+      app: admin-panel
+
+# For single replica, PDB with minAvailable: 1 blocks all drains!
+# Use minAvailable: 0 or don't create PDB</code></pre>
+
+            <h2>Testing Your PDBs</h2>
+
+            <h3>Drain Simulation</h3>
+
+            <pre><code># 1. Check current PDB status
+kubectl get pdb
+
+# 2. Cordon a node
+kubectl cordon node-1
+
+# 3. Drain the node (dry-run first)
+kubectl drain node-1 --dry-run=client --ignore-daemonsets
+
+# 4. Actual drain
+kubectl drain node-1 --ignore-daemonsets --delete-emptydir-data
+
+# 5. Monitor pod evictions
+kubectl get pods -w
+
+# 6. Check if PDB is blocking
+kubectl get pdb -w
+
+# If drain is stuck, check:
+kubectl describe pdb <pdb-name></code></pre>
+
+            <h3>Automated PDB Validation</h3>
+
+            <pre><code>#!/bin/bash
+# validate-pdbs.sh
+
+echo "Checking PDB configurations..."
+
+# Find deployments without PDBs
+for deploy in $(kubectl get deploy -o name); do
+  name=$(echo $deploy | cut -d'/' -f2)
+  replicas=$(kubectl get $deploy -o jsonpath='{.spec.replicas}')
+  
+  if [ "$replicas" -gt 1 ]; then
+    pdb=$(kubectl get pdb -l app=$name -o name 2>/dev/null)
+    if [ -z "$pdb" ]; then
+      echo "WARNING: $deploy has $replicas replicas but no PDB"
+    fi
+  fi
+done
+
+# Check PDB health
+kubectl get pdb -o json | jq -r '.items[] | 
+  select(.status.currentHealthy == 0) | 
+  "ERROR: PDB \(.metadata.name) protects 0 pods (wrong selector?)"'</code></pre>
+
+            <h2>PDB Decision Matrix</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Workload Type</th>
+                        <th>Replicas</th>
+                        <th>Recommended PDB</th>
+                        <th>Reasoning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Critical API</td>
+                        <td>5-10</td>
+                        <td>minAvailable: 80%</td>
+                        <td>Maintain high availability</td>
+                    </tr>
+                    <tr>
+                        <td>Database</td>
+                        <td>3</td>
+                        <td>minAvailable: 2</td>
+                        <td>Maintain quorum</td>
+                    </tr>
+                    <tr>
+                        <td>Worker</td>
+                        <td>20+</td>
+                        <td>maxUnavailable: 50%</td>
+                        <td>Fast drains, tolerate disruption</td>
+                    </tr>
+                    <tr>
+                        <td>Batch Job</td>
+                        <td>100+</td>
+                        <td>maxUnavailable: 80%</td>
+                        <td>Very fast drains</td>
+                    </tr>
+                    <tr>
+                        <td>Single Instance</td>
+                        <td>1</td>
+                        <td>No PDB or minAvailable: 0</td>
+                        <td>Can't maintain availability anyway</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Monitoring PDBs</h2>
+
+            <h3>Prometheus Alerts</h3>
+
+            <pre><code>groups:
+- name: pdb_alerts
+  rules:
+  - alert: PDBViolation
+    expr: kube_poddisruptionbudget_status_current_healthy < kube_poddisruptionbudget_status_desired_healthy
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PDB {{ $labels.poddisruptionbudget }} violated"
+  
+  - alert: PDBBlockingDrain
+    expr: kube_poddisruptionbudget_status_disruptions_allowed == 0
+    for: 30m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PDB {{ $labels.poddisruptionbudget }} blocking drains"
+  
+  - alert: PDBNotProtectingPods
+    expr: kube_poddisruptionbudget_status_current_healthy == 0
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "PDB {{ $labels.poddisruptionbudget }} not protecting any pods"</code></pre>
+
+            <h2>Key Takeaways</h2>
+
+            <div class="info-box success">
+                <ul class="icon-list">
+                    <li>Always create PDBs for multi-replica workloads</li>
+                    <li>Use minAvailable for critical services</li>
+                    <li>Use maxUnavailable for fault-tolerant workloads</li>
+                    <li>Verify selector matches pod labels</li>
+                    <li>Avoid percentages for small replica counts</li>
+                    <li>Test PDBs with actual node drains</li>
+                    <li>Monitor PDB health with Prometheus</li>
+                    <li>Single replica apps: no PDB or minAvailable: 0</li>
+                </ul>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>PodDisruptionBudgets are critical for production Kubernetes but easy to misconfigure. The most common mistakes: no PDB at all, wrong selector, too restrictive settings, and percentage rounding issues. Follow the patterns in this guide, test your PDBs with actual drains, and monitor their health. A properly configured PDB is the difference between zero-downtime updates and complete outages.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

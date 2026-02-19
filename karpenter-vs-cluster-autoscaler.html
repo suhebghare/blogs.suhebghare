@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karpenter vs Cluster Autoscaler - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>Karpenter vs Cluster Autoscaler – Real Production Comparison</h1>
+                <div class="blog-meta">Published on October 5, 2024 | 14 min read</div>
+            </div>
+
+            <h2>The Scaling Challenge</h2>
+            <p>We ran Cluster Autoscaler for 2 years before migrating to Karpenter. Here's what we learned from running both in production with real traffic patterns.</p>
+
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>Cluster Size</h4>
+                    <div class="metric-value">200+</div>
+                    <p>Nodes at peak</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Daily Scaling Events</h4>
+                    <div class="metric-value">50-100</div>
+                    <p>Scale up/down cycles</p>
+                </div>
+            </div>
+
+            <h2>How They Work</h2>
+
+            <div class="diagram">
+                <h4>Cluster Autoscaler Flow</h4>
+                <div class="flow-step">Pending Pods</div>
+                <div class="flow-step">Check Node Groups</div>
+                <div class="flow-step">Scale ASG</div>
+                <div class="flow-step">Wait for Node</div>
+                <div class="flow-step">Schedule Pods</div>
+            </div>
+
+            <div class="diagram">
+                <h4>Karpenter Flow</h4>
+                <div class="flow-step">Pending Pods</div>
+                <div class="flow-step">Calculate Requirements</div>
+                <div class="flow-step">Launch Optimal Instance</div>
+                <div class="flow-step">Schedule Pods</div>
+            </div>
+
+            <h2>Head-to-Head Comparison</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Cluster Autoscaler</th>
+                        <th>Karpenter</th>
+                        <th>Winner</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Scale-up Speed</td>
+                        <td>2-3 minutes</td>
+                        <td>30-60 seconds</td>
+                        <td><span class="cost-badge low">Karpenter</span></td>
+                    </tr>
+                    <tr>
+                        <td>Instance Selection</td>
+                        <td>Pre-defined node groups</td>
+                        <td>Dynamic, optimal selection</td>
+                        <td><span class="cost-badge low">Karpenter</span></td>
+                    </tr>
+                    <tr>
+                        <td>Bin Packing</td>
+                        <td>Basic</td>
+                        <td>Advanced</td>
+                        <td><span class="cost-badge low">Karpenter</span></td>
+                    </tr>
+                    <tr>
+                        <td>Spot Integration</td>
+                        <td>Manual configuration</td>
+                        <td>Automatic diversification</td>
+                        <td><span class="cost-badge low">Karpenter</span></td>
+                    </tr>
+                    <tr>
+                        <td>Maturity</td>
+                        <td>Battle-tested (5+ years)</td>
+                        <td>Newer (2 years)</td>
+                        <td><span class="cost-badge medium">CA</span></td>
+                    </tr>
+                    <tr>
+                        <td>Setup Complexity</td>
+                        <td>Simple</td>
+                        <td>Moderate</td>
+                        <td><span class="cost-badge medium">CA</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Production Metrics: Before & After</h2>
+
+            <div class="grid-2">
+                <div class="info-box warning">
+                    <h4>Cluster Autoscaler (Before)</h4>
+                    <ul>
+                        <li>Avg scale-up time: <strong>2m 45s</strong></li>
+                        <li>Wasted capacity: <strong>15-20%</strong></li>
+                        <li>Monthly cost: <strong>$8,500</strong></li>
+                        <li>Pending pod time: <strong>3-4 minutes</strong></li>
+                    </ul>
+                </div>
+                <div class="info-box success">
+                    <h4>Karpenter (After)</h4>
+                    <ul>
+                        <li>Avg scale-up time: <strong>45s</strong></li>
+                        <li>Wasted capacity: <strong>5-8%</strong></li>
+                        <li>Monthly cost: <strong>$6,800</strong></li>
+                        <li>Pending pod time: <strong>1 minute</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h4>Cost Savings with Karpenter</h4>
+                <div class="metric-value">20%</div>
+                <p>$1,700/month reduction in compute costs</p>
+            </div>
+
+            <h2>Cluster Autoscaler Configuration</h2>
+
+            <pre><code># Cluster Autoscaler deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  template:
+    spec:
+      containers:
+      - name: cluster-autoscaler
+        image: k8s.gcr.io/autoscaling/cluster-autoscaler:v1.27.0
+        command:
+        - ./cluster-autoscaler
+        - --cloud-provider=aws
+        - --namespace=kube-system
+        - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled
+        - --balance-similar-node-groups
+        - --skip-nodes-with-system-pods=false
+        - --scale-down-delay-after-add=10m
+        - --scale-down-unneeded-time=10m
+        - --scale-down-utilization-threshold=0.5</code></pre>
+
+            <h3>Cluster Autoscaler Limitations We Hit</h3>
+
+            <div class="info-box danger">
+                <ul class="icon-list cross">
+                    <li>Slow to react to traffic spikes (2-3 min delay)</li>
+                    <li>Poor bin packing led to 15% wasted capacity</li>
+                    <li>Required pre-defining all node group combinations</li>
+                    <li>Struggled with mixed workload requirements</li>
+                    <li>Spot instance management was manual</li>
+                </ul>
+            </div>
+
+            <h2>Karpenter Configuration</h2>
+
+            <pre><code># Karpenter Provisioner
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: default
+spec:
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["spot", "on-demand"]
+    - key: kubernetes.io/arch
+      operator: In
+      values: ["amd64"]
+    - key: karpenter.k8s.aws/instance-category
+      operator: In
+      values: ["c", "m", "r"]
+    - key: karpenter.k8s.aws/instance-generation
+      operator: Gt
+      values: ["4"]
+  
+  limits:
+    resources:
+      cpu: 1000
+      memory: 1000Gi
+  
+  providerRef:
+    name: default
+  
+  ttlSecondsAfterEmpty: 30
+  ttlSecondsUntilExpired: 604800
+  
+  consolidation:
+    enabled: true
+---
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: default
+spec:
+  subnetSelector:
+    karpenter.sh/discovery: prod-cluster
+  securityGroupSelector:
+    karpenter.sh/discovery: prod-cluster
+  instanceProfile: KarpenterNodeInstanceProfile
+  
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  
+  userData: |
+    #!/bin/bash
+    /etc/eks/bootstrap.sh prod-cluster</code></pre>
+
+            <h3>Karpenter Advantages We Experienced</h3>
+
+            <div class="info-box success">
+                <ul class="icon-list">
+                    <li>3x faster scale-up (45s vs 2m 45s)</li>
+                    <li>Automatic instance type selection</li>
+                    <li>Better bin packing (5% waste vs 15%)</li>
+                    <li>Intelligent Spot diversification</li>
+                    <li>Consolidation reduces costs automatically</li>
+                    <li>No need to pre-define node groups</li>
+                </ul>
+            </div>
+
+            <h2>Real Production Scenarios</h2>
+
+            <h3>Scenario 1: Traffic Spike (Black Friday)</h3>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>Cluster Autoscaler:</strong> 3 minutes to add capacity, some requests queued
+                </div>
+                <div class="timeline-item">
+                    <strong>Karpenter:</strong> 45 seconds to add capacity, minimal queueing
+                </div>
+            </div>
+
+            <h3>Scenario 2: Mixed Workload Requirements</h3>
+
+            <pre><code># Pod with specific requirements
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ml-training
+spec:
+  containers:
+  - name: trainer
+    image: ml-trainer:latest
+    resources:
+      requests:
+        memory: "32Gi"
+        cpu: "8"
+        nvidia.com/gpu: "1"
+  nodeSelector:
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: g4dn.2xlarge</code></pre>
+
+            <div class="info-box">
+                <strong>Result:</strong> Karpenter automatically launched g4dn.2xlarge instance. Cluster Autoscaler would need pre-configured node group.
+            </div>
+
+            <h3>Scenario 3: Cost Optimization with Spot</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Cluster Autoscaler</th>
+                        <th>Karpenter</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Spot Instance Types</td>
+                        <td>3 (manually configured)</td>
+                        <td>15+ (automatic)</td>
+                    </tr>
+                    <tr>
+                        <td>Spot Interruptions/Month</td>
+                        <td>12</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>Spot Savings</td>
+                        <td>65%</td>
+                        <td>72%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Migration Strategy</h2>
+
+            <div class="diagram">
+                <h4>Our Migration Approach</h4>
+                <div class="flow-step">Install Karpenter</div>
+                <div class="flow-step">Run Both (2 weeks)</div>
+                <div class="flow-step">Gradual Traffic Shift</div>
+                <div class="flow-step">Remove CA</div>
+            </div>
+
+            <h3>Migration Steps</h3>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>Week 1:</strong> Install Karpenter, create provisioner for 20% of workload
+                </div>
+                <div class="timeline-item">
+                    <strong>Week 2:</strong> Monitor metrics, increase to 50% of workload
+                </div>
+                <div class="timeline-item">
+                    <strong>Week 3:</strong> Migrate 80% of workload, keep CA for critical apps
+                </div>
+                <div class="timeline-item">
+                    <strong>Week 4:</strong> Full migration, remove Cluster Autoscaler
+                </div>
+            </div>
+
+            <h2>Gotchas & Lessons Learned</h2>
+
+            <div class="info-box warning">
+                <h4>Karpenter Challenges</h4>
+                <ul class="icon-list cross">
+                    <li>Initial learning curve steeper than CA</li>
+                    <li>Requires proper IAM permissions setup</li>
+                    <li>Consolidation can be aggressive (tune carefully)</li>
+                    <li>Need to handle Spot interruptions gracefully</li>
+                    <li>Monitoring requires custom dashboards</li>
+                </ul>
+            </div>
+
+            <h3>Karpenter Best Practices</h3>
+
+            <pre><code># Use multiple provisioners for different workload types
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: spot-general
+spec:
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["spot"]
+  ttlSecondsAfterEmpty: 30
+  labels:
+    workload-type: general
+---
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: ondemand-critical
+spec:
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["on-demand"]
+  ttlSecondsAfterEmpty: 300
+  labels:
+    workload-type: critical</code></pre>
+
+            <h2>When to Use Each</h2>
+
+            <div class="grid-2">
+                <div class="info-box">
+                    <h4>Use Cluster Autoscaler If:</h4>
+                    <ul class="icon-list">
+                        <li>Simple, predictable workloads</li>
+                        <li>Small clusters (< 50 nodes)</li>
+                        <li>Risk-averse environment</li>
+                        <li>Limited DevOps resources</li>
+                    </ul>
+                </div>
+                <div class="info-box success">
+                    <h4>Use Karpenter If:</h4>
+                    <ul class="icon-list">
+                        <li>Dynamic, varied workloads</li>
+                        <li>Large clusters (> 50 nodes)</li>
+                        <li>Cost optimization priority</li>
+                        <li>Fast scaling requirements</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>After 6 months with Karpenter, we're seeing 20% cost savings, 3x faster scaling, and better resource utilization. The migration was smooth, and the operational benefits outweigh the initial learning curve. For large, dynamic workloads, Karpenter is the clear winner. However, Cluster Autoscaler remains a solid choice for simpler use cases.</p>
+
+            <div class="metric-card">
+                <h4>Our Recommendation</h4>
+                <div class="metric-value">Karpenter</div>
+                <p>For production workloads at scale</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

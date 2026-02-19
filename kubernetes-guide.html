@@ -13,6 +13,7 @@
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
             </div>
         </nav>
     </header>
@@ -27,18 +28,38 @@
             </div>
 
             <h2>Why Kubernetes Matters Today</h2>
-            <p>Kubernetes (K8s) has become the de facto standard for container orchestration. It's not just a trend—it's a fundamental shift in how we deploy and manage applications. Over 5.6 million developers use Kubernetes globally, and 96% of organizations are either using or evaluating it.</p>
+            <p>Kubernetes (K8s) has become the de facto standard for container orchestration. It's not just a trend—it's a fundamental shift in how we deploy and manage applications.</p>
+            
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>Global Developers</h4>
+                    <div class="metric-value">5.6M+</div>
+                    <p>Using Kubernetes worldwide</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Enterprise Adoption</h4>
+                    <div class="metric-value">96%</div>
+                    <p>Organizations using or evaluating K8s</p>
+                </div>
+            </div>
 
             <h2>The Problems Kubernetes Solved</h2>
 
+            <div class="info-box warning">
+                <strong>Before Kubernetes:</strong> Managing containers across multiple hosts was manual, error-prone, and didn't scale.
+            </div>
+
             <h3>1. Container Orchestration at Scale</h3>
-            <p>Before Kubernetes, managing containers across multiple hosts was complex:</p>
-            <ul>
+            <ul class="icon-list cross">
                 <li>Manual container placement and scheduling</li>
                 <li>No automatic recovery from failures</li>
                 <li>Difficult service discovery and load balancing</li>
                 <li>Complex networking between containers</li>
             </ul>
+
+            <div class="info-box success">
+                <strong>With Kubernetes:</strong> Automated orchestration, self-healing, and seamless scaling across any infrastructure.
+            </div>
 
             <h3>2. Infrastructure Abstraction</h3>
             <p>Kubernetes provides a consistent API across different cloud providers and on-premises infrastructure. Write once, deploy anywhere—whether it's AWS, GCP, Azure, or your own data center.</p>
@@ -74,14 +95,27 @@ spec:
 
             <h3>4. Self-Healing Systems</h3>
             <p>Kubernetes automatically:</p>
-            <ul>
+            <ul class="icon-list">
                 <li>Restarts failed containers</li>
                 <li>Replaces and reschedules containers when nodes die</li>
                 <li>Kills containers that don't respond to health checks</li>
                 <li>Doesn't advertise containers to clients until they're ready</li>
             </ul>
 
+            <div class="diagram">
+                <h4>Kubernetes Architecture Flow</h4>
+                <div class="flow-step">Developer</div>
+                <div class="flow-step">kubectl</div>
+                <div class="flow-step">API Server</div>
+                <div class="flow-step">Scheduler</div>
+                <div class="flow-step">Pods</div>
+            </div>
+
             <h2>Core Kubernetes Concepts</h2>
+
+            <div style="text-align: center; margin: 2rem 0;">
+                <img src="images/k8s-cluster.svg" alt="Kubernetes Cluster Architecture" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            </div>
 
             <h3>Pods</h3>
             <p>The smallest deployable unit in Kubernetes. A pod can contain one or more containers that share storage and network resources.</p>
@@ -112,12 +146,38 @@ spec:
 
             <h3>Managed Kubernetes Services</h3>
             <p>Every major cloud provider offers managed Kubernetes:</p>
-            <ul>
-                <li><strong>AWS</strong>: EKS (Elastic Kubernetes Service)</li>
-                <li><strong>Google Cloud</strong>: GKE (Google Kubernetes Engine)</li>
-                <li><strong>Azure</strong>: AKS (Azure Kubernetes Service)</li>
-                <li><strong>DigitalOcean</strong>: DOKS</li>
-            </ul>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Service</th>
+                        <th>Key Feature</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AWS</td>
+                        <td>EKS</td>
+                        <td>Deep AWS integration</td>
+                    </tr>
+                    <tr>
+                        <td>Google Cloud</td>
+                        <td>GKE</td>
+                        <td>Best K8s experience (Google created K8s)</td>
+                    </tr>
+                    <tr>
+                        <td>Azure</td>
+                        <td>AKS</td>
+                        <td>Enterprise-ready with AD integration</td>
+                    </tr>
+                    <tr>
+                        <td>DigitalOcean</td>
+                        <td>DOKS</td>
+                        <td>Simple and affordable</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h2>Real-World Use Cases</h2>
 
@@ -132,6 +192,56 @@ spec:
 
             <h3>Edge Computing</h3>
             <p>Lightweight distributions like K3s bring Kubernetes to edge devices and IoT scenarios.</p>
+
+            <h2>Autoscaling in Kubernetes</h2>
+
+            <p>One of Kubernetes' most powerful features is automatic scaling. As traffic increases, Kubernetes can automatically add more resources to handle the load, and scale down when demand decreases.</p>
+
+            <h3>Why Pod Autoscaling Matters</h3>
+            <ul class="icon-list">
+                <li>Handle traffic spikes without manual intervention</li>
+                <li>Optimize resource utilization and reduce costs</li>
+                <li>Maintain application performance during peak loads</li>
+                <li>Scale down during off-peak hours to save money</li>
+                <li>Improve reliability with automatic capacity management</li>
+            </ul>
+
+            <h3>Types of Autoscaling</h3>
+
+            <div style="text-align: center; margin: 2rem 0;">
+                <img src="images/k8s-hpa-vs-vpa.gif" alt="HPA vs VPA Scaling Comparison" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            </div>
+
+            <h4>Horizontal Pod Autoscaler (HPA)</h4>
+            <p>Scales the number of pod replicas based on CPU, memory, or custom metrics. When load increases, HPA adds more pods. When load decreases, it removes pods.</p>
+            <pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70</code></pre>
+
+            <h4>Vertical Pod Autoscaler (VPA)</h4>
+            <p>Adjusts CPU and memory requests/limits for containers. Instead of adding more pods, VPA increases the resources allocated to existing pods.</p>
+
+            <h4>Cluster Autoscaler</h4>
+            <p>Automatically adjusts the number of nodes in the cluster when pods can't be scheduled due to insufficient resources.</p>
+
+            <div class="info-box success">
+                <strong>Best Practice:</strong> Use HPA for stateless applications that can scale horizontally. Use VPA for stateful applications or when you need to right-size resource requests.
+            </div>
 
             <h2>Best Practices</h2>
 
@@ -161,7 +271,7 @@ readinessProbe:
   periodSeconds: 5</code></pre>
 
             <h3>Security Hardening</h3>
-            <ul>
+            <ul class="icon-list">
                 <li>Use RBAC for access control</li>
                 <li>Enable Pod Security Standards</li>
                 <li>Run containers as non-root users</li>
@@ -169,8 +279,8 @@ readinessProbe:
                 <li>Regularly scan images for vulnerabilities</li>
             </ul>
 
-            <div class="highlight">
-                <strong>Important:</strong> Kubernetes is powerful but complex. Start small, learn the fundamentals, and gradually adopt advanced features as your needs grow.
+            <div class="info-box">
+                <strong>💡 Pro Tip:</strong> Kubernetes is powerful but complex. Start small, learn the fundamentals, and gradually adopt advanced features as your needs grow.
             </div>
 
             <h2>The Future of Kubernetes</h2>
@@ -189,7 +299,6 @@ readinessProbe:
 
     <footer>
         <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
-        <p>Hosted on AWS S3 + CloudFront</p>
     </footer>
 </body>
 </html>

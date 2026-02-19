@@ -46,26 +46,42 @@
 
             <h3>S3 Storage Classes</h3>
 
-            <h4>S3 Standard</h4>
-            <p>Frequently accessed data. $0.023/GB/month. Use for active data, websites, content distribution.</p>
-
-            <h4>S3 Intelligent-Tiering</h4>
-            <p>Automatically moves data between access tiers. $0.0025/1000 objects monitoring fee. Use when access patterns are unpredictable.</p>
-
-            <h4>S3 Standard-IA (Infrequent Access)</h4>
-            <p>Less frequently accessed data. $0.0125/GB/month + retrieval fee. Use for backups, disaster recovery data accessed monthly.</p>
-
-            <h4>S3 One Zone-IA</h4>
-            <p>Single AZ storage. $0.01/GB/month. Use for reproducible data, secondary backups.</p>
-
-            <h4>S3 Glacier Instant Retrieval</h4>
-            <p>Archive with millisecond retrieval. $0.004/GB/month. Use for archived data needing immediate access.</p>
-
-            <h4>S3 Glacier Flexible Retrieval</h4>
-            <p>Archive with 1-5 minute retrieval. $0.0036/GB/month. Use for long-term backups accessed quarterly.</p>
-
-            <h4>S3 Glacier Deep Archive</h4>
-            <p>Lowest cost archive. $0.00099/GB/month, 12-hour retrieval. Use for compliance archives, data retained for 7-10 years.</p>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Storage Class</th>
+                        <th>Cost/GB/Month</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>S3 Standard</td>
+                        <td><span class="cost-badge high">$0.023</span></td>
+                        <td>Frequently accessed data</td>
+                    </tr>
+                    <tr>
+                        <td>S3 Standard-IA</td>
+                        <td><span class="cost-badge medium">$0.0125</span></td>
+                        <td>Monthly backups</td>
+                    </tr>
+                    <tr>
+                        <td>S3 Glacier IR</td>
+                        <td><span class="cost-badge low">$0.004</span></td>
+                        <td>Archive with instant access</td>
+                    </tr>
+                    <tr>
+                        <td>S3 Glacier</td>
+                        <td><span class="cost-badge low">$0.0036</span></td>
+                        <td>Long-term backups</td>
+                    </tr>
+                    <tr>
+                        <td>S3 Deep Archive</td>
+                        <td><span class="cost-badge low">$0.00099</span></td>
+                        <td>Compliance archives (7-10 years)</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h3>S3 Cost Optimization</h3>
             <pre><code>{
@@ -97,20 +113,48 @@
 
             <h3>EBS Volume Types</h3>
 
-            <h4>gp3 (General Purpose SSD)</h4>
-            <p>$0.08/GB/month. 3,000 IOPS baseline. Use for most workloads, boot volumes.</p>
-
-            <h4>gp2 (Previous Gen)</h4>
-            <p>$0.10/GB/month. Migrate to gp3 for 20% cost savings.</p>
-
-            <h4>io2 (Provisioned IOPS SSD)</h4>
-            <p>$0.125/GB/month + IOPS cost. Use for critical databases.</p>
-
-            <h4>st1 (Throughput Optimized HDD)</h4>
-            <p>$0.045/GB/month. Use for big data, data warehouses.</p>
-
-            <h4>sc1 (Cold HDD)</h4>
-            <p>$0.015/GB/month. Lowest cost for infrequently accessed data.</p>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Volume Type</th>
+                        <th>Cost</th>
+                        <th>Performance</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>gp3</td>
+                        <td><span class="cost-badge medium">$0.08/GB</span></td>
+                        <td>3,000 IOPS</td>
+                        <td>Most workloads</td>
+                    </tr>
+                    <tr>
+                        <td>gp2</td>
+                        <td><span class="cost-badge medium">$0.10/GB</span></td>
+                        <td>Variable IOPS</td>
+                        <td>Migrate to gp3</td>
+                    </tr>
+                    <tr>
+                        <td>io2</td>
+                        <td><span class="cost-badge high">$0.125/GB</span></td>
+                        <td>256,000 IOPS</td>
+                        <td>Critical databases</td>
+                    </tr>
+                    <tr>
+                        <td>st1</td>
+                        <td><span class="cost-badge low">$0.045/GB</span></td>
+                        <td>500 MB/s</td>
+                        <td>Big data</td>
+                    </tr>
+                    <tr>
+                        <td>sc1</td>
+                        <td><span class="cost-badge low">$0.015/GB</span></td>
+                        <td>250 MB/s</td>
+                        <td>Cold storage</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h3>EBS Cost Optimization</h3>
             <ul>
@@ -138,31 +182,50 @@
 
             <h2>Storage Decision Matrix</h2>
 
-            <h3>Choose S3 When:</h3>
-            <ul>
-                <li>Storing objects (images, videos, backups)</li>
-                <li>Need unlimited scalability</li>
-                <li>Static website hosting</li>
-                <li>Data lakes</li>
-            </ul>
+            <div class="grid-2">
+                <div class="info-box success">
+                    <h4>Choose S3 When:</h4>
+                    <ul class="icon-list">
+                        <li>Storing objects (images, videos, backups)</li>
+                        <li>Need unlimited scalability</li>
+                        <li>Static website hosting</li>
+                        <li>Data lakes</li>
+                    </ul>
+                </div>
 
-            <h3>Choose EBS When:</h3>
-            <ul>
-                <li>EC2 instance storage</li>
-                <li>Database volumes</li>
-                <li>Low-latency block storage</li>
-                <li>Single instance access</li>
-            </ul>
+                <div class="info-box">
+                    <h4>Choose EBS When:</h4>
+                    <ul class="icon-list">
+                        <li>EC2 instance storage</li>
+                        <li>Database volumes</li>
+                        <li>Low-latency block storage</li>
+                        <li>Single instance access</li>
+                    </ul>
+                </div>
+            </div>
 
-            <h3>Choose EFS When:</h3>
-            <ul>
-                <li>Multiple instances need shared access</li>
-                <li>NFS file system required</li>
-                <li>Automatic scaling needed</li>
-            </ul>
+            <div class="grid-2">
+                <div class="info-box warning">
+                    <h4>Choose EFS When:</h4>
+                    <ul class="icon-list">
+                        <li>Multiple instances need shared access</li>
+                        <li>NFS file system required</li>
+                        <li>Automatic scaling needed</li>
+                    </ul>
+                </div>
 
-            <div class="highlight">
-                <strong>Cost Optimization Rule:</strong> Use the coldest storage tier that meets your access requirements. Moving from S3 Standard to Glacier Deep Archive saves 96% on storage costs.
+                <div class="info-box danger">
+                    <h4>Avoid When:</h4>
+                    <ul class="icon-list cross">
+                        <li>Using wrong storage tier</li>
+                        <li>Keeping unattached volumes</li>
+                        <li>No lifecycle policies</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box success">
+                <strong>💰 Cost Optimization Rule:</strong> Use the coldest storage tier that meets your access requirements. Moving from S3 Standard to Glacier Deep Archive saves 96% on storage costs.
             </div>
 
             <h2>Conclusion</h2>

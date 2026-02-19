@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production-Grade Node Groups Strategy - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>How to Design Production-Grade Node Groups (Spot + OnDemand Strategy)</h1>
+                <div class="blog-meta">Published on October 20, 2024 | 14 min read</div>
+            </div>
+
+            <h2>The Node Group Strategy</h2>
+            <p>After running production EKS for 3 years, here's our battle-tested node group architecture that balances cost, reliability, and performance.</p>
+
+            <div class="diagram">
+                <h4>Our 3-Tier Node Group Architecture</h4>
+                <div class="architecture-box">Critical (OnDemand) - 20%</div>
+                <div class="architecture-box">Standard (Mixed) - 50%</div>
+                <div class="architecture-box">Batch (Spot) - 30%</div>
+            </div>
+
+            <h2>Node Group Types</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Node Group</th>
+                        <th>Capacity Type</th>
+                        <th>Workload</th>
+                        <th>Cost</th>
+                        <th>Reliability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Critical</td>
+                        <td>100% OnDemand</td>
+                        <td>Databases, Stateful apps</td>
+                        <td><span class="cost-badge high">High</span></td>
+                        <td><span class="cost-badge low">99.99%</span></td>
+                    </tr>
+                    <tr>
+                        <td>Standard</td>
+                        <td>70% Spot, 30% OnDemand</td>
+                        <td>APIs, Web services</td>
+                        <td><span class="cost-badge medium">Medium</span></td>
+                        <td><span class="cost-badge medium">99.9%</span></td>
+                    </tr>
+                    <tr>
+                        <td>Batch</td>
+                        <td>100% Spot</td>
+                        <td>Jobs, Workers</td>
+                        <td><span class="cost-badge low">Low</span></td>
+                        <td><span class="cost-badge medium">99%</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Critical Node Group (OnDemand)</h2>
+
+            <div class="info-box danger">
+                <strong>Use Case:</strong> Stateful workloads that cannot tolerate interruptions - databases, caches, message queues
+            </div>
+
+            <pre><code>resource "aws_eks_node_group" "critical" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "critical-ondemand"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 3
+    max_size     = 10
+    min_size     = 3
+  }
+  
+  instance_types = ["m6i.2xlarge"]
+  capacity_type  = "ON_DEMAND"
+  
+  labels = {
+    node-type = "critical"
+    workload  = "stateful"
+  }
+  
+  taints {
+    key    = "workload"
+    value  = "critical"
+    effect = "NO_SCHEDULE"
+  }
+  
+  tags = {
+    "k8s.io/cluster-autoscaler/enabled" = "true"
+    "k8s.io/cluster-autoscaler/prod"    = "owned"
+  }
+}</code></pre>
+
+            <h3>Workload Placement</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  replicas: 3
+  template:
+    spec:
+      nodeSelector:
+        node-type: critical
+      tolerations:
+      - key: workload
+        operator: Equal
+        value: critical
+        effect: NoSchedule
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - postgres
+            topologyKey: kubernetes.io/hostname</code></pre>
+
+            <h2>Standard Node Group (Mixed Spot + OnDemand)</h2>
+
+            <div class="info-box success">
+                <strong>Use Case:</strong> Stateless applications with multiple replicas - APIs, web services, microservices
+            </div>
+
+            <h3>The 70/30 Split Strategy</h3>
+
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>Spot Instances</h4>
+                    <div class="metric-value">70%</div>
+                    <p>Cost savings while maintaining availability</p>
+                </div>
+                <div class="metric-card">
+                    <h4>OnDemand Instances</h4>
+                    <div class="metric-value">30%</div>
+                    <p>Guaranteed capacity baseline</p>
+                </div>
+            </div>
+
+            <pre><code>resource "aws_eks_node_group" "standard" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "standard-mixed"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 10
+    max_size     = 50
+    min_size     = 5
+  }
+  
+  # Multiple instance types for Spot diversification
+  instance_types = [
+    "m6i.xlarge",
+    "m6a.xlarge",
+    "m5.xlarge",
+    "m5a.xlarge",
+    "m5n.xlarge"
+  ]
+  
+  capacity_type = "SPOT"
+  
+  labels = {
+    node-type = "standard"
+    workload  = "stateless"
+    lifecycle = "spot"
+  }
+  
+  tags = {
+    "k8s.io/cluster-autoscaler/enabled" = "true"
+  }
+}
+
+# OnDemand baseline
+resource "aws_eks_node_group" "standard_ondemand" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "standard-ondemand"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 3
+    max_size     = 15
+    min_size     = 3
+  }
+  
+  instance_types = ["m6i.xlarge"]
+  capacity_type  = "ON_DEMAND"
+  
+  labels = {
+    node-type = "standard"
+    workload  = "stateless"
+    lifecycle = "ondemand"
+  }
+}</code></pre>
+
+            <h3>Application Deployment Strategy</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+spec:
+  replicas: 10
+  template:
+    spec:
+      # Prefer Spot, tolerate OnDemand
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: lifecycle
+                operator: In
+                values:
+                - spot
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: lifecycle
+                operator: In
+                values:
+                - ondemand
+      
+      # Spread across nodes for HA
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: api-service
+      
+      # Spread across AZs
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: api-service</code></pre>
+
+            <h2>Batch Node Group (100% Spot)</h2>
+
+            <div class="info-box">
+                <strong>Use Case:</strong> Fault-tolerant batch jobs, data processing, CI/CD builds
+            </div>
+
+            <pre><code>resource "aws_eks_node_group" "batch" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "batch-spot"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 0
+    max_size     = 100
+    min_size     = 0
+  }
+  
+  # Diverse instance types for maximum Spot availability
+  instance_types = [
+    "c6i.2xlarge",
+    "c6a.2xlarge",
+    "c5.2xlarge",
+    "c5a.2xlarge",
+    "c5n.2xlarge",
+    "m6i.2xlarge",
+    "m5.2xlarge"
+  ]
+  
+  capacity_type = "SPOT"
+  
+  labels = {
+    node-type = "batch"
+    workload  = "batch"
+  }
+  
+  taints {
+    key    = "workload"
+    value  = "batch"
+    effect = "NO_SCHEDULE"
+  }
+}</code></pre>
+
+            <h3>Batch Job Configuration</h3>
+
+            <pre><code>apiVersion: batch/v1
+kind: Job
+metadata:
+  name: data-processing
+spec:
+  parallelism: 20
+  completions: 100
+  template:
+    spec:
+      nodeSelector:
+        node-type: batch
+      tolerations:
+      - key: workload
+        operator: Equal
+        value: batch
+        effect: NoSchedule
+      
+      restartPolicy: OnFailure
+      
+      containers:
+      - name: processor
+        image: data-processor:latest
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"</code></pre>
+
+            <h2>Spot Interruption Handling</h2>
+
+            <div class="info-box warning">
+                <strong>Critical:</strong> Always handle Spot interruptions gracefully to avoid service disruption
+            </div>
+
+            <h3>AWS Node Termination Handler</h3>
+
+            <pre><code>apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aws-node-termination-handler
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: aws-node-termination-handler
+  template:
+    metadata:
+      labels:
+        app: aws-node-termination-handler
+    spec:
+      serviceAccountName: aws-node-termination-handler
+      hostNetwork: true
+      containers:
+      - name: aws-node-termination-handler
+        image: public.ecr.aws/aws-ec2/aws-node-termination-handler:v1.19.0
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ENABLE_SPOT_INTERRUPTION_DRAINING
+          value: "true"
+        - name: ENABLE_SCHEDULED_EVENT_DRAINING
+          value: "true"
+        - name: ENABLE_REBALANCE_MONITORING
+          value: "true"
+        - name: DELETE_LOCAL_DATA
+          value: "true"
+        - name: IGNORE_DAEMON_SETS
+          value: "true"
+        - name: POD_TERMINATION_GRACE_PERIOD
+          value: "90"
+        - name: NODE_TERMINATION_GRACE_PERIOD
+          value: "120"</code></pre>
+
+            <h2>Instance Type Selection Strategy</h2>
+
+            <h3>Diversification is Key</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Instance Family</th>
+                        <th>Use Case</th>
+                        <th>Spot Availability</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>M6i (Intel)</td>
+                        <td>General purpose</td>
+                        <td><span class="cost-badge medium">Medium</span></td>
+                        <td>Baseline</td>
+                    </tr>
+                    <tr>
+                        <td>M6a (AMD)</td>
+                        <td>General purpose</td>
+                        <td><span class="cost-badge low">High</span></td>
+                        <td>10% cheaper</td>
+                    </tr>
+                    <tr>
+                        <td>M5 (Previous gen)</td>
+                        <td>General purpose</td>
+                        <td><span class="cost-badge low">High</span></td>
+                        <td>15% cheaper</td>
+                    </tr>
+                    <tr>
+                        <td>C6i (Compute)</td>
+                        <td>CPU intensive</td>
+                        <td><span class="cost-badge medium">Medium</span></td>
+                        <td>Similar</td>
+                    </tr>
+                    <tr>
+                        <td>R6i (Memory)</td>
+                        <td>Memory intensive</td>
+                        <td><span class="cost-badge high">Low</span></td>
+                        <td>Higher</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Our Instance Selection Rules</h3>
+
+            <ul class="icon-list">
+                <li>Always include 5+ instance types per node group</li>
+                <li>Mix Intel (6i) and AMD (6a) for better availability</li>
+                <li>Include previous generation (5/5a) for cost savings</li>
+                <li>Stay within same vCPU/memory ratio (e.g., all 4:16)</li>
+                <li>Avoid R-family for Spot (low availability)</li>
+            </ul>
+
+            <h2>Cost Analysis</h2>
+
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>100% OnDemand</h4>
+                    <div class="metric-value">$12,000</div>
+                    <p>Monthly compute cost</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Our Mixed Strategy</h4>
+                    <div class="metric-value">$5,400</div>
+                    <p>55% cost savings</p>
+                </div>
+            </div>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Node Group</th>
+                        <th>Nodes</th>
+                        <th>OnDemand Cost</th>
+                        <th>Actual Cost</th>
+                        <th>Savings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Critical (OnDemand)</td>
+                        <td>5</td>
+                        <td>$2,400</td>
+                        <td>$2,400</td>
+                        <td><span class="cost-badge high">0%</span></td>
+                    </tr>
+                    <tr>
+                        <td>Standard (Mixed)</td>
+                        <td>15</td>
+                        <td>$7,200</td>
+                        <td>$2,880</td>
+                        <td><span class="cost-badge low">60%</span></td>
+                    </tr>
+                    <tr>
+                        <td>Batch (Spot)</td>
+                        <td>10</td>
+                        <td>$2,400</td>
+                        <td>$720</td>
+                        <td><span class="cost-badge low">70%</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Monitoring & Alerts</h2>
+
+            <h3>Key Metrics to Track</h3>
+
+            <div class="info-box">
+                <ul class="icon-list">
+                    <li>Spot interruption rate (target: < 5%)</li>
+                    <li>Node group utilization (target: 70-85%)</li>
+                    <li>Pod pending time (target: < 2 minutes)</li>
+                    <li>Cost per pod (track trends)</li>
+                    <li>Spot vs OnDemand ratio (maintain 70/30)</li>
+                </ul>
+            </div>
+
+            <h3>Prometheus Alerts</h3>
+
+            <pre><code>groups:
+- name: node_group_alerts
+  rules:
+  - alert: HighSpotInterruptionRate
+    expr: rate(spot_interruptions_total[1h]) > 0.05
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High Spot interruption rate"
+      description: "Spot interruption rate is {{ $value }}"
+  
+  - alert: LowSpotCapacity
+    expr: (count(kube_node_labels{label_lifecycle="spot"}) / count(kube_node_labels)) < 0.6
+    for: 30m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Spot capacity below target"
+      description: "Only {{ $value }}% Spot capacity"</code></pre>
+
+            <h2>Best Practices Summary</h2>
+
+            <div class="grid-2">
+                <div class="info-box success">
+                    <h4>Do This</h4>
+                    <ul class="icon-list">
+                        <li>Use 3-tier node group strategy</li>
+                        <li>Diversify Spot instance types (5+)</li>
+                        <li>Handle Spot interruptions gracefully</li>
+                        <li>Set proper resource requests/limits</li>
+                        <li>Use topology spread constraints</li>
+                        <li>Monitor Spot interruption rates</li>
+                    </ul>
+                </div>
+                <div class="info-box danger">
+                    <h4>Avoid This</h4>
+                    <ul class="icon-list cross">
+                        <li>Running stateful apps on Spot</li>
+                        <li>Using only 1-2 instance types</li>
+                        <li>Ignoring Spot interruptions</li>
+                        <li>Over-provisioning OnDemand</li>
+                        <li>No pod disruption budgets</li>
+                        <li>Forgetting node affinity rules</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>Our 3-tier node group strategy (Critical OnDemand, Standard Mixed, Batch Spot) has been running in production for 18 months with 99.99% uptime and 55% cost savings. The key is proper workload classification, Spot diversification, and graceful interruption handling. Start conservative with 50% Spot, monitor for a month, then increase to 70%.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>

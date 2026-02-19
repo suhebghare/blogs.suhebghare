@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Environment EKS for Production Stability - Suheb Ghare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Suheb Ghare</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#blog-index">Blog Index</a>
+                <a href="https://portfolio.suhebghare.tech" target="_blank">Portfolio</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <article class="blog-content">
+            <div class="blog-header">
+                <h1>How We Designed Multi-Environment EKS for Production Stability</h1>
+                <div class="blog-meta">Published on September 15, 2024 | 15 min read</div>
+            </div>
+
+            <h2>The Challenge</h2>
+            <p>Running multiple environments (dev, staging, production) on EKS requires careful architecture to ensure isolation, cost efficiency, and operational simplicity. Here's how we designed a production-grade multi-environment setup.</p>
+
+            <div class="info-box warning">
+                <strong>Key Requirement:</strong> Complete isolation between environments while maintaining consistent deployment patterns and minimizing operational overhead.
+            </div>
+
+            <h2>Architecture Decision: Separate Clusters vs Namespaces</h2>
+
+            <div class="diagram">
+                <h4>Our Multi-Environment Strategy</h4>
+                <div class="architecture-box">Production Cluster (Dedicated)</div>
+                <div class="architecture-box">Staging Cluster (Dedicated)</div>
+                <div class="architecture-box">Dev Cluster (Shared Namespaces)</div>
+            </div>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Approach</th>
+                        <th>Pros</th>
+                        <th>Cons</th>
+                        <th>Our Choice</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Single Cluster + Namespaces</td>
+                        <td>Cost efficient, simple management</td>
+                        <td>Risk of noisy neighbor, blast radius</td>
+                        <td><span class="cost-badge medium">Dev Only</span></td>
+                    </tr>
+                    <tr>
+                        <td>Separate Clusters</td>
+                        <td>Complete isolation, independent scaling</td>
+                        <td>Higher cost, more operational overhead</td>
+                        <td><span class="cost-badge high">Prod + Staging</span></td>
+                    </tr>
+                    <tr>
+                        <td>Hybrid Approach</td>
+                        <td>Balance cost and isolation</td>
+                        <td>Complex to manage</td>
+                        <td><span class="cost-badge low">Our Solution</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Production Cluster Design</h2>
+
+            <h3>Network Architecture</h3>
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>VPC CIDR</h4>
+                    <div class="metric-value">10.0.0.0/16</div>
+                    <p>65,536 IPs for growth</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Availability Zones</h4>
+                    <div class="metric-value">3 AZs</div>
+                    <p>High availability setup</p>
+                </div>
+            </div>
+
+            <pre><code># Production VPC Configuration
+resource "aws_vpc" "prod_eks" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  
+  tags = {
+    Name        = "prod-eks-vpc"
+    Environment = "production"
+  }
+}
+
+# Private subnets for nodes
+resource "aws_subnet" "private" {
+  count             = 3
+  vpc_id            = aws_vpc.prod_eks.id
+  cidr_block        = "10.0.${count.index + 1}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  
+  tags = {
+    "kubernetes.io/role/internal-elb" = "1"
+    "kubernetes.io/cluster/prod"      = "shared"
+  }
+}
+
+# Public subnets for load balancers
+resource "aws_subnet" "public" {
+  count                   = 3
+  vpc_id                  = aws_vpc.prod_eks.id
+  cidr_block              = "10.0.${count.index + 101}.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+  
+  tags = {
+    "kubernetes.io/role/elb"     = "1"
+    "kubernetes.io/cluster/prod" = "shared"
+  }
+}</code></pre>
+
+            <h3>Node Group Strategy</h3>
+
+            <div class="info-box">
+                <strong>Production Node Groups:</strong>
+                <ul class="icon-list">
+                    <li>System nodes (OnDemand) - Control plane workloads</li>
+                    <li>Application nodes (Mixed) - 70% Spot, 30% OnDemand</li>
+                    <li>Stateful nodes (OnDemand) - Databases, caches</li>
+                </ul>
+            </div>
+
+            <pre><code># System node group (OnDemand only)
+resource "aws_eks_node_group" "system" {
+  cluster_name    = aws_eks_cluster.prod.name
+  node_group_name = "system-nodes"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 3
+    max_size     = 6
+    min_size     = 3
+  }
+  
+  instance_types = ["t3.large"]
+  capacity_type  = "ON_DEMAND"
+  
+  labels = {
+    role = "system"
+  }
+  
+  taints {
+    key    = "CriticalAddonsOnly"
+    value  = "true"
+    effect = "NO_SCHEDULE"
+  }
+}
+
+# Application node group (Mixed)
+resource "aws_eks_node_group" "application" {
+  cluster_name    = aws_eks_cluster.prod.name
+  node_group_name = "app-nodes"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = aws_subnet.private[*].id
+  
+  scaling_config {
+    desired_size = 6
+    max_size     = 20
+    min_size     = 3
+  }
+  
+  instance_types = ["m5.xlarge", "m5a.xlarge", "m5n.xlarge"]
+  capacity_type  = "SPOT"
+  
+  labels = {
+    role      = "application"
+    lifecycle = "spot"
+  }
+}</code></pre>
+
+            <h2>Environment Isolation Strategies</h2>
+
+            <h3>1. Network Isolation</h3>
+            <ul class="icon-list">
+                <li>Separate VPCs per environment</li>
+                <li>VPC peering only when needed</li>
+                <li>Network policies for pod-to-pod communication</li>
+                <li>Private endpoints for AWS services</li>
+            </ul>
+
+            <h3>2. IAM Isolation</h3>
+            <pre><code># Separate IAM roles per environment
+resource "aws_iam_role" "prod_node_role" {
+  name = "prod-eks-node-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+  
+  tags = {
+    Environment = "production"
+  }
+}
+
+# IRSA for pod-level permissions
+resource "aws_iam_role" "app_irsa" {
+  name = "prod-app-irsa-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.eks.arn
+      }
+      Condition = {
+        StringEquals = {
+          "${aws_iam_openid_connect_provider.eks.url}:sub": "system:serviceaccount:production:app-sa"
+        }
+      }
+    }]
+  })
+}</code></pre>
+
+            <h3>3. Resource Quotas</h3>
+            <pre><code>apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: prod-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: 200Gi
+    limits.cpu: "200"
+    limits.memory: 400Gi
+    persistentvolumeclaims: "20"
+    services.loadbalancers: "5"</code></pre>
+
+            <h2>Staging Environment Design</h2>
+
+            <div class="info-box success">
+                <strong>Staging Philosophy:</strong> Mirror production architecture but with reduced capacity. Use same Kubernetes versions, same add-ons, same deployment patterns.
+            </div>
+
+            <div class="grid-2">
+                <div class="metric-card">
+                    <h4>Cost Savings</h4>
+                    <div class="metric-value">60%</div>
+                    <p>vs full production replica</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Node Count</h4>
+                    <div class="metric-value">40%</div>
+                    <p>of production capacity</p>
+                </div>
+            </div>
+
+            <h3>Staging Optimizations</h3>
+            <ul class="icon-list">
+                <li>Smaller instance types (t3.medium vs m5.xlarge)</li>
+                <li>100% Spot instances for cost savings</li>
+                <li>Reduced replica counts (1-2 vs 3-5)</li>
+                <li>Shared RDS instances with separate databases</li>
+                <li>Auto-shutdown during off-hours</li>
+            </ul>
+
+            <h2>Development Environment Design</h2>
+
+            <div class="info-box">
+                <strong>Dev Strategy:</strong> Single cluster with namespace-based isolation. Multiple teams share resources with quotas.
+            </div>
+
+            <pre><code># Namespace per team/feature
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-backend
+  labels:
+    environment: dev
+    team: backend
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-backend-quota
+  namespace: team-backend
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-namespace
+  namespace: team-backend
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: team-backend</code></pre>
+
+            <h2>Cross-Environment Consistency</h2>
+
+            <h3>GitOps with ArgoCD</h3>
+            <div class="diagram">
+                <h4>Deployment Flow</h4>
+                <div class="flow-step">Git Commit</div>
+                <div class="flow-step">ArgoCD Sync</div>
+                <div class="flow-step">Dev Deploy</div>
+                <div class="flow-step">Staging Deploy</div>
+                <div class="flow-step">Prod Deploy</div>
+            </div>
+
+            <pre><code># ArgoCD Application for multi-env
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp-prod
+  namespace: argocd
+spec:
+  project: production
+  source:
+    repoURL: https://github.com/org/manifests
+    targetRevision: main
+    path: apps/myapp/overlays/production
+  destination:
+    server: https://prod-cluster-api
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true</code></pre>
+
+            <h2>Monitoring & Observability</h2>
+
+            <div class="grid-2">
+                <div class="info-box success">
+                    <h4>Centralized Logging</h4>
+                    <ul class="icon-list">
+                        <li>Fluent Bit on all clusters</li>
+                        <li>CloudWatch Logs per environment</li>
+                        <li>Retention: 7d dev, 30d staging, 90d prod</li>
+                    </ul>
+                </div>
+                <div class="info-box">
+                    <h4>Metrics & Alerts</h4>
+                    <ul class="icon-list">
+                        <li>Prometheus per cluster</li>
+                        <li>Grafana with multi-cluster view</li>
+                        <li>PagerDuty for prod alerts only</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Cost Optimization Results</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Environment</th>
+                        <th>Monthly Cost</th>
+                        <th>Optimization</th>
+                        <th>Savings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Production</td>
+                        <td>$3,200</td>
+                        <td>30% Spot instances</td>
+                        <td><span class="cost-badge low">$1,400/mo</span></td>
+                    </tr>
+                    <tr>
+                        <td>Staging</td>
+                        <td>$800</td>
+                        <td>100% Spot + smaller instances</td>
+                        <td><span class="cost-badge low">$1,200/mo</span></td>
+                    </tr>
+                    <tr>
+                        <td>Development</td>
+                        <td>$400</td>
+                        <td>Shared cluster + auto-shutdown</td>
+                        <td><span class="cost-badge low">$600/mo</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Key Takeaways</h2>
+
+            <div class="info-box success">
+                <ul class="icon-list">
+                    <li>Separate clusters for prod/staging provide best isolation</li>
+                    <li>Shared dev cluster with namespaces reduces costs</li>
+                    <li>GitOps ensures consistency across environments</li>
+                    <li>Spot instances in non-prod saves 70% on compute</li>
+                    <li>Resource quotas prevent resource exhaustion</li>
+                    <li>IRSA provides fine-grained IAM permissions</li>
+                </ul>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>Our multi-environment EKS design balances isolation, cost, and operational simplicity. Production gets dedicated resources and high availability, staging mirrors production at lower cost, and development uses shared resources with namespace isolation. This architecture has served us reliably for 18 months with zero cross-environment incidents.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Suheb Ghare. All rights reserved.</p>
+    </footer>
+</body>
+</html>
