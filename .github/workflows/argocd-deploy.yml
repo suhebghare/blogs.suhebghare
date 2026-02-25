@@ -96,7 +96,7 @@ jobs:
 
       - name: Update Argocd values.yaml
         run: |
-          git clone https://suheb:${{ secrets.ORG_PAT_TOKEN }}@github.com:suhebghare/argocd-templates.git
+          git clone https://suheb:${{ secrets.ORG_PAT_TOKEN }}@github.com/suhebghare/argocd-templates.git
           git config --global user.name 'Argocd Bot'
           git config --global user.email 'suhebghare@gmail.com'
           cd argocd-templates
