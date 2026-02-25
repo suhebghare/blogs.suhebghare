@@ -18,13 +18,22 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.REGION }}
       
+      - name: Download existing stats from S3
+        run: |
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/blog-stats.json ./blog-stats.json || echo "No existing stats found"
+      
       - name: Sync to S3
         run: |
           aws s3 sync . s3://${{ secrets.S3_BUCKET }} \
             --exclude ".git/*" \
             --exclude ".github/*" \
             --exclude "README.md" \
+            --exclude "blog-stats.json" \
             --delete
+      
+      - name: Upload stats file
+        run: |
+          aws s3 cp ./blog-stats.json s3://${{ secrets.S3_BUCKET }}/blog-stats.json
       
       - name: Invalidate CloudFront cache
         run: |
