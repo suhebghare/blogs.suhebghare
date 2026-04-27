@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitOps with ArgoCD: From Zero to Production-Grade – Suheb Ghare</title>
+  <meta name="description" content="A complete guide to production-grade GitOps with ArgoCD — app-of-apps pattern, ApplicationSets, secrets management, sync waves, RBAC, multi-cluster setup, and handling hotfixes in a GitOps world.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">CI/CD</span></div>
+      <h1 class="post-title">GitOps with ArgoCD: From Zero to Production-Grade</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 December 20, 2024</span>
+        <span class="meta-item">⏱ 17 min read</span>
+        <span class="meta-item">👁 <span data-blog="gitops-with-argocd" data-stat="reads">1050</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="gitops-with-argocd" data-stat="reads">1050</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="gitops-with-argocd" data-stat="likes">431</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="gitops-with-argocd" data-stat="dislikes">25</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="gitops-with-argocd">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="gitops-with-argocd">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>We run ArgoCD across 3 Kubernetes clusters managing 50+ applications. It took us about 6 months to go from "ArgoCD is installed" to "ArgoCD is production-grade." This post covers everything I wish someone had told me at the start — the patterns that work, the ones that don't, and the operational gotchas that only show up at scale.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=900&q=85" alt="GitOps with ArgoCD" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">App-of-apps pattern managing 50+ applications across 3 clusters</figcaption>
+</figure>
+
+        <h2>GitOps Principles (The Non-Negotiables)</h2>
+
+        <p>GitOps isn't just "store YAML in Git." It's a set of principles that, when followed strictly, give you auditable, reproducible, and recoverable infrastructure:</p>
+
+        <ul>
+          <li><strong>Git is the single source of truth.</strong> The desired state of every environment lives in Git. If it's not in Git, it doesn't exist.</li>
+          <li><strong>All changes go through Git.</strong> No <code>kubectl apply</code> from laptops. No manual changes in the console. Every change is a commit with an author and a review.</li>
+          <li><strong>The system converges automatically.</strong> An agent (ArgoCD) continuously compares Git state to cluster state and reconciles drift.</li>
+          <li><strong>Drift is detected and corrected.</strong> If someone manually changes a resource, ArgoCD detects it and reverts it to match Git.</li>
+        </ul>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">The Hard Truth About GitOps</div>
+          <p>GitOps adds friction to emergency changes. When production is on fire and you need to change something NOW, going through a PR feels slow. You need a well-defined hotfix process (covered below) or your team will bypass GitOps under pressure, and once they start bypassing it, the whole model breaks down.</p>
+        </div>
+
+        <h2>ArgoCD Architecture</h2>
+
+        <p>ArgoCD runs inside your Kubernetes cluster and consists of three main components:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 325" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ArgoCD App-of-Apps Pattern</text><rect x="20" y="60" width="140" height="80" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="90" y="88" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Git Repo</text><text x="90" y="106" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">apps/</text><text x="90" y="120" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">  ├ app-of-apps.yaml</text><line x1="160" y1="100" x2="220" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="220" y="70" width="160" height="60" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="300" y="92" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Root App</text><text x="300" y="108" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">app-of-apps</text><rect x="380" y="50" width="140" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="450" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">payments-app</text><line x1="380" y1="100" x2="380" y2="100" stroke="72" stroke-width="2" marker-end="url(#a)"/><rect x="380" y="120" width="140" height="44" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="450" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">auth-app</text><line x1="380" y1="100" x2="380" y2="100" stroke="142" stroke-width="2" marker-end="url(#a)"/><rect x="380" y="190" width="140" height="44" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="450" y="212" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">infra-app</text><line x1="380" y1="100" x2="380" y2="100" stroke="212" stroke-width="2" marker-end="url(#a)"/><rect x="580" y="50" width="160" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="660" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">dev cluster</text><text x="660" y="88" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">auto-synced</text><line x1="520" y1="120" x2="580" y2="120" stroke="80" stroke-width="2" marker-end="url(##06b6d4)"/><rect x="580" y="130" width="160" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="660" y="152" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">staging cluster</text><text x="660" y="168" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">auto-synced</text><line x1="520" y1="120" x2="580" y2="120" stroke="160" stroke-width="2" marker-end="url(##06b6d4)"/><rect x="580" y="210" width="160" height="60" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="660" y="232" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">prod cluster</text><text x="660" y="248" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">auto-synced</text><line x1="520" y1="120" x2="580" y2="120" stroke="240" stroke-width="2" marker-end="url(##06b6d4)"/><rect x="20" y="260" width="760" height="44" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="282" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Drift Detection: ArgoCD polls Git every 3min — any manual kubectl change triggers OutOfSync alert</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">App-of-apps: one root Application manages all child Applications — add a new service by adding one YAML file</figcaption></figure>
+
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">API Server</div>
+            <div class="metric-label">Exposes the gRPC/REST API and the web UI. Handles authentication, RBAC, and serves as the entry point for all operations.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Repo Server</div>
+            <div class="metric-label">Clones Git repos, renders Helm charts and Kustomize overlays, and generates the Kubernetes manifests that represent desired state.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Application Controller</div>
+            <div class="metric-label">The reconciliation loop. Compares desired state (from repo server) to live state (from Kubernetes API) and syncs when they diverge.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Redis</div>
+            <div class="metric-label">Caching layer for the repo server. Stores rendered manifests to avoid re-cloning and re-rendering on every reconciliation cycle (default: 3 minutes).</div>
+          </div>
+        </div>
+
+        <h2>Repository Structure</h2>
+
+        <p>Separate your application code from your deployment manifests. This is critical. Your CI pipeline builds and pushes images. Your GitOps repo defines what runs where.</p>
+
+<pre><code># App repo (CI pipeline)
+app-repo/
+├── src/
+├── Dockerfile
+└── .github/workflows/ci.yml    # Build → Test → Push image to ECR
+
+# GitOps repo (ArgoCD watches this)
+gitops-repo/
+├── apps/                        # ArgoCD Application definitions
+│   ├── api-server.yaml
+│   ├── web-frontend.yaml
+│   └── background-worker.yaml
+├── base/                        # Shared Kubernetes manifests
+│   ├── api-server/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── hpa.yaml
+│   │   └── kustomization.yaml
+│   └── web-frontend/
+│       └── ...
+└── overlays/                    # Environment-specific overrides
+    ├── dev/
+    │   ├── api-server/
+    │   │   ├── kustomization.yaml
+    │   │   └── replicas-patch.yaml
+    │   └── ...
+    ├── staging/
+    └── production/</code></pre>
+
+        <h2>App-of-Apps Pattern</h2>
+
+        <p>Managing 50+ ArgoCD Application resources individually is painful. The app-of-apps pattern uses a single "root" Application that manages all other Applications. You add a new service by adding one YAML file.</p>
+
+<pre><code># apps/root-app.yaml — The parent Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:myorg/gitops-repo.git
+    targetRevision: main
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true</code></pre>
+
+<pre><code># apps/api-server.yaml — A child Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: api-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: production
+  source:
+    repoURL: git@github.com:myorg/gitops-repo.git
+    targetRevision: main
+    path: overlays/production/api-server
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m</code></pre>
+
+        <p>Now when you want to deploy a new service, you add a YAML file to the <code>apps/</code> directory. The root app detects it and creates the ArgoCD Application, which then deploys the service. Deletion works the same way — remove the file, and the finalizer cleans up the resources.</p>
+
+        <h2>ApplicationSet for Multi-Environment</h2>
+
+        <p>ApplicationSets are the evolution of app-of-apps. Instead of writing one Application YAML per service per environment, you write a template that generates them:</p>
+
+<pre><code>apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: all-services
+  namespace: argocd
+spec:
+  generators:
+  - matrix:
+      generators:
+      # All environments
+      - list:
+          elements:
+          - env: dev
+            cluster: https://dev-cluster.example.com
+          - env: staging
+            cluster: https://staging-cluster.example.com
+          - env: production
+            cluster: https://prod-cluster.example.com
+      # All services (auto-discovered from directories)
+      - git:
+          repoURL: git@github.com:myorg/gitops-repo.git
+          revision: main
+          directories:
+          - path: overlays/*/  # Matches all service dirs
+  template:
+    metadata:
+      name: '{{path.basename}}-{{env}}'
+      namespace: argocd
+    spec:
+      project: '{{env}}'
+      source:
+        repoURL: git@github.com:myorg/gitops-repo.git
+        targetRevision: main
+        path: 'overlays/{{env}}/{{path.basename}}'
+      destination:
+        server: '{{cluster}}'
+        namespace: '{{env}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true</code></pre>
+
+        <p>This single ApplicationSet generates an Application for every combination of service × environment. Add a new service directory, and it's automatically deployed to all environments. Add a new environment, and all services are deployed there.</p>
+
+        <h2>Secrets Management</h2>
+
+        <p>The biggest challenge in GitOps: you can't store secrets in Git. Here are the two approaches that work in production.</p>
+
+        <h3>Option 1: Sealed Secrets</h3>
+
+        <p>Bitnami Sealed Secrets encrypts secrets with a cluster-specific key. The encrypted version is safe to store in Git. Only the controller running in the cluster can decrypt them.</p>
+
+<pre><code># Encrypt a secret
+kubeseal --format yaml --cert pub-cert.pem \
+  < secret.yaml > sealed-secret.yaml
+
+# sealed-secret.yaml (safe to commit)
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: api-credentials
+  namespace: production
+spec:
+  encryptedData:
+    DB_PASSWORD: AgBy3i4OJSWK+PiTySYZZA9rO...
+    API_KEY: AgCtr8QLGHO2tkc+PiTySYZZA9rO...</code></pre>
+
+        <div class="info-box warning">
+          <p><strong>Sealed Secrets Gotcha:</strong> Secrets are encrypted per-cluster and per-namespace. If you move a SealedSecret to a different namespace, it won't decrypt. If you rebuild the cluster without backing up the sealing key, all your secrets are lost. Back up the sealing key to a secure location outside the cluster.</p>
+        </div>
+
+        <h3>Option 2: External Secrets Operator (Recommended)</h3>
+
+        <p>External Secrets Operator (ESO) syncs secrets from external stores (AWS Secrets Manager, HashiCorp Vault, GCP Secret Manager) into Kubernetes Secrets. The Git repo only contains a reference to the secret, not the secret itself.</p>
+
+<pre><code># ClusterSecretStore — connects to AWS Secrets Manager
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: aws-secrets-manager
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-east-1
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: external-secrets-sa
+            namespace: external-secrets
+---
+# ExternalSecret — syncs a specific secret
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: api-credentials
+  namespace: production
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: api-credentials
+    creationPolicy: Owner
+  data:
+  - secretKey: DB_PASSWORD
+    remoteRef:
+      key: production/api-server
+      property: db_password
+  - secretKey: API_KEY
+    remoteRef:
+      key: production/api-server
+      property: api_key</code></pre>
+
+        <p>I recommend ESO over Sealed Secrets for production. It integrates with your existing secrets management infrastructure, supports rotation, and doesn't have the cluster-specific encryption problem.</p>
+
+        <h2>Sync Waves and Hooks</h2>
+
+        <p>When deploying a service that depends on a database migration or a ConfigMap, order matters. Sync waves let you control the order of resource creation:</p>
+
+<pre><code># Wave -1: Namespace and RBAC (created first)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+---
+# Wave 0: ConfigMaps and Secrets
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+---
+# Wave 1: Database migration job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrate
+        image: api-server:v2.3.1
+        command: ["./migrate", "--direction", "up"]
+      restartPolicy: Never
+---
+# Wave 2: Deployment (created after migration completes)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"</code></pre>
+
+        <p>The <code>PreSync</code> hook runs the migration job before the main sync. ArgoCD waits for the job to complete successfully before proceeding to wave 2. If the migration fails, the deployment doesn't happen.</p>
+
+        <h2>Drift Detection and Auto-Sync Policy</h2>
+
+        <p>ArgoCD checks for drift every 3 minutes by default. When it detects drift, the behavior depends on your sync policy:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Policy</th><th>Behavior</th><th>Use When</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Manual sync</td>
+              <td>ArgoCD shows "OutOfSync" but takes no action</td>
+              <td>Production environments where you want human approval</td>
+            </tr>
+            <tr>
+              <td><code>automated: {}</code></td>
+              <td>Auto-syncs when Git changes, but doesn't revert manual changes</td>
+              <td>Staging environments</td>
+            </tr>
+            <tr>
+              <td><code>automated: { selfHeal: true }</code></td>
+              <td>Reverts any manual changes to match Git</td>
+              <td>Environments where drift is never acceptable</td>
+            </tr>
+            <tr>
+              <td><code>automated: { prune: true }</code></td>
+              <td>Deletes resources that exist in cluster but not in Git</td>
+              <td>Clean environments where orphaned resources are a problem</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">selfHeal + prune: The Nuclear Option</div>
+          <p>Enabling both <code>selfHeal</code> and <code>prune</code> means ArgoCD will delete any resource in the namespace that isn't defined in Git. This is powerful but dangerous. If someone accidentally removes a manifest from Git, ArgoCD will delete the live resource. Always use <code>resources-finalizer.argocd.argoproj.io</code> and test in staging first.</p>
+        </div>
+
+        <h2>RBAC for ArgoCD</h2>
+
+        <p>ArgoCD has its own RBAC system separate from Kubernetes RBAC. Define who can sync what:</p>
+
+<pre><code># argocd-rbac-cm ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    # Developers can sync dev and staging apps
+    p, role:developer, applications, sync, dev/*, allow
+    p, role:developer, applications, sync, staging/*, allow
+    p, role:developer, applications, get, */*, allow
+
+    # SRE team can sync everything including production
+    p, role:sre, applications, *, */*, allow
+    p, role:sre, clusters, get, *, allow
+    p, role:sre, repositories, *, *, allow
+
+    # Map SSO groups to roles
+    g, myorg:developers, role:developer
+    g, myorg:sre-team, role:sre</code></pre>
+
+        <h2>Our Production Setup: 3 Clusters, 50+ Apps</h2>
+
+        <p>Here's how we structure ArgoCD for a real multi-cluster production environment:</p>
+
+        <div class="architecture-box">
+          <h3>Cluster Layout</h3>
+          <p><strong>Management Cluster:</strong> Runs ArgoCD, Prometheus, Grafana, and other platform tools. ArgoCD manages all three clusters from here.</p>
+          <p><strong>Staging Cluster:</strong> Mirror of production. Auto-sync enabled with selfHeal. Developers can sync freely.</p>
+          <p><strong>Production Cluster:</strong> Manual sync only. Requires SRE approval. No auto-prune (safety net).</p>
+
+          <h3>Deployment Flow</h3>
+        </div>
+
+        <div class="diagram">
+          <div class="flow-step">Developer merges PR to app repo</div>
+          <div class="flow-step">CI builds image, pushes to ECR with git SHA tag</div>
+          <div class="flow-step">CI updates image tag in gitops-repo (staging overlay)</div>
+          <div class="flow-step">ArgoCD auto-syncs to staging cluster</div>
+          <div class="flow-step">Automated tests run against staging</div>
+          <div class="flow-step">Developer creates PR to promote image tag to production overlay</div>
+          <div class="flow-step">SRE reviews and approves PR</div>
+          <div class="flow-step">ArgoCD detects change, shows OutOfSync</div>
+          <div class="flow-step">SRE clicks Sync in ArgoCD UI (or merges triggers auto-sync)</div>
+          <div class="flow-step">Production deployment complete</div>
+        </div>
+
+        <h2>Handling Hotfixes in a GitOps World</h2>
+
+        <p>This is the question every team asks: "What do we do when production is on fire and we need to deploy a fix NOW?" Here's our process:</p>
+
+        <ol>
+          <li><strong>Developer pushes hotfix to a branch</strong> in the app repo</li>
+          <li><strong>CI builds the image</strong> with a <code>hotfix-</code> prefix tag</li>
+          <li><strong>Developer creates a PR directly to the production overlay</strong> in the gitops repo, updating the image tag</li>
+          <li><strong>SRE approves the PR</strong> (Slack notification with @oncall-sre, expected response time: &lt;5 minutes)</li>
+          <li><strong>Merge triggers auto-sync</strong> to production</li>
+          <li><strong>Post-incident:</strong> The hotfix branch is merged to main through the normal process</li>
+        </ol>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Emergency Override</div>
+          <p>For true emergencies (P0, revenue-impacting), the on-call SRE can sync directly from the ArgoCD UI without waiting for PR approval. This is logged and auditable. The PR is created retroactively. We've used this exactly 3 times in 18 months. Having the escape hatch prevents people from bypassing GitOps entirely.</p>
+        </div>
+
+        <h2>Monitoring ArgoCD Itself</h2>
+
+        <p>ArgoCD exposes Prometheus metrics. Monitor these to catch problems before they affect deployments:</p>
+
+<pre><code># ArgoCD application health
+argocd_app_info{health_status="Degraded"} > 0
+
+# Sync failures
+increase(argocd_app_sync_total{phase="Error"}[1h]) > 0
+
+# Repo server performance (slow renders block all syncs)
+histogram_quantile(0.99,
+  sum(rate(argocd_repo_server_request_duration_seconds_bucket[5m])) by (le)
+) > 10
+
+# Controller queue depth (backlog of reconciliations)
+argocd_app_reconcile_count > 100
+
+# Git fetch failures
+increase(argocd_git_request_total{request_type="fetch", result="error"}[5m]) > 0</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Repo Server Memory</div>
+          <p>The repo server clones every Git repo and renders every Helm chart in memory. With 50+ apps and large repos, it can easily OOM. We had to increase the repo server memory to 2Gi and add <code>--parallelismlimit 5</code> to prevent it from rendering too many charts simultaneously. Monitor <code>container_memory_working_set_bytes{container="repo-server"}</code> closely.</p>
+        </div>
+
+        <h2>Common Pitfalls</h2>
+
+        <ul class="icon-list cross">
+          <li><strong>Monorepo for app code + GitOps manifests:</strong> Every app commit triggers ArgoCD reconciliation even if manifests didn't change. Separate repos.</li>
+          <li><strong>Not pinning Helm chart versions:</strong> <code>targetRevision: *</code> means ArgoCD might deploy a new chart version without you knowing. Pin it.</li>
+          <li><strong>Ignoring resource hooks on CRDs:</strong> CRDs must be synced before resources that use them. Use sync waves.</li>
+          <li><strong>Too many apps in one ArgoCD instance:</strong> Beyond ~200 apps, the controller struggles. Shard across multiple instances or use ApplicationSets with progressive syncs.</li>
+          <li><strong>No backup of ArgoCD itself:</strong> If the management cluster dies, you lose all Application definitions. Back up the argocd namespace or store Application YAMLs in Git (which app-of-apps gives you for free).</li>
+        </ul>
+
+        <h2>Key Takeaways</h2>
+
+        <p>GitOps with ArgoCD is not just "put YAML in Git." It's an operational model that requires thoughtful design around repository structure, secrets management, sync policies, RBAC, and emergency procedures. Start with the app-of-apps pattern, use External Secrets Operator for secrets, enable auto-sync in staging but keep production manual until you trust the system. Define your hotfix process before you need it. And monitor ArgoCD itself — it's infrastructure too, and it can fail in ways that silently block all your deployments.</p>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

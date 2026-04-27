@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terraform at Scale: Managing 500+ Resources Without Losing Your Mind – Suheb Ghare</title>
+  <meta name="description" content="How to structure Terraform for large organizations — module design, remote state with locking, workspace strategies, Terragrunt, CI/CD pipelines, state surgery, and recovering from state file corruption.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">Cloud</span></div>
+      <h1 class="post-title">Terraform at Scale: Managing 500+ Resources Without Losing Your Mind</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 January 5, 2025</span>
+        <span class="meta-item">⏱ 15 min read</span>
+        <span class="meta-item">👁 <span data-blog="terraform-at-scale" data-stat="reads">1100</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="terraform-at-scale" data-stat="reads">1100</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="terraform-at-scale" data-stat="likes">445</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="terraform-at-scale" data-stat="dislikes">28</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="terraform-at-scale">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="terraform-at-scale">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>When your Terraform codebase manages 50 resources, everything is fine. When it manages 500+, everything breaks — <code>terraform plan</code> takes 12 minutes, state files are 40MB, one bad merge can destroy production resources, and nobody understands the module hierarchy anymore. I've managed Terraform at this scale across 3 AWS accounts with 800+ resources. Here's what I learned.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=85" alt="Terraform infrastructure as code" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Module-based Terraform managing 500+ resources across 50 AWS accounts</figcaption>
+</figure>
+
+        <h2>The Module Structure That Scales</h2>
+
+        <p>The single biggest mistake teams make is putting everything in one state file. The second biggest is creating too many tiny modules. You need a middle ground: split by blast radius and team ownership.</p>
+
+<pre><code>infrastructure/
+├── modules/                    # Reusable building blocks
+│   ├── vpc/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md
+│   ├── eks-cluster/
+│   ├── rds/
+│   ├── s3-bucket/
+│   └── iam-role/
+├── environments/
+│   ├── dev/
+│   │   ├── networking/         # VPC, subnets, NAT gateways
+│   │   │   ├── main.tf
+│   │   │   ├── backend.tf      # Separate state file
+│   │   │   └── terraform.tfvars
+│   │   ├── compute/            # EKS, node groups, ASGs
+│   │   │   ├── main.tf
+│   │   │   ├── backend.tf
+│   │   │   └── terraform.tfvars
+│   │   ├── data/               # RDS, ElastiCache, S3
+│   │   └── security/           # IAM, KMS, WAF
+│   ├── staging/
+│   │   └── ... (same structure)
+│   └── production/
+│       └── ... (same structure)
+└── global/                     # Shared across environments
+    ├── iam/
+    ├── route53/
+    └── ecr/</code></pre>
+
+        <p>Each directory under an environment has its own state file. This gives you:</p>
+
+        <ul>
+          <li><strong>Blast radius isolation:</strong> A bad networking change can't accidentally destroy your database</li>
+          <li><strong>Faster plans:</strong> Planning 50 resources takes 30 seconds, not 12 minutes</li>
+          <li><strong>Team ownership:</strong> The platform team owns networking, the app team owns compute</li>
+          <li><strong>Independent deploys:</strong> Teams don't block each other with state locks</li>
+        </ul>
+
+        <h2>Remote State with S3 + DynamoDB Locking</h2>
+
+        <p>If you're using local state files, stop reading and fix that first. Remote state with locking is non-negotiable for any team larger than one person.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 375" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Terraform at Scale: Module + State Architecture</text><rect x="20" y="50" width="200" height="50" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="120" y="75" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Root Module</text><rect x="20" y="150" width="120" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="80" y="172" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">vpc</text><line x1="120" y1="100" x2="120" y2="150" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="160" y="150" width="120" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="220" y="172" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">eks</text><line x1="120" y1="100" x2="120" y2="150" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="300" y="150" width="120" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="360" y="172" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">rds</text><line x1="120" y1="100" x2="120" y2="150" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="440" y="150" width="120" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="500" y="172" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">iam</text><line x1="120" y1="100" x2="120" y2="150" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="20" y="230" width="760" height="2" rx="8" fill="#334155" stroke="#334155" stroke-width="1.5"/><text x="400" y="245" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Remote State: S3 + DynamoDB Locking</text><rect x="20" y="260" width="118" height="36" rx="6" fill="#1e3a5f" stroke="#334155" stroke-width="1.5"/><text x="79" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">dev/vpc</text><rect x="148" y="260" width="118" height="36" rx="6" fill="#1e3a5f" stroke="#334155" stroke-width="1.5"/><text x="207" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">dev/eks</text><rect x="276" y="260" width="118" height="36" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="335" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">staging/eks</text><rect x="404" y="260" width="118" height="36" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="463" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">prod/vpc</text><rect x="532" y="260" width="118" height="36" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="591" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">prod/eks</text><rect x="660" y="260" width="118" height="36" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="719" y="278" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">prod/rds</text><rect x="20" y="316" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="330" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">CI/CD: terraform plan on PR (Infracost estimate) → human approval → terraform apply on merge</text><text x="400" y="346" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Plan time: 45s per module (was 12min monolith)</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Separate state per environment+component — a failed prod/eks apply can't corrupt dev/vpc state</figcaption></figure>
+
+
+<pre><code># backend.tf — every stack gets one
+terraform {
+  backend "s3" {
+    bucket         = "myorg-terraform-state"
+    key            = "production/networking/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+    # Enable state file versioning on the S3 bucket!
+  }
+}</code></pre>
+
+<pre><code># Bootstrap: Create the state bucket and lock table
+# (Do this once, manually or with a separate bootstrap stack)
+
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "myorg-terraform-state"
+}
+
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
+
+resource "aws_dynamodb_table" "terraform_lock" {
+  name         = "terraform-state-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Enable Versioning on Your State Bucket</div>
+          <p>S3 versioning is your last line of defense against state corruption. When (not if) someone runs <code>terraform apply</code> with the wrong variables and corrupts the state, you can restore a previous version. I've done this twice in production. Both times, versioning saved us from a multi-hour recovery.</p>
+        </div>
+
+        <h2>Workspaces vs Separate State Files</h2>
+
+        <p>Terraform workspaces let you use the same code with different state files. Sounds great in theory. In practice, I've seen it cause more problems than it solves.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Approach</th>
+              <th>Pros</th>
+              <th>Cons</th>
+              <th>Use When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Workspaces</strong></td>
+              <td>DRY code, single source of truth</td>
+              <td>Easy to apply to wrong workspace, all envs share code changes, hard to have env-specific resources</td>
+              <td>Identical environments (e.g., ephemeral review apps)</td>
+            </tr>
+            <tr>
+              <td><strong>Separate dirs</strong></td>
+              <td>Clear isolation, env-specific configs, independent deploys</td>
+              <td>Code duplication, drift between environments</td>
+              <td>Production workloads where envs differ</td>
+            </tr>
+            <tr>
+              <td><strong>Terragrunt</strong></td>
+              <td>DRY + isolation, generates backend configs, dependency management</td>
+              <td>Extra tool to learn, adds complexity</td>
+              <td>Large orgs with many environments and stacks</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>My recommendation: use separate directories with shared modules for production workloads. Use Terragrunt if you have more than 3 environments or 10+ stacks.</p>
+
+        <h2>Terragrunt for DRY Configs</h2>
+
+        <p>Terragrunt wraps Terraform and eliminates the duplication problem. Instead of copying <code>backend.tf</code> and <code>provider.tf</code> into every directory, you define them once:</p>
+
+<pre><code># terragrunt.hcl (root)
+remote_state {
+  backend = "s3"
+  generate = {
+    path      = "backend.tf"
+    if_exists = "overwrite_terragrunt"
+  }
+  config = {
+    bucket         = "myorg-terraform-state"
+    key            = "${path_relative_to_include()}/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+}
+
+generate "provider" {
+  path      = "provider.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = &lt;&lt;EOF
+provider "aws" {
+  region = "us-east-1"
+  default_tags {
+    tags = {
+      ManagedBy   = "terraform"
+      Environment = "${basename(get_terragrunt_dir())}"
+    }
+  }
+}
+EOF
+}</code></pre>
+
+<pre><code># environments/production/networking/terragrunt.hcl
+include "root" {
+  path = find_in_parent_folders()
+}
+
+terraform {
+  source = "../../../modules/vpc"
+}
+
+inputs = {
+  vpc_cidr           = "10.0.0.0/16"
+  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  environment        = "production"
+}</code></pre>
+
+        <p>Now <code>terragrunt run-all plan</code> from the production directory plans all stacks in dependency order. <code>terragrunt run-all apply</code> applies them. The state key is automatically derived from the directory path.</p>
+
+        <h2>CI/CD Pipeline for Terraform</h2>
+
+        <p>The golden rule: <strong>plan on PR, apply on merge</strong>. Nobody should run <code>terraform apply</code> from their laptop against production.</p>
+
+        <h3>GitHub Actions Pipeline</h3>
+
+<pre><code>name: Terraform
+on:
+  pull_request:
+    paths: ['infrastructure/**']
+  push:
+    branches: [main]
+    paths: ['infrastructure/**']
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.changes.outputs.stacks }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: changes
+      run: |
+        # Detect which stacks changed
+        CHANGED=$(git diff --name-only ${{ github.event.before }} HEAD \
+          | grep '^infrastructure/environments/' \
+          | cut -d'/' -f1-4 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+        echo "stacks=$CHANGED" >> $GITHUB_OUTPUT
+
+  plan:
+    needs: detect-changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.7.0
+    - name: Terraform Plan
+      working-directory: ${{ matrix.stack }}
+      run: |
+        terraform init -input=false
+        terraform plan -input=false -no-color -out=tfplan
+    - name: Comment Plan on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Post plan output as PR comment
+          // (truncated for brevity)
+
+  apply:
+    needs: detect-changes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production  # Requires approval
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.detect-changes.outputs.stacks) }}
+      max-parallel: 1  # Apply one stack at a time
+    steps:
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.7.0
+    - name: Terraform Apply
+      working-directory: ${{ matrix.stack }}
+      run: |
+        terraform init -input=false
+        terraform apply -input=false -auto-approve</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Atlantis vs GitHub Actions</div>
+          <p>Atlantis is purpose-built for Terraform CI/CD and handles plan/apply workflows, locking, and PR comments out of the box. GitHub Actions gives you more flexibility but requires more setup. For teams with &lt;5 stacks, GitHub Actions is fine. For 10+ stacks with multiple teams, Atlantis pays for itself in reduced configuration and better locking semantics.</p>
+        </div>
+
+        <h2>Importing Existing Resources</h2>
+
+        <p>When you inherit infrastructure that was created manually (ClickOps), you need to import it into Terraform state without recreating it.</p>
+
+<pre><code># Step 1: Write the resource block
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name = "production-vpc"
+  }
+}
+
+# Step 2: Import into state
+terraform import aws_vpc.main vpc-0abc123def456
+
+# Step 3: Run plan — fix any drift
+terraform plan
+# You'll likely see tag changes or minor attribute differences.
+# Update your .tf file to match reality, then plan again until clean.</code></pre>
+
+        <p>For Terraform 1.5+, use import blocks for a declarative approach:</p>
+
+<pre><code>import {
+  to = aws_vpc.main
+  id = "vpc-0abc123def456"
+}
+
+# Then run: terraform plan -generate-config-out=generated.tf
+# This generates the resource block for you</code></pre>
+
+        <h2>State Surgery: mv, rm, and When You Need Them</h2>
+
+        <p>State surgery is dangerous but sometimes necessary. Common scenarios:</p>
+
+        <h3>Renaming a Resource</h3>
+<pre><code># You renamed aws_instance.web to aws_instance.api in code
+# Without state mv, Terraform will destroy web and create api
+terraform state mv aws_instance.web aws_instance.api</code></pre>
+
+        <h3>Moving a Resource to a Module</h3>
+<pre><code># You refactored aws_s3_bucket.logs into module.storage
+terraform state mv aws_s3_bucket.logs module.storage.aws_s3_bucket.logs</code></pre>
+
+        <h3>Removing a Resource from State (Without Destroying It)</h3>
+<pre><code># You want Terraform to stop managing this resource
+# but don't want to delete it from AWS
+terraform state rm aws_iam_role.legacy_role</code></pre>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Incident: State File Corruption and Recovery</div>
+          <p>In 2023, a CI pipeline ran two <code>terraform apply</code> commands concurrently against the same state (the DynamoDB lock had been accidentally removed during a "cleanup"). The state file ended up with duplicate resource entries and orphaned references. Plan showed 47 resources to destroy.</p>
+          <p><strong>Recovery steps:</strong></p>
+          <ol>
+            <li>Immediately locked the state: <code>terraform force-unlock</code> then manual DynamoDB lock</li>
+            <li>Downloaded the corrupted state: <code>terraform state pull > corrupted.tfstate</code></li>
+            <li>Restored previous version from S3 versioning (thank god we had it enabled)</li>
+            <li>Compared the two states to identify the 3 resources that were actually created by the concurrent apply</li>
+            <li>Imported those 3 resources into the restored state</li>
+            <li>Ran <code>terraform plan</code> — clean, no changes</li>
+            <li>Re-enabled DynamoDB locking and added a CI check to prevent concurrent runs</li>
+          </ol>
+          <p>Total recovery time: 2 hours. Without S3 versioning, it would have been a full day of manual state reconstruction.</p>
+        </div>
+
+        <h2>The Cost of Plan Time at Scale</h2>
+
+        <p>Every <code>terraform plan</code> makes API calls to your cloud provider to check the current state of every resource. At 500+ resources in a single state file, this takes 8-15 minutes. That's 8-15 minutes per PR, per push, per developer.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">12 min</div>
+            <div class="metric-label">Average plan time with 500 resources in one state file</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">45 sec</div>
+            <div class="metric-label">Average plan time after splitting into 10 stacks of ~50 resources</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$2,400/mo</div>
+            <div class="metric-label">Estimated developer time wasted waiting for plans (team of 8, 5 plans/day each)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">87%</div>
+            <div class="metric-label">Reduction in CI pipeline time after state splitting</div>
+          </div>
+        </div>
+
+        <p>Additional techniques to speed up plans:</p>
+
+        <ul>
+          <li><strong>Target specific resources:</strong> <code>terraform plan -target=module.networking</code> during development (never in CI)</li>
+          <li><strong>Parallelism tuning:</strong> <code>terraform plan -parallelism=20</code> (default is 10)</li>
+          <li><strong>Provider caching:</strong> Use <code>plugin_cache_dir</code> to avoid re-downloading providers</li>
+          <li><strong>State file size:</strong> Remove unused data sources and outputs that force unnecessary API calls</li>
+        </ul>
+
+        <h2>Terraform Best Practices at Scale</h2>
+
+        <ul class="icon-list">
+          <li>Pin provider versions exactly: <code>version = "= 5.31.0"</code>, not <code>"~> 5.0"</code></li>
+          <li>Pin Terraform version in <code>required_version</code> and in CI</li>
+          <li>Use <code>.terraform.lock.hcl</code> and commit it to version control</li>
+          <li>Tag every resource with <code>ManagedBy = "terraform"</code> and <code>Environment</code></li>
+          <li>Never use <code>count</code> for resources that might be reordered — use <code>for_each</code> with stable keys</li>
+          <li>Keep modules small and focused — one module per logical component</li>
+          <li>Document every module with a README and example usage</li>
+          <li>Run <code>terraform fmt</code> and <code>terraform validate</code> in CI as a pre-check</li>
+          <li>Use <code>tflint</code> and <code>checkov</code> for linting and security scanning</li>
+          <li>Never store secrets in <code>.tfvars</code> — use AWS Secrets Manager or SSM Parameter Store with data sources</li>
+        </ul>
+
+        <h2>Key Takeaways</h2>
+
+        <p>Terraform at scale is a state management problem, not a code problem. Split your state files by blast radius and team ownership. Use remote state with locking and versioning — no exceptions. Automate plan and apply through CI/CD so nobody runs Terraform from their laptop. And enable S3 versioning on your state bucket before you need it, because you will need it. The investment in structure pays off exponentially as your infrastructure grows.</p>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

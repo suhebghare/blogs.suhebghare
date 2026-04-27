@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaos Engineering in Production: How We Break Things on Purpose – Suheb Ghare</title>
+  <meta name="description" content="How we implemented chaos engineering in production — from killing pods to simulating AZ failures. Real experiments, GameDay planning, and how we found 3 critical bugs before customers did.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">SRE</span></div>
+      <h1 class="post-title">Chaos Engineering in Production: How We Break Things on Purpose</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 December 22, 2024</span>
+        <span class="meta-item">⏱ 14 min read</span>
+        <span class="meta-item">👁 <span data-blog="chaos-engineering-production" data-stat="reads">870</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="chaos-engineering-production" data-stat="reads">870</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="chaos-engineering-production" data-stat="likes">367</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="chaos-engineering-production" data-stat="dislikes">24</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="chaos-engineering-production">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="chaos-engineering-production">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>In Q3 last year, we ran our first chaos engineering experiment in production. We killed a single pod of our payment processing service during business hours. Within 90 seconds, we discovered that our circuit breaker configuration had a bug — it was set to open after 10 failures, but the health check interval was 30 seconds, meaning the circuit breaker never tripped fast enough. Requests piled up behind a dead pod for over a minute before Kubernetes rescheduled it.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=85" alt="Chaos engineering experiments" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Chaos maturity model: from pod kills to AZ failure simulations</figcaption>
+</figure>
+
+        <p>That single experiment led us to find two more critical bugs: a missing retry configuration in our API gateway and a database connection pool that didn't handle reconnection after a pod restart. All three would have caused real customer impact during an actual failure. We found them on our terms, during business hours, with the whole team watching.</p>
+
+        <p>That's the value of chaos engineering. You don't do it to break things — you do it to <strong>find the things that are already broken</strong> but haven't been triggered yet.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">3</div>
+            <div class="metric-label">Critical bugs found before customers</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">14</div>
+            <div class="metric-label">Experiments run in 6 months</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">67%</div>
+            <div class="metric-label">Reduction in MTTR</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">0</div>
+            <div class="metric-label">Customer-facing incidents from experiments</div>
+          </div>
+        </div>
+
+        <h2>The Chaos Maturity Model</h2>
+
+        <p>You don't start chaos engineering by simulating an AZ failure in production. That's how you create the incident you were trying to prevent. Chaos maturity is a progression:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Level 0: No Chaos</h3>
+            <p>You hope things work. You find out they don't when customers tell you. Most teams are here.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Level 1: Staging Chaos</h3>
+            <p>Kill pods, inject latency, and simulate failures in staging. Build confidence in your tools and processes. This is where you should spend 2-3 months.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Level 2: Production Chaos (Controlled)</h3>
+            <p>Run experiments in production during business hours with the team watching. Small blast radius. Kill one pod, not a whole deployment. Inject 200ms latency, not 30 seconds.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Level 3: Production Chaos (Automated)</h3>
+            <p>Scheduled experiments run automatically. Chaos Monkey-style random pod kills. The system is expected to handle it without human intervention.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Level 4: GameDays</h3>
+            <p>Full-scale failure simulations. AZ failures, database failovers, DNS outages. Cross-team exercises with incident response practice.</p>
+          </div>
+        </div>
+
+        <p>We're currently at Level 3 for most services and run Level 4 GameDays quarterly. It took us 8 months to get here from Level 0.</p>
+
+        <h2>Starting Small: Kill a Pod, Not a Region</h2>
+
+        <p>Your first chaos experiment should be embarrassingly simple: kill a single pod of a non-critical service and see what happens. If your system can't handle that, you have no business simulating an AZ failure.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Chaos Engineering Maturity Model</text><rect x="20" y="55" width="140" height="130" rx="10" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="90" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Level 0</text><text x="90" y="90" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">No Chaos Testing</text><text x="90" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Manual recovery only</text><line x1="160" y1="120" x2="175" y2="120" stroke="120" stroke-width="2" marker-end="url(#a)"/><rect x="175" y="55" width="140" height="130" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="245" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Level 1</text><text x="245" y="90" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Pod Kill</text><text x="245" y="106" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">in Staging</text><text x="245" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Litmus/Chaos Mesh</text><text x="245" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">basic experiments</text><line x1="315" y1="120" x2="330" y2="120" stroke="120" stroke-width="2" marker-end="url(#a)"/><rect x="330" y="55" width="140" height="130" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Level 2</text><text x="400" y="90" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Network Faults</text><text x="400" y="106" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">in Staging</text><text x="400" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Latency injection</text><text x="400" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">partition testing</text><line x1="470" y1="120" x2="485" y2="120" stroke="120" stroke-width="2" marker-end="url(#a)"/><rect x="485" y="55" width="140" height="130" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="555" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Level 3</text><text x="555" y="90" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">AZ Failure</text><text x="555" y="106" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">in Production</text><text x="555" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Controlled blast radius</text><text x="555" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">with abort conditions</text><line x1="625" y1="120" x2="640" y2="120" stroke="120" stroke-width="2" marker-end="url(#a)"/><rect x="640" y="55" width="140" height="130" rx="10" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="710" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Level 4</text><text x="710" y="90" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Full GameDay</text><text x="710" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Business metrics</text><text x="710" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">validation in prod</text><rect x="20" y="200" width="760" height="44" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="215" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Progression: start Level 1 in staging → graduate to prod only after staging is resilient</text><text x="400" y="232" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Rule: never run chaos without abort conditions and rollback plan</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Chaos maturity: start small in staging, graduate to production only with business-metric validation</figcaption></figure>
+
+
+        <p>Here's what our first experiment looked like:</p>
+
+        <div class="architecture-box">
+          <h3>Experiment #1: Pod Failure — Order Service</h3>
+          <p><strong>Hypothesis:</strong> If one pod of the order-service (3 replicas) is killed, the remaining 2 pods will handle traffic with no errors and latency increase under 50ms.</p>
+          <p><strong>Steady state:</strong> Error rate &lt; 0.1%, p99 latency &lt; 200ms, all health checks passing.</p>
+          <p><strong>Method:</strong> <code>kubectl delete pod order-service-abc123 --grace-period=0</code></p>
+          <p><strong>Blast radius:</strong> 1 pod out of 3. ~33% capacity reduction.</p>
+          <p><strong>Abort conditions:</strong> Error rate &gt; 1% OR p99 latency &gt; 500ms OR any 5xx from downstream services.</p>
+        </div>
+
+        <p><strong>What actually happened:</strong> The pod was killed. Traffic shifted to the remaining 2 pods within 5 seconds (kube-proxy updated iptables rules). Latency increased by 30ms — within our hypothesis. But we noticed something unexpected: the replacement pod took 45 seconds to become ready because the readiness probe had a 30-second <code>initialDelaySeconds</code>. During those 45 seconds, we were running at 66% capacity. For a service with tight margins, that's a problem during peak traffic.</p>
+
+        <p><strong>Action taken:</strong> Reduced <code>initialDelaySeconds</code> to 5 seconds, added a proper startup probe, and increased replicas from 3 to 4 for services with slow startup times.</p>
+
+        <h2>GameDay Planning</h2>
+
+        <p>A GameDay is a structured chaos engineering exercise involving multiple teams. It's part technical exercise, part incident response drill. Here's our GameDay template:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Phase</th><th>Duration</th><th>Activities</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Pre-GameDay (1 week before)</td><td>2 hours</td><td>Define experiments, set hypotheses, brief all teams, verify monitoring, confirm abort procedures</td></tr>
+            <tr><td>Setup</td><td>30 min</td><td>Verify steady state, confirm all dashboards are live, open incident channel, assign roles (experimenter, observer, scribe)</td></tr>
+            <tr><td>Experiments</td><td>2-3 hours</td><td>Run experiments sequentially. 15-min recovery between each. Document observations in real time.</td></tr>
+            <tr><td>Debrief</td><td>1 hour</td><td>Review findings, categorize issues by severity, assign action items, update runbooks</td></tr>
+            <tr><td>Follow-up (1 week after)</td><td>1 hour</td><td>Review action item progress, plan next GameDay</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The Scribe Role Is Critical</div>
+          <p>Assign someone whose only job is to document everything in real time — timestamps, observations, metrics, decisions. During the experiment, engineers are focused on the system. Without a scribe, you'll forget half of what happened and lose valuable learnings.</p>
+        </div>
+
+        <h2>AWS Fault Injection Simulator (FIS)</h2>
+
+        <p>For AWS-level chaos (not just Kubernetes), we use AWS Fault Injection Simulator. It integrates natively with EC2, ECS, EKS, and RDS. Here's how we set up an AZ failure simulation:</p>
+
+<pre><code># FIS experiment template — simulate AZ failure
+resource "aws_fis_experiment_template" "az_failure" {
+  description = "Simulate us-east-1a availability zone failure"
+  role_arn    = aws_iam_role.fis_role.arn
+
+  stop_condition {
+    source = "aws:cloudwatch:alarm"
+    value  = aws_cloudwatch_metric_alarm.error_rate_high.arn
+  }
+
+  # Action 1: Stop EC2 instances in the target AZ
+  action {
+    name      = "stop-instances-az-a"
+    action_id = "aws:ec2:stop-instances"
+
+    parameter {
+      key   = "startInstancesAfterDuration"
+      value = "PT10M"  # Auto-restart after 10 minutes
+    }
+
+    target {
+      key   = "Instances"
+      value = "instances-az-a"
+    }
+  }
+
+  # Action 2: Inject network disruption to RDS in target AZ
+  action {
+    name      = "disrupt-rds-network"
+    action_id = "aws:network:disrupt-connectivity"
+
+    parameter {
+      key   = "duration"
+      value = "PT5M"
+    }
+
+    parameter {
+      key   = "scope"
+      value = "availability-zone"
+    }
+
+    target {
+      key   = "Subnets"
+      value = "subnets-az-a"
+    }
+  }
+
+  # Target: EC2 instances in us-east-1a with chaos-eligible tag
+  target {
+    name           = "instances-az-a"
+    resource_type  = "aws:ec2:instance"
+    selection_mode = "ALL"
+
+    resource_tag {
+      key   = "chaos-eligible"
+      value = "true"
+    }
+
+    filter {
+      path   = "Placement.AvailabilityZone"
+      values = ["us-east-1a"]
+    }
+  }
+
+  target {
+    name           = "subnets-az-a"
+    resource_type  = "aws:ec2:subnet"
+    selection_mode = "ALL"
+
+    resource_tag {
+      key   = "chaos-eligible"
+      value = "true"
+    }
+
+    filter {
+      path   = "AvailabilityZone"
+      values = ["us-east-1a"]
+    }
+  }
+
+  tags = {
+    Purpose = "chaos-engineering"
+  }
+}</code></pre>
+
+        <p>The <code>stop_condition</code> is your safety net. If the CloudWatch alarm fires (error rate exceeds threshold), FIS automatically rolls back the experiment. Always configure this.</p>
+
+        <h2>Chaos Mesh on Kubernetes</h2>
+
+        <p>For Kubernetes-level chaos, we use Chaos Mesh. It's a CNCF project that runs as a set of CRDs in your cluster. Here are the experiments we run regularly:</p>
+
+        <h3>Experiment: Pod Failure</h3>
+
+<pre><code>apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-order-service
+  namespace: chaos-testing
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - production
+    labelSelectors:
+      app: order-service
+  scheduler:
+    cron: "@every 2h"  # Kill a random pod every 2 hours
+  duration: "60s"</code></pre>
+
+        <h3>Experiment: Network Latency Injection</h3>
+
+<pre><code>apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: latency-payment-to-db
+  namespace: chaos-testing
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - production
+    labelSelectors:
+      app: payment-service
+  delay:
+    latency: "200ms"
+    jitter: "50ms"
+    correlation: "75"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - production
+      labelSelectors:
+        app: postgres
+    mode: all
+  duration: "5m"</code></pre>
+
+        <h3>What We Learned From Each Experiment</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Experiment</th><th>Expected Result</th><th>Actual Result</th><th>Finding</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Kill 1 of 3 pods</td><td>No impact</td><td>45s degraded capacity</td><td>Startup probe too slow</td></tr>
+            <tr><td>200ms latency to DB</td><td>Graceful degradation</td><td>Connection pool exhaustion in 90s</td><td>Pool timeout was 30s, too long</td></tr>
+            <tr><td>Kill Redis leader</td><td>Sentinel failover in &lt;5s</td><td>Failover took 32s</td><td>Sentinel config had wrong quorum</td></tr>
+            <tr><td>DNS failure (5min)</td><td>Cached connections work</td><td>New connections failed immediately</td><td>No DNS caching at app level</td></tr>
+            <tr><td>AZ-a network partition</td><td>Traffic shifts to AZ-b/c</td><td>50% of requests failed for 2min</td><td>ALB health check interval too long</td></tr>
+          </tbody>
+        </table>
+
+        <p>Every single experiment found something. Not always a critical bug, but always a gap between what we assumed and what actually happened.</p>
+
+        <h2>Getting Management Buy-In</h2>
+
+        <p>This is the hardest part. "We want to intentionally break production" is a tough sell. Here's what worked for us:</p>
+
+        <ul>
+          <li><strong>Frame it as risk reduction, not breaking things.</strong> "We're testing our disaster recovery before a disaster happens" resonates with leadership.</li>
+          <li><strong>Start in staging.</strong> Run 3-4 experiments in staging first. Document the bugs you find. Present those findings to leadership: "We found these 3 bugs in staging. They exist in production too. Chaos engineering in production would have caught them before customers did."</li>
+          <li><strong>Quantify the cost of incidents.</strong> If your last production incident cost $50K in lost revenue and took 4 hours to resolve, a chaos engineering program that prevents one such incident per quarter pays for itself immediately.</li>
+          <li><strong>Show the blast radius controls.</strong> Demonstrate the abort conditions, the stop conditions in FIS, the monitoring dashboards. Show that you're not randomly breaking things — you're running controlled, scientific experiments.</li>
+          <li><strong>Start with non-critical services.</strong> Your first production experiment should not be on the payment processing pipeline. Pick an internal tool or a read-only service.</li>
+        </ul>
+
+        <div class="callout callout-success">
+          <div class="callout-title">The Pitch That Worked</div>
+          <p>"We have 99.95% uptime SLO. We've never tested what happens when an AZ goes down. We assume our multi-AZ setup works, but we've never verified it. I'd rather find out it doesn't work on a Tuesday at 2 PM with the team ready than on Black Friday at midnight."</p>
+        </div>
+
+        <h2>Steady-State Hypothesis</h2>
+
+        <p>Every chaos experiment must start with a steady-state hypothesis. This is the measurable definition of "the system is working correctly." Without it, you can't tell if the experiment caused a problem or if the system was already degraded.</p>
+
+        <p>Our steady-state checklist before every experiment:</p>
+
+        <ul class="icon-list">
+          <li>Error rate below SLO threshold (< 0.1% for critical services)</li>
+          <li>P99 latency within SLO (< 500ms for API, < 2s for web)</li>
+          <li>All health checks passing</li>
+          <li>No active incidents or ongoing deployments</li>
+          <li>No scheduled maintenance windows</li>
+          <li>CPU and memory utilization below 70% (headroom for failover)</li>
+          <li>All replicas running and ready</li>
+        </ul>
+
+        <p>If any of these conditions aren't met, we postpone the experiment. Running chaos on an already-degraded system doesn't teach you anything useful — it just creates an incident.</p>
+
+        <h2>Blast Radius Control</h2>
+
+        <p>The most important principle in chaos engineering is controlling the blast radius. Every experiment should have clearly defined boundaries:</p>
+
+        <div class="grid-2">
+          <div class="info-box success">
+            <p><strong>Safe blast radius:</strong></p>
+            <ul>
+              <li>Kill 1 pod out of 5</li>
+              <li>Add 100ms latency to one service</li>
+              <li>Fail 5% of requests to a dependency</li>
+              <li>Drain one node in a 20-node cluster</li>
+            </ul>
+          </div>
+          <div class="info-box danger">
+            <p><strong>Dangerous blast radius:</strong></p>
+            <ul>
+              <li>Kill all pods of a service</li>
+              <li>Add 10s latency to the database</li>
+              <li>Fail 100% of requests to auth service</li>
+              <li>Simulate full AZ failure without testing single-node first</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>We tag all resources eligible for chaos experiments with <code>chaos-eligible: true</code>. Production databases, stateful services, and anything handling financial transactions are explicitly excluded until we've built sufficient confidence with less critical services.</p>
+
+        <h2>Key Takeaways</h2>
+
+        <ul>
+          <li><strong>Every experiment finds something.</strong> In 14 experiments, we've never had one where the system behaved exactly as expected. The gaps between assumption and reality are where incidents live.</li>
+          <li><strong>Start embarrassingly small.</strong> Kill one pod. If that breaks things, you have bigger problems than chaos engineering can solve.</li>
+          <li><strong>Steady-state hypothesis is non-negotiable.</strong> If you can't define "working correctly" in measurable terms, you can't run a meaningful experiment.</li>
+          <li><strong>Abort conditions save you.</strong> Every experiment needs a kill switch. Automate it with CloudWatch alarms or Prometheus alerts.</li>
+          <li><strong>Document everything.</strong> The scribe role during GameDays is as important as the engineer running the experiment.</li>
+          <li><strong>Chaos engineering is a practice, not a tool.</strong> Chaos Mesh and FIS are just instruments. The value comes from the hypotheses, the observations, and the follow-up actions.</li>
+        </ul>
+
+        <blockquote>
+          <p>"Chaos engineering is not about breaking things. It's about building confidence in your system's ability to withstand turbulent conditions in production." — Principles of Chaos Engineering</p>
+        </blockquote>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

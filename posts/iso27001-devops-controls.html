@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ISO 27001 Controls for DevOps Engineers – Suheb Ghare</title>
+  <meta name="description" content="ISO 27001 Controls for DevOps Engineers – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Security</span>
+      </div>
+      <h1 class="post-title">ISO 27001 Controls for DevOps Engineers</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="iso27001-devops-controls" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="iso27001-devops-controls" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="iso27001-devops-controls" data-stat="likes">200</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="iso27001-devops-controls" data-stat="dislikes">15</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="iso27001-devops-controls">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="iso27001-devops-controls">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Not a Compliance Checkbox Exercise</h2>
+        <p>Most ISO 27001 guides read like they were written by auditors for auditors. This one is written by a DevOps engineer who spent 6 months implementing these controls across three AWS accounts and two Kubernetes clusters — and then automated the evidence collection so audit prep went from 3 weeks to 3 days.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/app-sec1.jpg" alt="ISO 27001 controls for DevOps" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Automated evidence collection reduces audit prep from 3 weeks to 3 days</figcaption>
+</figure>
+        <p>I'll cover the 10 ISO 27001 Annex A controls most relevant to DevOps teams, with real implementations in AWS and Kubernetes, and the automation that makes ongoing compliance sustainable.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">3 weeks → 3 days</div>
+            <div class="metric-label">Audit prep time reduction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">10</div>
+            <div class="metric-label">Key controls for DevOps</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">87%</div>
+            <div class="metric-label">Evidence collection automated</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$0</div>
+            <div class="metric-label">Additional tooling cost (used existing AWS services)</div>
+          </div>
+        </div>
+
+        <h2>A.9 — Access Control</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me how you control who has access to what, how access is granted and revoked, and how you review access periodically."</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ISO 27001 Controls → DevOps Implementation</text><rect x="20" y="50" width="160" height="28" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="100" y="64" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Control</text><rect x="180" y="50" width="60" height="28" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="210" y="64" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Annex</text><rect x="240" y="50" width="200" height="28" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="340" y="64" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">DevOps Tool</text><rect x="440" y="50" width="280" height="28" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="580" y="64" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Automation</text><rect x="20" y="78" width="160" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="100" y="94" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Access Control</text><rect x="180" y="78" width="60" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="210" y="94" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">A.9</text><rect x="240" y="78" width="200" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="340" y="94" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">IAM + IRSA + SSO</text><rect x="440" y="78" width="280" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="580" y="94" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Terraform IAM modules + Okta SCIM</text><rect x="20" y="112" width="160" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="100" y="128" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Operations Security</text><rect x="180" y="112" width="60" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="210" y="128" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">A.12</text><rect x="240" y="112" width="200" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="340" y="128" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">GitOps + Change Mgmt</text><rect x="440" y="112" width="280" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="580" y="128" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">ArgoCD audit log + PR approvals</text><rect x="20" y="146" width="160" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="100" y="162" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">System Acquisition</text><rect x="180" y="146" width="60" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="210" y="162" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">A.14</text><rect x="240" y="146" width="200" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="340" y="162" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">SAST/DAST in CI</text><rect x="440" y="146" width="280" height="32" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="580" y="162" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Trivy + Checkov + SonarQube</text><rect x="20" y="180" width="160" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="100" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Incident Management</text><rect x="180" y="180" width="60" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="210" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">A.16</text><rect x="240" y="180" width="200" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="340" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">PagerDuty + Runbooks</text><rect x="440" y="180" width="280" height="32" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="580" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Auto-escalation + postmortem template</text><rect x="20" y="220" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="235" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Audit prep time: 3 weeks → 3 days</text><text x="400" y="252" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Automated evidence collection from Git, CI/CD, and cloud audit logs</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Map ISO 27001 controls to DevOps tools — automate evidence collection for painless audits</figcaption></figure>
+
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>AWS IAM:</strong> No long-lived credentials. All human access via AWS SSO with MFA. Service accounts use IRSA (IAM Roles for Service Accounts)</li>
+          <li><strong>Kubernetes RBAC:</strong> Namespace-scoped roles, no cluster-admin for developers. Access via kubectl proxy through SSO</li>
+          <li><strong>Quarterly access reviews:</strong> Automated script that dumps all IAM users, roles, and K8s RBAC bindings into a spreadsheet for manager review</li>
+        </ul>
+        <pre><code># Automated access review script (runs quarterly via Lambda)
+aws iam generate-credential-report
+aws iam get-credential-report --output text --query Content | base64 -d > iam-report.csv
+
+# Find users with console access but no MFA
+aws iam list-users --query 'Users[*].UserName' --output text | while read user; do
+  mfa=$(aws iam list-mfa-devices --user-name "$user" --query 'MFADevices' --output text)
+  if [ -z "$mfa" ]; then
+    echo "WARNING: $user has no MFA configured"
+  fi
+done
+
+# Kubernetes RBAC audit
+kubectl get clusterrolebindings -o json | jq '.items[] |
+  select(.roleRef.name == "cluster-admin") |
+  {name: .metadata.name, subjects: .subjects}'</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Audit Evidence</div>
+          <p>Store the output of these scripts in an S3 bucket with versioning enabled. When the auditor asks for "evidence of quarterly access reviews," you hand them a link to the S3 bucket with timestamped reports. No scrambling.</p>
+        </div>
+
+        <h2>A.10 — Cryptography</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me your encryption policy, what's encrypted, and how you manage keys."</p>
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>At rest:</strong> KMS encryption on all RDS, S3, EBS, and DynamoDB. Account-level default EBS encryption enabled</li>
+          <li><strong>In transit:</strong> TLS 1.2+ everywhere. ACM certificates with auto-renewal. No self-signed certs in production</li>
+          <li><strong>Key rotation:</strong> KMS automatic key rotation enabled (annual). Application-level secrets rotated every 90 days via Secrets Manager</li>
+        </ul>
+        <pre><code># AWS Config rule: verify all EBS volumes are encrypted
+aws configservice put-config-rule --config-rule '{
+  "ConfigRuleName": "encrypted-volumes",
+  "Source": {
+    "Owner": "AWS",
+    "SourceIdentifier": "ENCRYPTED_VOLUMES"
+  }
+}'
+
+# AWS Config rule: verify all S3 buckets have encryption
+aws configservice put-config-rule --config-rule '{
+  "ConfigRuleName": "s3-bucket-server-side-encryption-enabled",
+  "Source": {
+    "Owner": "AWS",
+    "SourceIdentifier": "S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED"
+  }
+}'</code></pre>
+
+        <h2>A.12 — Operations Security</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me your change management process, how you handle capacity, and how you separate dev/test/prod."</p>
+
+        <h3>How We Implement It</h3>
+        <p>This is where GitOps shines as compliance evidence. Every infrastructure change goes through a pull request with:</p>
+        <ol>
+          <li>Code review by at least one peer (enforced via branch protection)</li>
+          <li>Automated tests (Terraform plan, policy checks via OPA/Conftest)</li>
+          <li>Approval from a designated approver</li>
+          <li>Automated deployment via ArgoCD (no manual kubectl apply)</li>
+        </ol>
+
+        <div class="info-box success">
+          <p><strong>GitOps = Change Management Evidence.</strong> Every Git commit is a timestamped, attributed, reviewed change record. The auditor can see who changed what, when, who approved it, and what tests passed. This is better evidence than any ticketing system.</p>
+        </div>
+
+        <pre><code># Branch protection as change management control
+# GitHub API — enforce PR reviews
+gh api repos/{owner}/{repo}/branches/main/protection -X PUT -f '{
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true
+  },
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["terraform-plan", "policy-check", "security-scan"]
+  },
+  "enforce_admins": true,
+  "restrictions": null
+}'</code></pre>
+
+        <h2>A.13 — Communications Security</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me how you protect data in transit and segment your networks."</p>
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>VPC segmentation:</strong> Separate VPCs for prod/staging/dev. No VPC peering between prod and non-prod</li>
+          <li><strong>Network policies:</strong> Default-deny Kubernetes NetworkPolicies with explicit allowlists</li>
+          <li><strong>mTLS:</strong> Istio service mesh with STRICT mTLS between all services</li>
+          <li><strong>VPC Flow Logs:</strong> Enabled on all VPCs, stored in S3 for 90 days</li>
+        </ul>
+
+        <h2>A.14 — System Acquisition, Development, and Maintenance</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me how security is built into your development process."</p>
+
+        <h3>How We Implement It</h3>
+        <p>Security scanning is embedded in every CI/CD pipeline:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Tool</th>
+              <th>What It Checks</th>
+              <th>Blocks Deploy?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Pre-commit</td>
+              <td>gitleaks</td>
+              <td>Secrets in code</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Build</td>
+              <td>Trivy</td>
+              <td>Container image vulnerabilities</td>
+              <td>Yes (Critical/High)</td>
+            </tr>
+            <tr>
+              <td>Build</td>
+              <td>Checkov</td>
+              <td>Terraform misconfigurations</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Test</td>
+              <td>OWASP ZAP</td>
+              <td>DAST — runtime vulnerabilities</td>
+              <td>Yes (High)</td>
+            </tr>
+            <tr>
+              <td>Deploy</td>
+              <td>OPA/Gatekeeper</td>
+              <td>K8s admission control policies</td>
+              <td>Yes</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>A.15 — Supplier Relationships</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me how you manage third-party risk — cloud providers, SaaS tools, dependencies."</p>
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>Dependency scanning:</strong> Dependabot/Renovate for automated dependency updates with vulnerability alerts</li>
+          <li><strong>Vendor assessment:</strong> Annual review of all SaaS vendors' SOC 2 reports</li>
+          <li><strong>AWS shared responsibility:</strong> Document which controls AWS owns vs. which we own</li>
+          <li><strong>Supply chain security:</strong> Container images pinned to SHA digests, not tags. Base images from verified publishers only</li>
+        </ul>
+
+        <h2>A.16 — Incident Management</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me your incident response process, recent incidents, and what you learned."</p>
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>PagerDuty:</strong> Escalation policies with defined response times per severity</li>
+          <li><strong>Postmortems:</strong> Blameless postmortem for every SEV1/SEV2 incident, stored in Confluence with action items tracked in Jira</li>
+          <li><strong>GuardDuty:</strong> Automated threat detection with Lambda-based auto-remediation for common findings</li>
+        </ul>
+
+        <h2>A.17 — Business Continuity</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me your disaster recovery plan, backup strategy, and test results."</p>
+
+        <h3>How We Implement It</h3>
+        <ul>
+          <li><strong>RDS:</strong> Automated backups with 35-day retention, cross-region read replicas</li>
+          <li><strong>S3:</strong> Cross-region replication for critical buckets</li>
+          <li><strong>EKS:</strong> Velero backups of cluster state, daily to S3</li>
+          <li><strong>DR testing:</strong> Quarterly failover test to DR region, documented with screenshots and timing</li>
+        </ul>
+
+        <pre><code># Velero backup schedule for K8s disaster recovery
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-cluster-backup
+  namespace: velero
+spec:
+  schedule: "0 2 * * *"
+  template:
+    includedNamespaces:
+      - production
+      - staging
+    storageLocation: aws-dr-region
+    ttl: 720h  # 30 days retention</code></pre>
+
+        <h2>A.18 — Compliance</h2>
+        <h3>What the Auditor Asks</h3>
+        <p>"Show me how you ensure ongoing compliance, not just point-in-time."</p>
+
+        <h3>How We Implement It</h3>
+        <p>AWS Config + Security Hub provides continuous compliance monitoring:</p>
+        <pre><code># Enable Security Hub with ISO 27001 standard
+aws securityhub enable-security-hub \
+  --enable-default-standards
+
+aws securityhub batch-enable-standards \
+  --standards-subscription-requests '[
+    {
+      "StandardsArn": "arn:aws:securityhub:::standards/aws-foundational-security-best-practices/v/1.0.0"
+    }
+  ]'</code></pre>
+
+        <h2>Automated Evidence Collection</h2>
+        <p>The biggest time saver: a Lambda function that runs monthly and collects all audit evidence into a structured S3 bucket:</p>
+
+        <div class="diagram">
+          <div class="flow-step">1. Lambda runs on 1st of each month</div>
+          <div class="flow-step">2. Collects: IAM report, Config compliance, Security Hub findings, CloudTrail digest, VPC Flow Log summary</div>
+          <div class="flow-step">3. Generates: Access review report, encryption status, change log from Git, incident summary</div>
+          <div class="flow-step">4. Stores in S3: s3://audit-evidence/2024/04/</div>
+          <div class="flow-step">5. Notifies compliance team via email with summary</div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Evidence Type</th>
+              <th>ISO Control</th>
+              <th>Collection Method</th>
+              <th>Frequency</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>IAM credential report</td>
+              <td>A.9</td>
+              <td>AWS IAM API</td>
+              <td>Monthly</td>
+            </tr>
+            <tr>
+              <td>Encryption compliance</td>
+              <td>A.10</td>
+              <td>AWS Config rules</td>
+              <td>Continuous</td>
+            </tr>
+            <tr>
+              <td>Change log (Git history)</td>
+              <td>A.12</td>
+              <td>GitHub API</td>
+              <td>Monthly</td>
+            </tr>
+            <tr>
+              <td>Network segmentation proof</td>
+              <td>A.13</td>
+              <td>VPC/SG export</td>
+              <td>Monthly</td>
+            </tr>
+            <tr>
+              <td>Vulnerability scan results</td>
+              <td>A.14</td>
+              <td>Trivy/Security Hub</td>
+              <td>Per deploy</td>
+            </tr>
+            <tr>
+              <td>Incident postmortems</td>
+              <td>A.16</td>
+              <td>Confluence API</td>
+              <td>Per incident</td>
+            </tr>
+            <tr>
+              <td>Backup test results</td>
+              <td>A.17</td>
+              <td>DR test runbook output</td>
+              <td>Quarterly</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Result</div>
+          <p>Before automation, audit prep took 3 weeks of an engineer's time — pulling reports, taking screenshots, writing narratives. After automation, it takes 3 days: 1 day to review the auto-collected evidence, 1 day to fill gaps, 1 day to prepare the presentation for the auditor. The auditor was impressed — they said it was the most organized evidence package they'd seen.</p>
+        </div>
+
+        <h2>Key Takeaways</h2>
+        <ul>
+          <li><strong>GitOps is your best friend for A.12</strong> — every change is a reviewed, approved, timestamped record</li>
+          <li><strong>AWS Config + Security Hub</strong> provides continuous compliance monitoring for most controls</li>
+          <li><strong>Automate evidence collection</strong> — manual audit prep doesn't scale and burns out engineers</li>
+          <li><strong>Store evidence in S3 with versioning</strong> — auditors love timestamped, immutable evidence</li>
+          <li><strong>Embed security in CI/CD</strong> (A.14) — it's both good security and good compliance evidence</li>
+          <li><strong>Quarterly access reviews</strong> are the most commonly failed control — automate the report generation</li>
+          <li><strong>ISO 27001 and DevOps are complementary</strong> — good DevOps practices naturally satisfy most controls</li>
+        </ul>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

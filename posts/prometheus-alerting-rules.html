@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prometheus Alerting Rules That Don't Page You for Nothing – Suheb Ghare</title>
+  <meta name="description" content="How we reduced alert noise from 200 alerts/week to 12 using multi-window multi-burn-rate alerting, symptom-based rules, and proper Alertmanager routing.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">Observability</span></div>
+      <h1 class="post-title">Prometheus Alerting Rules That Don't Page You for Nothing</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 January 20, 2025</span>
+        <span class="meta-item">⏱ 13 min read</span>
+        <span class="meta-item">👁 <span data-blog="prometheus-alerting-rules" data-stat="reads">920</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="prometheus-alerting-rules" data-stat="reads">920</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="prometheus-alerting-rules" data-stat="likes">389</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="prometheus-alerting-rules" data-stat="dislikes">21</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="prometheus-alerting-rules">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="prometheus-alerting-rules">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>Last year, our on-call engineers were getting paged 200+ times per week. Most of those alerts were noise — transient CPU spikes, brief latency bumps that resolved before anyone could even look at them, and threshold-based rules that fired on perfectly healthy systems during normal traffic patterns. Engineers started ignoring alerts. That's when the real incidents slipped through.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/grafana1.svg" alt="Prometheus alerting dashboard in Grafana" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Multi-window burn-rate alerting reduces false positives by 94%</figcaption>
+</figure>
+
+        <p>We spent three months rewriting every alerting rule from scratch. The result: <strong>12 actionable alerts per week</strong>, zero missed incidents, and on-call engineers who actually sleep through the night. Here's exactly how we did it.</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The Real Cost of Alert Fatigue</div>
+          <p>Alert fatigue doesn't just burn out engineers — it causes real incidents. When your team gets 30+ alerts per day, the response to every alert becomes "probably nothing." That's how a genuine database failover gets ignored for 23 minutes.</p>
+        </div>
+
+        <h2>Why Most Alerting Rules Are Wrong</h2>
+
+        <p>The default approach most teams take is threshold-based alerting: CPU > 80%? Alert. Memory > 90%? Alert. Response time > 500ms? Alert. This approach is fundamentally broken for three reasons:</p>
+
+        <ul>
+          <li><strong>Thresholds ignore context.</strong> A node running at 85% CPU during a batch job at 3 AM is not the same as 85% CPU during peak traffic with no headroom.</li>
+          <li><strong>Point-in-time checks miss trends.</strong> A disk at 70% that's been stable for months is fine. A disk at 70% that was at 40% yesterday is an emergency.</li>
+          <li><strong>Cause-based alerts create noise.</strong> High CPU is a cause. Slow user requests is a symptom. Users don't care about your CPU — they care about latency.</li>
+        </ul>
+
+        <p>The shift we made was from <strong>cause-based alerting</strong> to <strong>symptom-based alerting</strong>. Instead of alerting on "CPU is high," we alert on "users are experiencing errors" or "checkout latency exceeds SLO." The CPU metric still exists — it's in the dashboard for debugging. But it doesn't page anyone at 3 AM.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">200+</div>
+            <div class="metric-label">Alerts/week (before)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">12</div>
+            <div class="metric-label">Alerts/week (after)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">94%</div>
+            <div class="metric-label">Noise reduction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">0</div>
+            <div class="metric-label">Missed incidents</div>
+          </div>
+        </div>
+
+        <h2>Multi-Window, Multi-Burn-Rate Alerting</h2>
+
+        <p>This is the single most impactful change we made. Instead of a simple threshold ("error rate > 1%"), we use burn-rate alerting based on our SLO error budget. The concept comes from Google's SRE book, and it works like this:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 290" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Multi-Window Burn-Rate Alerting</text><rect x="20" y="55" width="130" height="50" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="85" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Prometheus</text><line x1="150" y1="80" x2="200" y2="80" stroke="80" stroke-width="2" marker-end="url(#a)"/><rect x="200" y="55" width="140" height="50" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="270" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">AlertManager</text><line x1="340" y1="80" x2="390" y2="80" stroke="80" stroke-width="2" marker-end="url(#a)"/><rect x="390" y="55" width="130" height="50" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="455" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">PagerDuty</text><text x="455" y="88" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Slack</text><rect x="20" y="130" width="240" height="70" rx="10" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="140" y="148" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">1h Fast Burn</text><text x="140" y="166" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">14x burn rate</text><text x="140" y="182" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Severity: critical</text><rect x="280" y="130" width="240" height="70" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="400" y="148" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">6h Slow Burn</text><text x="400" y="166" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">6x burn rate</text><text x="400" y="182" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Severity: warning</text><rect x="540" y="130" width="240" height="70" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="660" y="148" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">3d Trend</text><text x="660" y="166" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">1x burn rate</text><text x="660" y="182" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Severity: ticket</text><rect x="20" y="220" width="370" height="50" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="238" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Before: 200 alerts/week</text><text x="205" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">68% noise, alert fatigue</text><rect x="410" y="220" width="370" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="238" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">After: 12 alerts/week</text><text x="595" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Multi-window eliminates flapping</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Multi-window burn-rate alerting: fast window catches outages, slow window catches degradation</figcaption></figure>
+
+
+        <p>If your SLO is 99.9% availability over 30 days, you have an error budget of 0.1% — roughly 43 minutes of downtime per month. A <strong>burn rate</strong> of 1x means you're consuming that budget at exactly the expected rate. A burn rate of 14.4x means you'll exhaust your entire monthly budget in 2 hours.</p>
+
+        <p>We use multiple windows to catch both fast burns (something is very broken right now) and slow burns (something is degraded and will eventually exhaust the budget):</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Severity</th><th>Burn Rate</th><th>Long Window</th><th>Short Window</th><th>Budget Consumed</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="cost-badge high">Critical</span></td><td>14.4x</td><td>1h</td><td>5m</td><td>2% in 1h</td><td>Page immediately</td></tr>
+            <tr><td><span class="cost-badge high">Critical</span></td><td>6x</td><td>6h</td><td>30m</td><td>5% in 6h</td><td>Page</td></tr>
+            <tr><td><span class="cost-badge medium">Warning</span></td><td>3x</td><td>1d</td><td>2h</td><td>10% in 1d</td><td>Ticket</td></tr>
+            <tr><td><span class="cost-badge low">Info</span></td><td>1x</td><td>3d</td><td>6h</td><td>10% in 3d</td><td>Review</td></tr>
+          </tbody>
+        </table>
+
+        <p>The dual-window approach is critical. The long window ensures the problem is real and sustained. The short window ensures the problem is still happening right now (not something that already resolved). Both conditions must be true to fire.</p>
+
+        <h2>Real PromQL Rules That Work</h2>
+
+        <h3>API Error Rate (Multi-Burn-Rate)</h3>
+
+        <p>This is our primary SLO-based alert. It fires when the error rate is burning through our error budget too fast:</p>
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/grafana1.svg" alt="Grafana monitoring dashboard" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">Grafana RED method dashboard: Rate, Errors, Duration — the three signals that matter for every service</figcaption>
+</figure>
+
+<pre><code># Critical: 14.4x burn rate — exhausts monthly budget in 2 hours
+- alert: APIHighErrorBurnRate
+  expr: |
+    (
+      sum(rate(http_requests_total{status=~"5..",job="api-server"}[1h]))
+      /
+      sum(rate(http_requests_total{job="api-server"}[1h]))
+    ) > (14.4 * 0.001)
+    and
+    (
+      sum(rate(http_requests_total{status=~"5..",job="api-server"}[5m]))
+      /
+      sum(rate(http_requests_total{job="api-server"}[5m]))
+    ) > (14.4 * 0.001)
+  for: 2m
+  labels:
+    severity: critical
+    team: platform
+    slo: availability
+  annotations:
+    summary: "API error rate burning through SLO budget at 14.4x"
+    description: "Error rate is {{ $value | humanizePercentage }} over the last hour. At this rate, the monthly error budget will be exhausted in ~2 hours."
+    runbook_url: "https://runbooks.internal/api-high-error-rate"
+    dashboard: "https://grafana.internal/d/api-overview"</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Why the <code>for: 2m</code> clause?</div>
+          <p>The <code>for</code> clause adds a pending period. The alert must be continuously firing for 2 minutes before it actually triggers. This catches the edge case where a single scrape returns bad data. Don't set this too high though — for critical alerts, 1-2 minutes is the sweet spot.</p>
+        </div>
+
+        <h3>Latency P99 SLO Breach</h3>
+
+        <p>We track p99 latency against a 500ms SLO. The histogram_quantile function is your friend here:</p>
+
+<pre><code>- alert: APILatencyP99High
+  expr: |
+    (
+      histogram_quantile(0.99,
+        sum(rate(http_request_duration_seconds_bucket{job="api-server"}[5m])) by (le)
+      ) > 0.5
+    )
+    and
+    (
+      sum(rate(http_requests_total{job="api-server"}[5m])) > 10
+    )
+  for: 5m
+  labels:
+    severity: warning
+    team: platform
+  annotations:
+    summary: "API p99 latency exceeds 500ms SLO"
+    description: "P99 latency is {{ $value | humanizeDuration }}. SLO target is 500ms."
+    runbook_url: "https://runbooks.internal/api-high-latency"</code></pre>
+
+        <p>Notice the second condition: <code>sum(rate(...)) > 10</code>. This ensures we only alert when there's meaningful traffic. A single slow request at 4 AM shouldn't page anyone.</p>
+
+        <h3>Pod OOMKilled Detection</h3>
+
+        <p>OOMKilled pods are a leading indicator of memory leaks or undersized resource limits. This rule catches pods that are repeatedly OOMKilled:</p>
+
+<pre><code>- alert: PodOOMKilledRepeated
+  expr: |
+    (
+      kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+    )
+    * on(namespace, pod) group_left()
+    (
+      increase(kube_pod_container_status_restarts_total[1h]) > 2
+    )
+  for: 0m
+  labels:
+    severity: warning
+    team: "{{ $labels.namespace }}"
+  annotations:
+    summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} OOMKilled 3+ times in 1h"
+    description: "Container {{ $labels.container }} is being repeatedly OOMKilled. Current memory limit may be too low, or there's a memory leak."
+    runbook_url: "https://runbooks.internal/pod-oomkilled"</code></pre>
+
+        <h3>Disk Filling Up — Predictive Alert</h3>
+
+        <p>This is one of my favorite rules. Instead of alerting when disk is at 90% (which might be fine for months), we predict when the disk will be full based on the current growth rate:</p>
+
+<pre><code>- alert: DiskWillFillIn4Hours
+  expr: |
+    (
+      node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+      /
+      node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+      < 0.20
+    )
+    and
+    (
+      predict_linear(
+        node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 4 * 3600
+      ) < 0
+    )
+  for: 10m
+  labels:
+    severity: critical
+  annotations:
+    summary: "Disk {{ $labels.mountpoint }} on {{ $labels.instance }} will fill within 4 hours"
+    description: "Current available space is {{ $value | humanize1024 }}B. Based on the last 6 hours of growth, the disk will be full in approximately 4 hours."
+    runbook_url: "https://runbooks.internal/disk-filling"</code></pre>
+
+        <p>The <code>predict_linear</code> function uses linear regression over the last 6 hours to project when available space hits zero. We combine it with a current threshold (< 20% free) to avoid false positives on disks that are mostly full but stable.</p>
+
+        <h3>Node Not Ready</h3>
+
+<pre><code>- alert: KubernetesNodeNotReady
+  expr: |
+    kube_node_status_condition{condition="Ready",status="true"} == 0
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: "Node {{ $labels.node }} is NotReady for 5+ minutes"
+    description: "Node has been in NotReady state. This affects all pods scheduled on this node. Check kubelet logs and node conditions."
+    runbook_url: "https://runbooks.internal/node-not-ready"</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Don't Alert on Single Node Failures in Large Clusters</div>
+          <p>If you have 50+ nodes, a single node going NotReady is expected and Kubernetes handles it automatically via rescheduling. Consider alerting only when multiple nodes are NotReady simultaneously, or when the NotReady node is running critical workloads without PodDisruptionBudgets.</p>
+        </div>
+
+        <h2>Alertmanager Routing and Grouping</h2>
+
+        <p>Writing good alerting rules is only half the battle. If your routing is wrong, the right people don't see the right alerts. Here's our Alertmanager config structure:</p>
+
+<pre><code>route:
+  receiver: 'default-slack'
+  group_by: ['alertname', 'namespace', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts → PagerDuty immediately
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: false
+
+    # Warning alerts → Slack channel, create ticket
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      group_wait: 1m
+      repeat_interval: 8h
+
+    # Team-specific routing
+    - match_re:
+        team: 'payments|checkout'
+      receiver: 'slack-payments-team'
+      continue: true
+
+    # Inhibit noisy namespaces during deployments
+    - match:
+        namespace: 'staging'
+      receiver: 'slack-staging'
+      repeat_interval: 24h
+
+receivers:
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key_file: '/etc/alertmanager/secrets/pagerduty-key'
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          runbook: '{{ .CommonAnnotations.runbook_url }}'
+          dashboard: '{{ .CommonAnnotations.dashboard }}'
+
+  - name: 'slack-warnings'
+    slack_configs:
+      - api_url_file: '/etc/alertmanager/secrets/slack-webhook'
+        channel: '#alerts-warning'
+        title: '{{ .CommonAnnotations.summary }}'
+        text: '{{ .CommonAnnotations.description }}'
+        actions:
+          - type: button
+            text: 'Runbook'
+            url: '{{ .CommonAnnotations.runbook_url }}'
+          - type: button
+            text: 'Dashboard'
+            url: '{{ .CommonAnnotations.dashboard }}'</code></pre>
+
+        <h3>Grouping Strategy</h3>
+
+        <p>Grouping is how Alertmanager batches related alerts into a single notification. Get this wrong and you'll either get one notification per alert (noisy) or all alerts in one blob (useless).</p>
+
+        <p>Our grouping strategy:</p>
+
+        <ul>
+          <li><strong>group_by: ['alertname', 'namespace', 'severity']</strong> — Groups the same alert type within the same namespace. So if 5 pods in the <code>payments</code> namespace are OOMKilled, you get one notification listing all 5.</li>
+          <li><strong>group_wait: 30s</strong> — Waits 30 seconds to collect related alerts before sending. This prevents getting 5 separate notifications when a cascading failure triggers multiple alerts within seconds.</li>
+          <li><strong>group_interval: 5m</strong> — If new alerts join an existing group, wait 5 minutes before sending an update.</li>
+          <li><strong>repeat_interval: 4h</strong> — Don't re-send the same alert group more than once every 4 hours. For critical alerts, we use 1h.</li>
+        </ul>
+
+        <h2>Inhibition Rules</h2>
+
+        <p>Inhibition rules suppress alerts when a higher-level alert is already firing. This is essential for preventing alert storms during cascading failures:</p>
+
+<pre><code>inhibit_rules:
+  # If a node is down, suppress all pod alerts on that node
+  - source_match:
+      alertname: KubernetesNodeNotReady
+    target_match_re:
+      alertname: 'Pod.*|Container.*'
+    equal: ['instance']
+
+  # If the cluster is unhealthy, suppress individual service alerts
+  - source_match:
+      alertname: KubernetesClusterUnhealthy
+    target_match:
+      severity: warning
+
+  # Critical suppresses warning for the same alert
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'namespace']</code></pre>
+
+        <p>The last rule is particularly important. When an alert escalates from warning to critical, you don't want both notifications firing. The critical alert inhibits the warning for the same alertname and namespace.</p>
+
+        <h2>Silence vs. Fix: The Rule We Enforce</h2>
+
+        <p>We have a strict team policy: <strong>every silence must have a corresponding Jira ticket</strong>. Silences are not a fix — they're a temporary acknowledgment that you know about the problem and are working on it.</p>
+
+        <div class="info-box warning">
+          <p><strong>Our silence policy:</strong> Maximum silence duration is 7 days. If you need to silence an alert for longer, the alert rule itself needs to be fixed. We review all active silences in our weekly SRE sync.</p>
+        </div>
+
+        <p>We also track a metric we call the <strong>silence ratio</strong> — the percentage of alerts that are silenced at any given time. If this exceeds 20%, it's a signal that our alerting rules need a review pass. A high silence ratio means we're generating alerts we don't actually care about.</p>
+
+        <h2>Runbook Links: Non-Negotiable</h2>
+
+        <p>Every single alert must have a <code>runbook_url</code> annotation. No exceptions. When an engineer gets paged at 3 AM, they should not have to figure out what the alert means or what to do about it. The runbook should contain:</p>
+
+        <ul>
+          <li><strong>What this alert means</strong> — in plain English, not PromQL</li>
+          <li><strong>Impact</strong> — what's affected and who's impacted</li>
+          <li><strong>Immediate actions</strong> — step-by-step triage</li>
+          <li><strong>Escalation path</strong> — who to contact if you can't resolve it</li>
+          <li><strong>Historical context</strong> — links to past incidents caused by this alert</li>
+        </ul>
+
+        <p>We enforce this with a CI check that parses our alerting rules YAML and fails the build if any alert is missing a <code>runbook_url</code> annotation.</p>
+
+        <h2>The Results</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Month 1: Audit</h3>
+            <p>Cataloged all 147 alerting rules. Found that 68% were threshold-based cause alerts. Tagged each as "keep," "rewrite," or "delete."</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Month 2: Rewrite</h3>
+            <p>Rewrote 43 rules using multi-burn-rate approach. Deleted 89 rules entirely. Added runbooks for every remaining alert.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Month 3: Tune</h3>
+            <p>Ran old and new rules in parallel. Compared signal-to-noise ratio. Adjusted burn rates and windows based on real incident data.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Month 4+: Maintain</h3>
+            <p>Weekly review of all fired alerts. Any alert that fires without requiring action gets rewritten or deleted. Alert count stabilized at 10-15/week.</p>
+          </div>
+        </div>
+
+        <h2>Key Takeaways</h2>
+
+        <ul>
+          <li><strong>Alert on symptoms, not causes.</strong> Users don't care about your CPU. They care about latency and errors.</li>
+          <li><strong>Use multi-window, multi-burn-rate alerting</strong> for SLO-based alerts. It's more complex to set up but dramatically reduces noise.</li>
+          <li><strong>Every alert needs a runbook.</strong> If you can't write a runbook for an alert, the alert probably shouldn't exist.</li>
+          <li><strong>Inhibition rules prevent alert storms.</strong> A node failure shouldn't generate 50 pod alerts.</li>
+          <li><strong>Track your alert quality.</strong> Measure signal-to-noise ratio weekly. Any alert that fires without action is a bug in your alerting.</li>
+          <li><strong>Silences are not fixes.</strong> Track them, time-limit them, and review them regularly.</li>
+        </ul>
+
+        <blockquote>
+          <p>"The best alerting system is one where every page means something is broken and the engineer knows exactly what to do about it." — Our SRE team charter</p>
+        </blockquote>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

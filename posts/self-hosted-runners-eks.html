@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Hosted Runners on EKS – Architecture & Pitfalls – Suheb Ghare</title>
+  <meta name="description" content="Self-Hosted Runners on EKS – Architecture & Pitfalls – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">CI/CD</span>
+      </div>
+      <h1 class="post-title">Self-Hosted Runners on EKS – Architecture & Pitfalls</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="self-hosted-runners-eks" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="self-hosted-runners-eks" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="self-hosted-runners-eks" data-stat="likes">389</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="self-hosted-runners-eks" data-stat="dislikes">40</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="self-hosted-runners-eks">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="self-hosted-runners-eks">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Why Self-Hosted Runners?</h2>
+        <p>GitHub-hosted runners are convenient — zero setup, always available. But once you're running 200+ CI/CD pipelines across 40 microservices, three problems become impossible to ignore:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/k8s-cluster.svg" alt="GitHub Actions self-hosted runners on EKS" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Actions Runner Controller manages runner pods on dedicated EKS node groups</figcaption>
+</figure>
+        <ul>
+          <li><strong>Cost:</strong> At $0.008/minute for Linux runners, our 85,000 monthly build minutes cost ~$6,800/month. Self-hosted on EKS brought that down to ~$2,600/month.</li>
+          <li><strong>Private network access:</strong> Integration tests need to hit RDS, ElastiCache, and internal APIs inside our VPC. GitHub-hosted runners can't reach them without exposing services publicly or running a VPN tunnel per job.</li>
+          <li><strong>Custom tooling:</strong> Our builds need specific versions of Terraform, Helm, AWS CLI, and internal CLI tools baked into the runner image. Reinstalling these every run added 3-4 minutes per job.</li>
+        </ul>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$4,200/mo</div>
+            <div class="metric-label">Monthly savings after migration</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">3-4 min</div>
+            <div class="metric-label">Saved per job (no tool install)</div>
+          </div>
+        </div>
+
+        <h2>Architecture: Actions Runner Controller on EKS</h2>
+        <p>We use <strong>Actions Runner Controller (ARC)</strong> — the official Kubernetes controller for GitHub Actions self-hosted runners. It manages runner pods as ephemeral workloads that scale based on workflow demand.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 295" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Actions Runner Controller on EKS</text><rect x="20" y="60" width="140" height="60" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="90" y="82" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">GitHub</text><text x="90" y="98" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Webhook events</text><line x1="160" y1="90" x2="220" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="220" y="60" width="160" height="60" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="300" y="82" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ARC Controller</text><text x="300" y="98" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">HorizontalRunner
+Autoscaler</text><line x1="380" y1="90" x2="440" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="440" y="50" width="320" height="80" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="600" y="72" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Runner Pods (Spot Node Group)</text><rect x="450" y="90" width="80" height="30" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="490" y="105" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">runner-1</text><rect x="550" y="90" width="80" height="30" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="590" y="105" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">runner-2</text><rect x="650" y="90" width="80" height="30" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="690" y="105" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">runner-3</text><rect x="440" y="150" width="320" height="50" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="600" y="175" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Dedicated Node Group</text><text x="600" y="190" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Taint: runners=true:NoSchedule</text><rect x="20" y="160" width="380" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="210" y="178" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">$4,200/month saved</text><text x="210" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">vs GitHub-hosted runners at scale</text><rect x="20" y="230" width="760" height="44" rx="8" fill="#3b1a1a" stroke="#f59e0b" stroke-width="1.5"/><text x="400" y="252" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">⚠ Pitfall: Without taint, runners schedule on prod nodes → resource contention. Always use dedicated node group.</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">ARC watches GitHub webhook events and scales runner pods up/down on a dedicated Spot node group</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">GitHub webhook fires on workflow_job event</div>
+          <div class="flow-step">ARC webhook server receives the event</div>
+          <div class="flow-step">ARC controller creates a runner pod</div>
+          <div class="flow-step">Runner registers with GitHub, picks up the job</div>
+          <div class="flow-step">Job completes → pod is terminated (ephemeral)</div>
+        </div>
+
+        <h3>RunnerDeployment vs RunnerSet</h3>
+        <p>ARC offers two CRDs for managing runners:</p>
+        <table class="data-table">
+          <thead>
+            <tr><th>Feature</th><th>RunnerDeployment</th><th>RunnerSet</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Scaling model</td><td>HorizontalRunnerAutoscaler</td><td>Built-in autoscaling</td></tr>
+            <tr><td>Pod identity</td><td>Random names</td><td>Stable ordinal names</td></tr>
+            <tr><td>Docker-in-Docker</td><td>Sidecar container</td><td>Sidecar container</td></tr>
+            <tr><td>Recommended for</td><td>Most workloads</td><td>Stateful build caches</td></tr>
+          </tbody>
+        </table>
+        <p>We use <code>RunnerDeployment</code> for 90% of workloads. <code>RunnerSet</code> is only used for our monorepo builds that benefit from persistent build caches on PVCs.</p>
+
+        <h3>RunnerDeployment YAML</h3>
+<pre><code>apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: org-runners
+  namespace: actions-runner-system
+spec:
+  replicas: 2  # minimum idle runners
+  template:
+    spec:
+      organization: our-org
+      labels:
+        - self-hosted
+        - linux
+        - eks
+      ephemeral: true
+      dockerEnabled: false  # no DinD — use Kaniko
+      resources:
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+        requests:
+          cpu: "2"
+          memory: "4Gi"
+      nodeSelector:
+        node-group: ci-runners
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "ci-runners"
+          effect: "NoSchedule"</code></pre>
+
+        <h3>Autoscaling with HorizontalRunnerAutoscaler</h3>
+<pre><code>apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: org-runners-autoscaler
+  namespace: actions-runner-system
+spec:
+  scaleTargetRef:
+    kind: RunnerDeployment
+    name: org-runners
+  minReplicas: 2
+  maxReplicas: 30
+  scaleUpTriggers:
+    - githubEvent:
+        workflowJob: {}
+      amount: 1
+      duration: "5m"</code></pre>
+        <p>This webhook-based autoscaler reacts to <code>workflow_job</code> events in real time. When a job is queued, it scales up by 1 runner within seconds. The <code>duration</code> field keeps the runner alive for 5 minutes after creation to handle burst scenarios.</p>
+
+        <h2>The 5 Pitfalls We Hit in Production</h2>
+
+        <h3>Pitfall 1: Runner Pods Getting OOMKilled</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Real Incident</div>
+          <p>Our Java microservice builds were getting killed mid-compilation. <code>kubectl describe pod</code> showed <code>OOMKilled</code> with exit code 137. The runner itself uses ~500MB, but <code>gradle build</code> was consuming 6GB+ for large projects.</p>
+        </div>
+        <p><strong>Fix:</strong> Profile your heaviest builds first. We set runner memory limits to 8Gi after discovering that Gradle + parallel test execution peaked at 7.2GB. Set <code>JAVA_OPTS=-Xmx4g</code> in the runner environment to cap JVM heap separately.</p>
+
+        <h3>Pitfall 2: Docker-in-Docker Security Issues</h3>
+        <p>Running Docker inside runner pods requires privileged mode — a massive security risk. A compromised build could escape the container and access the host node.</p>
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Solution: Use Kaniko</div>
+          <p>Kaniko builds container images in userspace without a Docker daemon. No privileged mode needed. We replaced all <code>docker build</code> steps with Kaniko executor and saw zero security findings in our next audit.</p>
+        </div>
+<pre><code># GitHub Actions step using Kaniko
+- name: Build and push image
+  run: |
+    /kaniko/executor \
+      --context=. \
+      --dockerfile=Dockerfile \
+      --destination=$ECR_REPO:$GITHUB_SHA \
+      --cache=true \
+      --cache-repo=$ECR_REPO/cache</code></pre>
+
+        <h3>Pitfall 3: Shared /tmp Causing Flaky Tests</h3>
+        <p>Multiple test suites writing to <code>/tmp</code> with hardcoded filenames caused intermittent failures. Two parallel jobs on the same runner pod would overwrite each other's temp files.</p>
+        <p><strong>Fix:</strong> Set <code>ephemeral: true</code> in the RunnerDeployment so each job gets a fresh pod. This eliminated all shared-state flakiness. The tradeoff is slightly slower cold starts (~15 seconds for pod scheduling), but reliability is worth it.</p>
+
+        <h3>Pitfall 4: GitHub Rate Limiting Webhook Events</h3>
+        <p>During peak hours (9-11 AM when all teams push), we'd see 50+ workflow_job events per minute. GitHub's webhook delivery has retry logic, but ARC's webhook server was dropping events under load.</p>
+        <p><strong>Fix:</strong> Increased ARC webhook server replicas to 3 and added an HPA targeting 70% CPU. Also configured GitHub webhook to use a dedicated ALB endpoint with connection draining.</p>
+
+        <h3>Pitfall 5: Runner Pod Scheduled on Prod Node Group</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Real Incident: Resource Contention</div>
+          <p>A CI runner pod requesting 4 CPU / 8Gi memory got scheduled on a production node group because we forgot to add <code>nodeSelector</code> in the initial deployment. The runner consumed resources meant for production workloads, causing latency spikes on our payment service during a build storm. P99 latency went from 120ms to 2.3 seconds for 12 minutes.</p>
+        </div>
+        <p><strong>Fix:</strong> Dedicated node group with taints. Runners <em>must</em> have matching tolerations or they won't schedule there. Production nodes reject runner pods entirely.</p>
+
+        <h2>Node Group Strategy for CI Runners</h2>
+<pre><code># Terraform — dedicated spot node group for CI runners
+resource "aws_eks_node_group" "ci_runners" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "ci-runners-spot"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "SPOT"
+  instance_types  = ["m5.xlarge", "m5a.xlarge", "m6i.xlarge", "m6a.xlarge"]
+
+  scaling_config {
+    desired_size = 2
+    min_size     = 1
+    max_size     = 15
+  }
+
+  taint {
+    key    = "dedicated"
+    value  = "ci-runners"
+    effect = "NO_SCHEDULE"
+  }
+
+  labels = {
+    "node-group" = "ci-runners"
+  }
+}</code></pre>
+
+        <h2>Cost Comparison: GitHub-Hosted vs Self-Hosted at Scale</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Metric</th><th>GitHub-Hosted</th><th>Self-Hosted (EKS)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Monthly build minutes</td><td>85,000</td><td>85,000</td></tr>
+            <tr><td>Cost per minute</td><td>$0.008</td><td>~$0.003 (spot)</td></tr>
+            <tr><td>Monthly compute cost</td><td>$6,800</td><td>$2,550</td></tr>
+            <tr><td>EKS cluster cost</td><td>—</td><td>$73</td></tr>
+            <tr><td>Ops overhead (est.)</td><td>$0</td><td>~$200 (engineer time)</td></tr>
+            <tr><td><strong>Total monthly</strong></td><td><strong>$6,800</strong></td><td><strong>$2,823</strong></td></tr>
+            <tr><td><strong>Annual savings</strong></td><td colspan="2"><strong>$47,724</strong></td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Key Takeaway</div>
+          <p>Self-hosted runners on EKS make sense when you exceed ~20,000 build minutes/month, need VPC access, or require custom tooling. Below that threshold, GitHub-hosted runners are simpler and the cost difference doesn't justify the operational overhead.</p>
+        </div>
+
+        <h2>Monitoring and Observability</h2>
+        <p>We track runner health with Prometheus metrics exported by ARC:</p>
+        <ul>
+          <li><code>github_runner_status</code> — idle, active, or offline runners</li>
+          <li><code>github_runner_job_duration_seconds</code> — build time per workflow</li>
+          <li><code>kube_pod_container_status_restarts_total</code> — OOMKill detection</li>
+          <li><code>kube_pod_status_phase</code> — pending pods indicate scaling lag</li>
+        </ul>
+        <p>Grafana dashboard alerts fire when: pending pods exceed 5 for more than 2 minutes (scaling issue), OOMKill count exceeds 3 in 10 minutes, or runner registration failures spike.</p>
+
+        <h2>Lessons Learned</h2>
+        <div class="info-box">
+          <p><strong>Start with ephemeral runners.</strong> The slight cold-start penalty is worth the elimination of state-related bugs. We wasted 2 weeks debugging flaky tests before switching to ephemeral mode.</p>
+        </div>
+        <div class="info-box warning">
+          <p><strong>Never run DinD in production.</strong> Privileged containers are a security audit failure waiting to happen. Kaniko or Buildah are drop-in replacements for 95% of use cases.</p>
+        </div>
+        <div class="info-box success">
+          <p><strong>Taints are non-negotiable.</strong> Without taints on your CI node group, the Kubernetes scheduler will happily place runner pods on production nodes. We learned this the hard way during a payment service incident.</p>
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

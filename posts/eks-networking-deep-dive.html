@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EKS Networking Deep Dive: VPC CNI, Security Groups, and Network Policies – Suheb Ghare</title>
+  <meta name="description" content="Deep dive into EKS networking — how VPC CNI assigns real VPC IPs to pods, solving IP exhaustion, security groups for pods, Calico vs Cilium network policies, and real troubleshooting techniques.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">Kubernetes</span></div>
+      <h1 class="post-title">EKS Networking Deep Dive: VPC CNI, Security Groups, and Network Policies</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 December 18, 2024</span>
+        <span class="meta-item">⏱ 18 min read</span>
+        <span class="meta-item">👁 <span data-blog="eks-networking-deep-dive" data-stat="reads">1180</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="eks-networking-deep-dive" data-stat="reads">1180</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="eks-networking-deep-dive" data-stat="likes">468</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="eks-networking-deep-dive" data-stat="dislikes">35</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="eks-networking-deep-dive">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="eks-networking-deep-dive">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>EKS networking is deceptively complex. On the surface, it "just works" — pods get IPs, services resolve, traffic flows. But underneath, the AWS VPC CNI plugin is doing something fundamentally different from what most Kubernetes CNI plugins do, and understanding that difference is critical when you hit scaling limits, IP exhaustion, or need to implement network security.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/eks-cluster.png" alt="EKS VPC CNI networking" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">VPC CNI assigns real VPC IPs to each pod — no overlay network</figcaption>
+</figure>
+
+        <p>This article is everything I've learned running EKS clusters in production for 4 years — from the basics of how VPC CNI assigns IPs, to the incident where we ran out of IPs in a /24 subnet during a Black Friday scale-up and had to emergency-migrate workloads at 2 AM.</p>
+
+        <h2>How VPC CNI Actually Works</h2>
+
+        <p>Most Kubernetes CNI plugins (Flannel, Calico in overlay mode, Weave) create a virtual network overlay. Pods get IPs from a virtual address space that only exists inside the cluster. Traffic between pods is encapsulated (VXLAN, IP-in-IP) and routed through the overlay.</p>
+
+        <p>The AWS VPC CNI plugin does something different: <strong>every pod gets a real, routable VPC IP address</strong>. There's no overlay. When pod A (10.0.1.47) talks to pod B (10.0.2.83), the traffic goes directly through the VPC network — same as EC2-to-EC2 traffic. This has major implications:</p>
+
+        <ul class="icon-list">
+          <li>Pods are directly reachable from any VPC resource (EC2, RDS, Lambda) without any proxy or gateway</li>
+          <li>VPC Flow Logs capture pod-level traffic with real IPs</li>
+          <li>Security Groups can be applied directly to pods</li>
+          <li>AWS networking features (PrivateLink, Transit Gateway, VPC Peering) work with pod IPs natively</li>
+        </ul>
+
+        <ul class="icon-list cross">
+          <li>Every pod consumes a real IP from your VPC CIDR — IP exhaustion is a real problem</li>
+          <li>ENI limits per instance type cap how many pods a node can run</li>
+          <li>Subnet sizing becomes a critical capacity planning exercise</li>
+        </ul>
+
+        <h3>The ENI and IP Allocation Mechanism</h3>
+
+        <p>Here's how VPC CNI allocates IPs under the hood:</p>
+
+        <div class="diagram">
+          <div class="flow-step">Node launches → VPC CNI attaches the primary ENI (already attached by EC2)</div>
+          <div class="flow-step">CNI pre-allocates secondary IPs on the primary ENI (warm pool)</div>
+          <div class="flow-step">As pods are scheduled, they're assigned IPs from the warm pool</div>
+          <div class="flow-step">When the warm pool runs low, CNI attaches additional ENIs and allocates more IPs</div>
+          <div class="flow-step">Each ENI can hold a limited number of IPs (varies by instance type)</div>
+        </div>
+
+        <p>The formula for maximum pods per node is: <code>(Number of ENIs × IPs per ENI) - Number of ENIs</code>. We subtract the ENI count because each ENI's primary IP is reserved for the ENI itself.</p>
+
+        <h2>ENI Limits Per Instance Type</h2>
+
+        <p>This table is the single most important reference for EKS capacity planning. The number of pods you can run is hard-limited by the instance type:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 285" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">EKS VPC CNI: Pod IP Allocation</text><rect x="20" y="50" width="360" height="220" rx="12" fill="#1e293b" stroke="#06b6d4" stroke-width="2"/><text x="200" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">EC2 Node (m5.xlarge)</text><text x="200" y="86" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Max ENIs: 4 · IPs per ENI: 15 → 60 pod IPs</text><rect x="40" y="100" width="90" height="40" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="85" y="120" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">ENI 1</text><rect x="40" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="52" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="68" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="80" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="96" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="108" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="150" y="100" width="90" height="40" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="195" y="120" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">ENI 2</text><rect x="150" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="162" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="178" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="190" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="206" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="218" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="260" y="100" width="90" height="40" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="305" y="120" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">ENI 3</text><rect x="260" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="272" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="288" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="300" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><rect x="316" y="150" width="24" height="24" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="328" y="162" font-family="Inter,system-ui,sans-serif" font-size="8" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IP</text><text x="200" y="190" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Each pod gets a REAL VPC IP (no overlay)</text><rect x="40" y="210" width="320" height="44" rx="6" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="200" y="232" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Prefix Delegation: /28 block per ENI = 16 IPs</text><text x="200" y="246" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Solves IP exhaustion on large clusters</text><rect x="420" y="50" width="360" height="100" rx="12" fill="#312e81" stroke="#6366f1" stroke-width="2"/><text x="600" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Security Groups for Pods</text><text x="600" y="88" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">SecurityGroupPolicy CRD</text><text x="600" y="104" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">payments-pod → sg-payments-db</text><text x="600" y="120" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">auth-pod → sg-auth-db</text><text x="600" y="136" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Fine-grained SG per pod, not per node</text><rect x="420" y="165" width="360" height="105" rx="12" fill="#3b1a1a" stroke="#ef4444" stroke-width="2"/><text x="600" y="183" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">⚠ Real Incident</text><text x="600" y="199" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Ran out of IPs in /24 subnet</text><text x="600" y="215" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">on Black Friday (256 IPs, 240 pods)</text><text x="600" y="231" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Fix: custom networking + /19 subnet</text><text x="600" y="247" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Plan: 5x expected pod count</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">VPC CNI gives each pod a real VPC IP — no overlay network, but plan subnet size carefully</figcaption></figure>
+
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Instance Type</th><th>Max ENIs</th><th>IPs per ENI</th><th>Max Pods (default)</th><th>Max Pods (prefix delegation)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>t3.medium</td><td>3</td><td>6</td><td>17</td><td>110</td></tr>
+            <tr><td>t3.xlarge</td><td>4</td><td>15</td><td>58</td><td>110</td></tr>
+            <tr><td>m5.large</td><td>3</td><td>10</td><td>29</td><td>110</td></tr>
+            <tr><td>m5.xlarge</td><td>4</td><td>15</td><td>58</td><td>110</td></tr>
+            <tr><td>m5.2xlarge</td><td>4</td><td>15</td><td>58</td><td>110</td></tr>
+            <tr><td>m5.4xlarge</td><td>8</td><td>30</td><td>234</td><td>250</td></tr>
+            <tr><td>c5.2xlarge</td><td>4</td><td>15</td><td>58</td><td>110</td></tr>
+            <tr><td>r5.2xlarge</td><td>4</td><td>15</td><td>58</td><td>110</td></tr>
+            <tr><td>m5.8xlarge</td><td>8</td><td>30</td><td>234</td><td>250</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">The t3.medium Trap</div>
+          <p>A t3.medium can only run 17 pods. That includes kube-proxy, aws-node (VPC CNI), CoreDNS, and any DaemonSets. After system pods, you might only have capacity for 10-12 application pods. We've seen teams use t3.medium for "cost savings" and then wonder why pods are stuck in Pending. Use at least m5.large for production workloads.</p>
+        </div>
+
+        <h2>The IP Exhaustion Problem</h2>
+
+        <p>This is the #1 operational issue with EKS networking. Because every pod gets a real VPC IP, a cluster with 500 pods needs 500 IPs. A /24 subnet only has 251 usable IPs (256 minus 5 reserved by AWS). You can see where this goes.</p>
+
+        <p>The math gets worse when you account for the warm IP pool. VPC CNI pre-allocates IPs to reduce pod startup latency. By default, it keeps <code>WARM_IP_TARGET=1</code> spare IP per node, but it allocates IPs in ENI-sized chunks. A node with 4 ENIs × 15 IPs/ENI might have 60 IPs allocated even if only 20 pods are running.</p>
+
+        <h3>Solution 1: Prefix Delegation</h3>
+
+        <p>Prefix delegation is the most impactful solution. Instead of allocating individual /32 IPs to ENIs, VPC CNI allocates /28 prefixes (16 IPs each). This dramatically increases the number of IPs available per ENI without consuming more ENI slots:</p>
+
+<pre><code># Enable prefix delegation on the VPC CNI DaemonSet
+kubectl set env daemonset aws-node \
+  -n kube-system \
+  ENABLE_PREFIX_DELEGATION=true \
+  WARM_PREFIX_TARGET=1
+
+# Or in your EKS Terraform module
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "vpc-cni"
+
+  configuration_values = jsonencode({
+    env = {
+      ENABLE_PREFIX_DELEGATION = "true"
+      WARM_PREFIX_TARGET       = "1"
+    }
+  })
+}</code></pre>
+
+        <div class="info-box success">
+          <p><strong>Impact:</strong> With prefix delegation, an m5.xlarge goes from 58 max pods to 110 max pods (Kubernetes default limit). The IPs come from /28 prefixes, so you're allocating 16 IPs at a time instead of 1. This is more IP-efficient at scale because there's less waste from warm pools.</p>
+        </div>
+
+        <h3>Solution 2: Custom Networking</h3>
+
+        <p>Custom networking lets you use a separate, larger CIDR range for pod IPs while keeping node IPs in the original VPC CIDR. This is the solution when your VPC CIDR is too small to accommodate pod IPs:</p>
+
+<pre><code># Enable custom networking
+kubectl set env daemonset aws-node \
+  -n kube-system \
+  AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG=true
+
+# Create ENIConfig for each AZ pointing to the larger pod subnets
+apiVersion: crd.k8s.amazonaws.com/v1alpha1
+kind: ENIConfig
+metadata:
+  name: us-east-1a
+spec:
+  subnet: subnet-0abc123def456  # Pod subnet in us-east-1a (e.g., /19)
+  securityGroups:
+    - sg-0abc123def456
+---
+apiVersion: crd.k8s.amazonaws.com/v1alpha1
+kind: ENIConfig
+metadata:
+  name: us-east-1b
+spec:
+  subnet: subnet-0def456abc789  # Pod subnet in us-east-1b (e.g., /19)
+  securityGroups:
+    - sg-0abc123def456</code></pre>
+
+        <p>With custom networking, nodes get IPs from the original VPC CIDR (e.g., 10.0.0.0/16) and pods get IPs from a secondary CIDR (e.g., 100.64.0.0/16). The secondary CIDR can be much larger, solving the IP exhaustion problem entirely.</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Custom Networking Reduces Max Pods</div>
+          <p>With custom networking enabled, the primary ENI is no longer used for pod IPs — only for the node's own IP. This means you lose one ENI's worth of pod capacity per node. On an m5.large, max pods drops from 29 to 19. Combine with prefix delegation to offset this.</p>
+        </div>
+
+        <h2>Security Groups for Pods</h2>
+
+        <p>One of the most powerful EKS features is the ability to assign VPC Security Groups directly to pods. This means you can use the same security group rules you use for EC2 and RDS to control pod-level network access.</p>
+
+<pre><code># SecurityGroupPolicy — assigns SGs to pods matching the selector
+apiVersion: vpcresources.k8s.aws/v1beta1
+kind: SecurityGroupPolicy
+metadata:
+  name: payment-service-sg
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-service
+  securityGroups:
+    groupIds:
+      - sg-0abc123def456  # Allows access to RDS
+      - sg-0def789abc012  # Allows access to ElastiCache</code></pre>
+
+        <p>This is significantly more powerful than node-level security groups. Without pod-level SGs, every pod on a node shares the node's security group. If the node SG allows access to RDS, every pod on that node can reach RDS — even pods that shouldn't.</p>
+
+        <p><strong>How it works under the hood:</strong> When a pod matches a SecurityGroupPolicy, VPC CNI creates a dedicated branch ENI for that pod and attaches the specified security groups to it. The pod's traffic flows through this branch ENI instead of the node's shared ENI.</p>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Branch ENI Limits</div>
+          <p>Security Groups for Pods uses branch ENIs, which have their own limits per instance type. An m5.large supports up to 9 branch ENIs. If you have more pods needing custom SGs than branch ENI slots, pods will be stuck in <code>ContainerCreating</code>. Check limits with: <code>aws ec2 describe-instance-types --instance-types m5.large --query "InstanceTypes[].NetworkInfo.MaximumNetworkInterfaces"</code></p>
+        </div>
+
+        <h2>Network Policies: Calico vs Cilium vs VPC CNI</h2>
+
+        <p>By default, EKS has no network policies — every pod can talk to every other pod. In production, that's unacceptable. You need network policies to enforce least-privilege network access. Here's how the three main options compare:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Feature</th><th>Calico</th><th>Cilium</th><th>VPC CNI Network Policy</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Implementation</td><td>iptables/eBPF</td><td>eBPF</td><td>eBPF (native VPC CNI)</td></tr>
+            <tr><td>K8s NetworkPolicy</td><td>Full support</td><td>Full support</td><td>Full support</td></tr>
+            <tr><td>Extended policies</td><td>Calico GlobalNetworkPolicy</td><td>CiliumNetworkPolicy</td><td>None</td></tr>
+            <tr><td>DNS-based policies</td><td>Yes (Enterprise)</td><td>Yes (FQDN rules)</td><td>No</td></tr>
+            <tr><td>L7 policies (HTTP)</td><td>Yes (Enterprise)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Performance overhead</td><td>Low (eBPF) / Medium (iptables)</td><td>Low</td><td>Low</td></tr>
+            <tr><td>Observability</td><td>Flow logs</td><td>Hubble (excellent)</td><td>VPC Flow Logs</td></tr>
+            <tr><td>Managed by AWS</td><td>No</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Best for</td><td>Mature teams, hybrid clouds</td><td>Advanced networking, observability</td><td>AWS-native, simplicity</td></tr>
+          </tbody>
+        </table>
+
+        <p>We use <strong>VPC CNI network policies</strong> for standard Kubernetes NetworkPolicy enforcement (it's built into the CNI addon since v1.14) and supplement with <strong>Calico</strong> for GlobalNetworkPolicy when we need cluster-wide default-deny rules.</p>
+
+        <h2>Real Network Policy Examples</h2>
+
+        <h3>Default Deny All Ingress</h3>
+
+        <p>The first policy you should apply to every namespace. Deny all ingress by default, then explicitly allow what's needed:</p>
+
+<pre><code>apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: production
+spec:
+  podSelector: {}  # Applies to ALL pods in the namespace
+  policyTypes:
+    - Ingress
+  # No ingress rules = deny all ingress</code></pre>
+
+        <h3>Allow Only From Same Namespace</h3>
+
+<pre><code>apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}  # Any pod in the same namespace</code></pre>
+
+        <h3>Allow Specific Port From Specific Service</h3>
+
+<pre><code>apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-to-db
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-server
+        - podSelector:
+            matchLabels:
+              app: migration-job
+      ports:
+        - protocol: TCP
+          port: 5432</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">AND vs OR in Network Policies</div>
+          <p>This is the most common mistake. In the <code>from</code> array, each item is OR'd. Within a single item, <code>podSelector</code> and <code>namespaceSelector</code> are AND'd. The policy above allows traffic from pods labeled <code>app: api-server</code> OR pods labeled <code>app: migration-job</code>. If you put both selectors in the same <code>from</code> item, it would mean pods that match BOTH labels (which probably don't exist).</p>
+        </div>
+
+        <h2>Troubleshooting EKS Network Issues</h2>
+
+        <p>When networking breaks in EKS, here are the tools and techniques that actually help:</p>
+
+        <h3>tcpdump Inside a Pod</h3>
+
+<pre><code># If the pod has tcpdump installed
+kubectl exec -it pod-name -- tcpdump -i eth0 -nn port 5432
+
+# If it doesn't (most production images don't), use an ephemeral debug container
+kubectl debug -it pod-name --image=nicolaka/netshoot --target=app-container
+
+# Inside the debug container
+tcpdump -i eth0 -nn host 10.0.2.45 and port 5432
+# Check DNS resolution
+nslookup postgres-service.production.svc.cluster.local
+# Test connectivity
+curl -v telnet://postgres-service:5432</code></pre>
+
+        <h3>Checking conntrack and iptables</h3>
+
+<pre><code># SSH to the node (or use SSM Session Manager)
+# Check conntrack table for connection tracking issues
+conntrack -L | grep 10.0.1.47
+conntrack -S  # Show conntrack stats — look for "drop" and "insert_failed"
+
+# Check iptables rules (kube-proxy and network policies)
+iptables -t nat -L KUBE-SERVICES -n | grep my-service
+iptables -L -n | grep -A5 "KUBE-NWPLCY"</code></pre>
+
+        <h3>VPC CNI Diagnostics</h3>
+
+<pre><code># Check VPC CNI logs
+kubectl logs -n kube-system -l k8s-app=aws-node --tail=100
+
+# Check IP allocation on a specific node
+kubectl exec -n kube-system aws-node-xxxxx -- /opt/cni/bin/aws-cni-support.sh
+
+# Check ENI allocation
+aws ec2 describe-network-interfaces \
+  --filters "Name=attachment.instance-id,Values=i-0abc123" \
+  --query "NetworkInterfaces[].{ENI:NetworkInterfaceId,IPs:PrivateIpAddresses[].PrivateIpAddress,SubnetId:SubnetId}" \
+  --output table</code></pre>
+
+        <h2>The Incident: Running Out of IPs in a /24 Subnet</h2>
+
+        <p>Black Friday, 11 PM. Our HPA started scaling up pods to handle the traffic surge. Pods went to Pending. The error: <code>failed to assign an IP address to container</code>.</p>
+
+        <p>We had 3 subnets, each a /24 (251 usable IPs). Our cluster had grown to 45 nodes across 3 AZs. With VPC CNI's warm pool, each node had pre-allocated ~20 IPs. That's 45 × 20 = 900 IPs needed, but we only had 753 available across all subnets. The warm pool had consumed IPs that weren't even assigned to pods yet.</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>T+0:00 — Pods stuck in Pending</h3>
+            <p>HPA triggers scale-up. New pods can't get IPs. <code>kubectl describe pod</code> shows: <code>failed to assign an IP address to container</code>.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+0:05 — Identified as IP exhaustion</h3>
+            <p>Checked VPC CNI logs: <code>ipamd: no available IP addresses</code>. Confirmed subnet utilization at 98%.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+0:15 — Emergency: reduce warm pool</h3>
+            <p>Set <code>WARM_IP_TARGET=1</code> and <code>MINIMUM_IP_TARGET=2</code> to release pre-allocated IPs. Freed ~200 IPs across the cluster.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+0:20 — Pods scheduling again</h3>
+            <p>Freed IPs allowed pending pods to schedule. Traffic handled. Crisis averted.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Next week — Permanent fix</h3>
+            <p>Added secondary CIDR (100.64.0.0/16) to VPC. Created /19 pod subnets (8,187 IPs each). Enabled custom networking + prefix delegation. Never hit IP limits again.</p>
+          </div>
+        </div>
+
+        <div class="info-box danger">
+          <p><strong>Lesson learned:</strong> Monitor your subnet IP utilization. We now have a CloudWatch alarm that fires when any subnet drops below 20% available IPs. The metric comes from a Lambda that runs every 5 minutes and calls <code>describe-subnets</code> to check <code>AvailableIpAddressCount</code>.</p>
+        </div>
+
+        <h2>Key Takeaways</h2>
+
+        <ul>
+          <li><strong>VPC CNI gives pods real VPC IPs.</strong> This is powerful for integration with AWS services but means IP exhaustion is a real operational concern.</li>
+          <li><strong>Enable prefix delegation.</strong> It's the single most impactful change for IP efficiency and pod density.</li>
+          <li><strong>Size your subnets for pods, not nodes.</strong> A /24 is almost never enough. Use /19 or larger for pod subnets.</li>
+          <li><strong>Use Security Groups for Pods</strong> for workloads that need direct access to RDS, ElastiCache, or other VPC resources. It's more secure than node-level SGs.</li>
+          <li><strong>Apply default-deny network policies</strong> to every namespace. Then explicitly allow required traffic.</li>
+          <li><strong>Monitor subnet IP utilization.</strong> Set alarms at 80% usage. You don't want to discover IP exhaustion during a traffic spike.</li>
+          <li><strong>Know your ENI limits.</strong> The instance type determines your max pod count. Choose instance types based on pod density needs, not just CPU/memory.</li>
+        </ul>
+
+        <blockquote>
+          <p>"EKS networking is simple until it isn't. The difference between a smooth scaling event and a 2 AM emergency is whether you planned for IP capacity the same way you plan for CPU and memory."</p>
+        </blockquote>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

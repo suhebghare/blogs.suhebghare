@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building an Internal Developer Platform – Suheb Ghare</title>
+  <meta name="description" content="Building an Internal Developer Platform – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">CI/CD</span>
+      </div>
+      <h1 class="post-title">Building an Internal Developer Platform</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="building-internal-developer-platform" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="building-internal-developer-platform" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="building-internal-developer-platform" data-stat="likes">414</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="building-internal-developer-platform" data-stat="dislikes">40</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="building-internal-developer-platform">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="building-internal-developer-platform">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Why We Built an IDP</h2>
+        <p>Onboarding a new engineer took <strong>3 weeks</strong>. Not because the work was complex — because they had to navigate 14 different tools, request access to 6 AWS accounts, figure out which Helm chart to use, and beg the platform team for a namespace. Meanwhile, 40% of our engineering time was spent on infrastructure toil: creating repos, setting up pipelines, provisioning databases, configuring monitoring.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=900&q=85" alt="Internal developer platform" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Backstage + Crossplane + ArgoCD: the golden path for 200+ engineers</figcaption>
+</figure>
+
+        <p>We built an Internal Developer Platform in 6 months. Today, 200+ engineers use it daily. Onboarding takes <strong>2 hours</strong>. Infrastructure tickets dropped <strong>70%</strong>.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">3 weeks → 2 hours</div>
+            <div class="metric-label">Developer onboarding time</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">70%</div>
+            <div class="metric-label">Reduction in infra tickets</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">200+</div>
+            <div class="metric-label">Engineers using the platform</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">6 months</div>
+            <div class="metric-label">Time to build v1</div>
+          </div>
+        </div>
+
+        <h2>What an IDP Is (and Isn't)</h2>
+
+        <div class="grid-2">
+          <div class="info-box success">
+            <h3>✅ An IDP Is</h3>
+            <ul>
+              <li>A self-service layer on top of existing infrastructure</li>
+              <li>Golden paths that encode best practices</li>
+              <li>A product built for internal developers</li>
+              <li>Opinionated defaults with escape hatches</li>
+              <li>A way to reduce cognitive load on developers</li>
+            </ul>
+          </div>
+          <div class="info-box danger">
+            <h3>❌ An IDP Is Not</h3>
+            <ul>
+              <li>A replacement for Kubernetes or AWS</li>
+              <li>A PaaS (developers still own their services)</li>
+              <li>A ticket system with a UI</li>
+              <li>A one-size-fits-all solution</li>
+              <li>Something you buy off the shelf</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>Our Tech Stack</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Tool</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Developer Portal</td>
+              <td>Backstage</td>
+              <td>Service catalog, templates, docs</td>
+            </tr>
+            <tr>
+              <td>Self-Service Infra</td>
+              <td>Crossplane</td>
+              <td>Provision AWS resources via K8s CRDs</td>
+            </tr>
+            <tr>
+              <td>Deployments</td>
+              <td>ArgoCD</td>
+              <td>GitOps continuous delivery</td>
+            </tr>
+            <tr>
+              <td>Secrets</td>
+              <td>HashiCorp Vault</td>
+              <td>Secret management and injection</td>
+            </tr>
+            <tr>
+              <td>Observability</td>
+              <td>Grafana + Prometheus</td>
+              <td>Metrics, dashboards, alerting</td>
+            </tr>
+            <tr>
+              <td>CI</td>
+              <td>GitHub Actions</td>
+              <td>Build, test, push images</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>The Golden Path</h2>
+        <p>A developer runs one command (or clicks one button in Backstage) and gets everything they need for a production-ready service:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IDP Golden Path: New Service in Minutes</text><rect x="20" y="55" width="760" height="36" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="73" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">$ ./platform new-service payments-api</text><rect x="20" y="110" width="140" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="90" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">GitHub Repo</text><text x="90" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">+ CI/CD pipeline</text><line x1="90" y1="91" x2="90" y2="110" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="172" y="110" width="140" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="242" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">EKS Namespace</text><text x="242" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">+ RBAC + quotas</text><line x1="242" y1="91" x2="242" y2="110" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="324" y="110" width="140" height="60" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="394" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Grafana Dashboard</text><text x="394" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">+ alerts configured</text><line x1="394" y1="91" x2="394" y2="110" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="476" y="110" width="140" height="60" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="546" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">PagerDuty Service</text><text x="546" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">+ escalation policy</text><line x1="546" y1="91" x2="546" y2="110" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><rect x="628" y="110" width="140" height="60" rx="8" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="698" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Vault Secrets</text><text x="698" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">+ path configured</text><line x1="698" y1="91" x2="698" y2="110" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><text x="400" y="195" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Platform Stack:</text><rect x="60" y="205" width="130" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="125" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Backstage (Portal)</text><rect x="210" y="205" width="130" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="275" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Crossplane (Infra)</text><rect x="360" y="205" width="130" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="425" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">ArgoCD (Deploy)</text><rect x="510" y="205" width="130" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="575" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Vault (Secrets)</text><rect x="660" y="205" width="130" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="725" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Grafana (Observe)</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">One command creates everything a service needs — golden path eliminates 95% of setup toil</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">Developer clicks "Create Service" in Backstage</div>
+          <div class="flow-step">GitHub repo created from template</div>
+          <div class="flow-step">CI/CD pipeline configured (GitHub Actions)</div>
+          <div class="flow-step">EKS namespace + RBAC provisioned</div>
+          <div class="flow-step">Grafana dashboards auto-created</div>
+          <div class="flow-step">PagerDuty service + escalation policy</div>
+          <div class="flow-step">ArgoCD Application registered</div>
+        </div>
+
+        <p>Total time: <strong>4 minutes</strong>. Previously: 3-5 days of tickets and waiting.</p>
+
+        <h2>Backstage Software Template</h2>
+        <p>This is the template that powers the "Create Service" flow. It defines the input form, the scaffolding steps, and the integrations:</p>
+
+        <pre><code>apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: microservice-template
+  title: Production Microservice
+  description: Creates a production-ready microservice with CI/CD, monitoring, and deployment
+  tags:
+    - recommended
+    - golang
+    - kubernetes
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Service Details
+      required:
+        - name
+        - team
+        - description
+      properties:
+        name:
+          title: Service Name
+          type: string
+          pattern: '^[a-z][a-z0-9-]*$'
+          maxLength: 30
+        team:
+          title: Owning Team
+          type: string
+          enum: [checkout, payments, inventory, platform, data]
+        description:
+          title: Description
+          type: string
+          maxLength: 200
+        language:
+          title: Language
+          type: string
+          default: golang
+          enum: [golang, python, nodejs]
+
+    - title: Infrastructure
+      properties:
+        needs_database:
+          title: Needs PostgreSQL database?
+          type: boolean
+          default: false
+        needs_redis:
+          title: Needs Redis cache?
+          type: boolean
+          default: false
+        needs_sqs:
+          title: Needs SQS queue?
+          type: boolean
+          default: false
+
+  steps:
+    - id: scaffold
+      name: Generate Code
+      action: fetch:template
+      input:
+        url: ./skeleton/${{ parameters.language }}
+        values:
+          name: ${{ parameters.name }}
+          team: ${{ parameters.team }}
+          description: ${{ parameters.description }}
+
+    - id: create-repo
+      name: Create GitHub Repository
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=our-org&repo=${{ parameters.name }}
+        defaultBranch: main
+        protectDefaultBranch: true
+        requireCodeOwnerReviews: true
+
+    - id: create-namespace
+      name: Provision Kubernetes Namespace
+      action: kubernetes:apply
+      input:
+        manifest:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ${{ parameters.name }}
+            labels:
+              team: ${{ parameters.team }}
+              managed-by: backstage
+
+    - id: create-argocd-app
+      name: Register with ArgoCD
+      action: argocd:create-application
+      input:
+        appName: ${{ parameters.name }}
+        repoUrl: https://github.com/our-org/${{ parameters.name }}
+        path: deploy/
+        namespace: ${{ parameters.name }}
+        cluster: production
+
+    - id: create-database
+      name: Provision Database
+      if: ${{ parameters.needs_database }}
+      action: kubernetes:apply
+      input:
+        manifest:
+          apiVersion: database.crossplane.io/v1alpha1
+          kind: PostgreSQLInstance
+          metadata:
+            name: ${{ parameters.name }}-db
+            namespace: ${{ parameters.name }}
+          spec:
+            parameters:
+              storageGB: 20
+              version: "15"
+            compositionRef:
+              name: production-postgresql
+
+    - id: register-catalog
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['create-repo'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml</code></pre>
+
+        <h2>Crossplane Composition for Self-Service RDS</h2>
+        <p>Developers request a database by creating a simple Kubernetes resource. Crossplane handles the actual AWS provisioning:</p>
+
+        <pre><code>apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: production-postgresql
+spec:
+  compositeTypeRef:
+    apiVersion: database.crossplane.io/v1alpha1
+    kind: PostgreSQLInstance
+  resources:
+    - name: rds-instance
+      base:
+        apiVersion: rds.aws.crossplane.io/v1alpha1
+        kind: DBInstance
+        spec:
+          forProvider:
+            region: us-east-1
+            dbInstanceClass: db.t3.medium
+            engine: postgres
+            masterUsername: app_admin
+            allocatedStorage: 20
+            storageEncrypted: true
+            publiclyAccessible: false
+            deletionProtection: true
+            backupRetentionPeriod: 7
+            multiAZ: true
+            vpcSecurityGroupIds:
+              - sg-0abc123def456
+            dbSubnetGroupName: production-db-subnet
+            tags:
+              - key: managed-by
+                value: crossplane
+              - key: environment
+                value: production
+          writeConnectionSecretToRef:
+            namespace: crossplane-system
+      patches:
+        - fromFieldPath: spec.parameters.storageGB
+          toFieldPath: spec.forProvider.allocatedStorage
+        - fromFieldPath: spec.parameters.version
+          toFieldPath: spec.forProvider.engineVersion
+        - fromFieldPath: metadata.labels[team]
+          toFieldPath: spec.forProvider.tags[2].value
+          transforms:
+            - type: string
+              string:
+                fmt: "team-%s"</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Why Crossplane over Terraform for self-service?</div>
+          <p>Crossplane uses Kubernetes CRDs, which means developers interact with infrastructure using the same <code>kubectl</code> they already know. No Terraform state files, no plan/apply workflow, no separate CI pipeline. The platform team defines the Composition (the guardrails), and developers just create a simple resource.</p>
+        </div>
+
+        <h2>What the Developer Experience Looks Like</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Minute 0 — Developer opens Backstage</h3>
+            <p>Clicks "Create" → selects "Production Microservice" template → fills in name, team, language, and infrastructure needs.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Minute 1 — Scaffolding completes</h3>
+            <p>GitHub repo created with CI/CD pipeline, Dockerfile, Helm chart, and catalog-info.yaml. Branch protection enabled.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Minute 2 — Infrastructure provisioned</h3>
+            <p>Kubernetes namespace created. ArgoCD application registered. If database requested, Crossplane starts provisioning RDS (takes ~8 min).</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Minute 3 — Observability ready</h3>
+            <p>Grafana dashboard created from template. Prometheus ServiceMonitor configured. PagerDuty service created with team's escalation policy.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Minute 4 — Developer pushes first commit</h3>
+            <p>GitHub Actions builds the image, pushes to ECR, ArgoCD deploys to the namespace. Service is live.</p>
+          </div>
+        </div>
+
+        <h2>Results After 6 Months</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Before IDP</th>
+              <th>After IDP</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>New service setup time</td>
+              <td>3-5 days</td>
+              <td>4 minutes</td>
+              <td>-99%</td>
+            </tr>
+            <tr>
+              <td>Developer onboarding</td>
+              <td>3 weeks</td>
+              <td>2 hours</td>
+              <td>-96%</td>
+            </tr>
+            <tr>
+              <td>Infra tickets per week</td>
+              <td>45</td>
+              <td>13</td>
+              <td>-71%</td>
+            </tr>
+            <tr>
+              <td>Platform team size needed</td>
+              <td>6 engineers</td>
+              <td>3 engineers</td>
+              <td>-50%</td>
+            </tr>
+            <tr>
+              <td>Services with monitoring</td>
+              <td>60%</td>
+              <td>100%</td>
+              <td>+40pp</td>
+            </tr>
+            <tr>
+              <td>Developer satisfaction (NPS)</td>
+              <td>-12</td>
+              <td>+47</td>
+              <td>+59 points</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Lessons Learned</h2>
+
+        <div class="info-box success">
+          <h3>✅ What Worked</h3>
+          <ul>
+            <li><strong>Start with the most painful workflow, not the most impressive feature.</strong> We started with "create a new service" because it was the #1 source of tickets. Tempting to build a fancy service mesh dashboard first — don't.</li>
+            <li><strong>Treat the IDP as a product.</strong> We ran user interviews, tracked adoption metrics, and iterated based on feedback. The platform team had a product manager.</li>
+            <li><strong>Opinionated defaults with escape hatches.</strong> 90% of services use the golden path. The 10% that need custom configs can still override — but they have to justify it.</li>
+            <li><strong>Backstage as the single entry point.</strong> One URL for everything: create services, view docs, check deployments, see who owns what.</li>
+          </ul>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ What Didn't Work</h3>
+          <ul>
+            <li><strong>Building everything before launching.</strong> Our first attempt took 4 months and nobody used it because we built features nobody asked for. V2 launched in 6 weeks with just "create service" and iterated from there.</li>
+            <li><strong>Forcing adoption.</strong> Mandating IDP usage created resentment. We switched to making it so good that teams chose it voluntarily. Adoption went from 30% to 85% in 2 months.</li>
+            <li><strong>Ignoring existing workflows.</strong> Some teams had working Terraform setups. We built import tools instead of forcing migration.</li>
+          </ul>
+        </div>
+
+        <h2>Where to Start</h2>
+        <ol>
+          <li><strong>Survey your developers.</strong> Ask: "What takes the most time when you start a new project?" The top answer is your first golden path.</li>
+          <li><strong>Deploy Backstage.</strong> Even without templates, the service catalog alone provides value by answering "who owns this service?"</li>
+          <li><strong>Build one template.</strong> The "create a new service" template. Make it work end-to-end for one language.</li>
+          <li><strong>Measure adoption.</strong> Track how many services are created through the platform vs manually. Target 80% within 3 months.</li>
+          <li><strong>Iterate based on tickets.</strong> Every infra ticket is a feature request for your IDP.</li>
+        </ol>
+
+        <blockquote>
+          <p>An IDP isn't a project — it's a product. Ship the smallest useful thing, measure adoption, and iterate. The goal isn't a perfect platform; it's a platform that developers actually use.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

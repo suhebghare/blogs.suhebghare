@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Observability & Monitoring: The Foundation of Uptime – Suheb Ghare</title>
+  <meta name="description" content="Observability & Monitoring: The Foundation of Uptime – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Observability</span>
+      </div>
+      <h1 class="post-title">Observability & Monitoring: The Foundation of Uptime</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="observability-monitoring" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="observability-monitoring" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="observability-monitoring" data-stat="likes">202</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="observability-monitoring" data-stat="dislikes">47</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="observability-monitoring">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="observability-monitoring">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="monitoring-vs-observability">Monitoring vs Observability: The Real Difference</h2>
+        <p>After building observability stacks for 6 different organizations, I've learned that most teams confuse monitoring with observability. They're not the same thing.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/grafana1.svg" alt="Grafana observability dashboard" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">USE/RED method dashboard showing service health metrics</figcaption>
+</figure>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>Monitoring (Known Unknowns)</h3>
+            <p>Dashboards and alerts for things you <em>expect</em> to go wrong. CPU &gt; 90%? Alert. Error rate &gt; 1%? Alert. You defined the failure mode in advance.</p>
+          </div>
+          <div class="info-box">
+            <h3>Observability (Unknown Unknowns)</h3>
+            <p>The ability to ask <em>arbitrary questions</em> about your system without deploying new code. "Why are requests from EU users 3x slower on Tuesdays?" You didn't predict this — but you can investigate it.</p>
+          </div>
+        </div>
+
+        <p>Observability requires three pillars working together: metrics tell you <em>something</em> is wrong, logs tell you <em>what</em> went wrong, and traces tell you <em>where</em> it went wrong.</p>
+
+        <h2 id="three-pillars">The Three Pillars</h2>
+
+        <div class="diagram">
+          <div class="flow-step">Metrics (Prometheus)<br><small>What's happening now?</small></div>
+          <div class="flow-step">Logs (Loki / CloudWatch)<br><small>What happened in detail?</small></div>
+          <div class="flow-step">Traces (Jaeger / X-Ray)<br><small>Where did it happen?</small></div>
+        </div>
+
+        <h2 id="prometheus">Prometheus: Metrics That Matter</h2>
+
+        <h3 id="scrape-config">Scrape Configuration</h3>
+        <pre><code># prometheus.yml — production config
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: production-us-east-1
+    environment: production
+
+scrape_configs:
+  # Kubernetes service discovery
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      # Only scrape pods with annotation prometheus.io/scrape: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_ip]
+        action: replace
+        target_label: __address__
+        regex: (.+);(.+)
+        replacement: $2:$1
+
+  # Node exporter for host metrics
+  - job_name: node-exporter
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: replace
+        target_label: __address__
+        regex: (.+):(.+)
+        replacement: $1:9100</code></pre>
+
+        <h3 id="recording-rules">Recording Rules for Performance</h3>
+        <p>Raw queries on high-cardinality metrics are slow. Recording rules pre-compute expensive queries every evaluation interval.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Observability Stack: Three Pillars</text><rect x="20" y="50" width="240" height="160" rx="12" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="72" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Metrics</text><text x="140" y="96" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Prometheus</text><text x="140" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">+ Grafana</text><text x="140" y="136" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Rate · Errors · Duration</text><text x="140" y="152" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Saturation · Utilization</text><rect x="280" y="50" width="240" height="160" rx="12" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Logs</text><text x="400" y="96" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Loki</text><text x="400" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">+ CloudWatch</text><text x="400" y="136" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Structured JSON</text><text x="400" y="152" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Correlation IDs</text><rect x="540" y="50" width="240" height="160" rx="12" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="660" y="72" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Traces</text><text x="660" y="96" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Jaeger / X-Ray</text><text x="660" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">+ OpenTelemetry</text><text x="660" y="136" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Distributed spans</text><text x="660" y="152" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Latency breakdown</text><rect x="20" y="230" width="760" height="50" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="248" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">OpenTelemetry Collector: vendor-neutral pipeline</text><text x="400" y="264" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">App → OTLP → Collector → Prometheus / Loki / Jaeger / Datadog (swap backends without code changes)</text><rect x="20" y="298" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="312" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">RED Method per service: Rate (req/s) · Errors (%) · Duration (p50/p99)</text><text x="400" y="328" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">USE Method per resource: Utilization · Saturation · Errors</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Three pillars answer different questions: metrics=what, logs=why, traces=where in the call chain</figcaption></figure>
+
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/otel1.png" alt="OpenTelemetry collector pipeline" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">OpenTelemetry Collector: receive, process, and export metrics, logs, and traces to any backend</figcaption>
+</figure>
+
+        <pre><code># recording-rules.yml
+groups:
+  - name: service_slos
+    interval: 30s
+    rules:
+      # Error rate per service (pre-computed)
+      - record: service:http_requests_error_rate:5m
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+
+      # P99 latency per service
+      - record: service:http_request_duration_seconds:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le)
+          )
+
+      # Request rate per service
+      - record: service:http_requests:rate5m
+        expr: sum(rate(http_requests_total[5m])) by (service)</code></pre>
+
+        <h3 id="alerting-rules">Alerting Rules</h3>
+        <pre><code># alerting-rules.yml
+groups:
+  - name: service_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: service:http_requests_error_rate:5m > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
+          runbook: "https://wiki.internal/runbooks/high-error-rate"
+
+      - alert: HighLatency
+        expr: service:http_request_duration_seconds:p99_5m > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 latency > 2s on {{ $labels.service }}"
+
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"</code></pre>
+
+        <h2 id="grafana">Grafana: Dashboard Design Principles</h2>
+
+        <h3 id="use-red-method">USE and RED Method Dashboards</h3>
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>USE Method (Infrastructure)</h3>
+            <p>For every resource (CPU, memory, disk, network):</p>
+            <ul>
+              <li><strong>U</strong>tilization — % time busy</li>
+              <li><strong>S</strong>aturation — queue depth</li>
+              <li><strong>E</strong>rrors — error count</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <h3>RED Method (Services)</h3>
+            <p>For every service endpoint:</p>
+            <ul>
+              <li><strong>R</strong>ate — requests per second</li>
+              <li><strong>E</strong>rrors — errors per second</li>
+              <li><strong>D</strong>uration — latency distribution</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Dashboard Design Rules</div>
+          <p>1) Top row: the 4 golden signals (latency, traffic, errors, saturation). 2) Use rate() not raw counters. 3) Show percentiles (p50, p95, p99), not averages — averages hide tail latency. 4) Time range: default to 6 hours, not 24. 5) Max 12 panels per dashboard — if you need more, split into sub-dashboards.</p>
+        </div>
+
+        <h3 id="real-queries">Real Prometheus Queries</h3>
+        <pre><code># Service error rate (percentage)
+sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+/
+sum(rate(http_requests_total[5m])) by (service)
+* 100
+
+# P95 latency
+histogram_quantile(0.95,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+)
+
+# CPU saturation (load average / CPU count)
+node_load1 / count without(cpu) (node_cpu_seconds_total{mode="idle"})
+
+# Memory utilization
+1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+
+# Disk I/O utilization
+rate(node_disk_io_time_seconds_total[5m])
+
+# Container CPU throttling
+rate(container_cpu_cfs_throttled_periods_total[5m])
+/
+rate(container_cpu_cfs_periods_total[5m])</code></pre>
+
+        <h2 id="opentelemetry">OpenTelemetry: The Future of Instrumentation</h2>
+        <p>OpenTelemetry (OTel) is the vendor-neutral standard for telemetry. It replaces Jaeger client, Zipkin client, Prometheus client libraries, and proprietary SDKs with one unified API. If you're starting fresh, use OTel.</p>
+
+        <h3 id="otel-collector">Collector Configuration</h3>
+        <pre><code># otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: otel-collector
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['0.0.0.0:8888']
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  attributes:
+    actions:
+      - key: environment
+        value: production
+        action: upsert
+
+exporters:
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+  otlp/jaeger:
+    endpoint: "jaeger-collector:4317"
+    tls:
+      insecure: true
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [prometheusremotewrite]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [otlp/jaeger]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [loki]</code></pre>
+
+        <h3 id="auto-instrumentation">Auto-Instrumentation</h3>
+        <p>OTel auto-instrumentation adds tracing to your app without code changes. It hooks into HTTP clients, database drivers, and framework middleware automatically.</p>
+
+        <pre><code># Python — zero-code instrumentation
+pip install opentelemetry-distro opentelemetry-exporter-otlp
+opentelemetry-bootstrap -a install
+
+OTEL_SERVICE_NAME=order-service \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317 \
+opentelemetry-instrument python app.py
+
+# Node.js — add to your entrypoint
+# npm install @opentelemetry/auto-instrumentations-node
+NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register" \
+OTEL_SERVICE_NAME=payment-service \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317 \
+node server.js</code></pre>
+
+        <h2 id="distributed-tracing">Distributed Tracing: Finding the Needle</h2>
+        <p>In a microservices architecture, a single user request might touch 8 services. When latency spikes, which service is the bottleneck? Traces answer this.</p>
+
+        <h3 id="sampling-strategy">Trace Sampling Strategy</h3>
+        <div class="callout callout-warning">
+          <div class="callout-title">Don't Sample 100% in Production</div>
+          <p>At 10K req/s, 100% sampling generates ~50GB/day of trace data. That's expensive to store and query. Use tail-based sampling: sample 1% of successful requests but 100% of errors and slow requests (&gt;2s). This gives you the traces you actually need for debugging.</p>
+        </div>
+
+        <pre><code># Tail-based sampling in OTel Collector
+processors:
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      # Always sample errors
+      - name: errors
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      # Always sample slow requests
+      - name: slow-requests
+        type: latency
+        latency: { threshold_ms: 2000 }
+      # Sample 1% of everything else
+      - name: probabilistic
+        type: probabilistic
+        probabilistic: { sampling_percentage: 1 }</code></pre>
+
+        <h2 id="structured-logging">Log Aggregation: Structured Logging</h2>
+        <p>Unstructured logs are useless at scale. You can't query "show me all errors for user X in the payment service" if your logs are free-text strings.</p>
+
+        <pre><code>// Bad — unstructured
+logger.info("Processing order 12345 for user john@example.com, amount $99.99")
+
+// Good — structured JSON
+logger.info("Processing order", {
+  orderId: "12345",
+  userId: "usr_abc123",
+  amount: 99.99,
+  currency: "USD",
+  traceId: span.spanContext().traceId,  // Correlate with traces
+  service: "order-service"
+})</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Correlation IDs Are Non-Negotiable</div>
+          <p>Every request gets a unique correlation ID (or use the trace ID from OpenTelemetry). Pass it through every service call in headers. When debugging, search logs by correlation ID to see the entire request flow across all services. Without this, debugging distributed systems is guessing.</p>
+        </div>
+
+        <h3 id="log-levels">Log Levels: Use Them Correctly</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Level</th><th>When to Use</th><th>Example</th><th>Alert?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>ERROR</strong></td><td>Something failed, needs attention</td><td>Database connection failed, payment declined</td><td>Yes</td></tr>
+            <tr><td><strong>WARN</strong></td><td>Unexpected but handled</td><td>Retry succeeded, cache miss, deprecated API called</td><td>If sustained</td></tr>
+            <tr><td><strong>INFO</strong></td><td>Normal operations</td><td>Request processed, user logged in, job completed</td><td>No</td></tr>
+            <tr><td><strong>DEBUG</strong></td><td>Detailed diagnostic info</td><td>SQL queries, request/response bodies</td><td>No (off in prod)</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="cost-optimization">Observability Cost Optimization</h2>
+        <p>Observability can get expensive fast. Prometheus storage, log ingestion, trace storage — it adds up.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$2,400/mo</div>
+            <div class="metric-label">Before: 90-day log retention, 100% trace sampling</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$800/mo</div>
+            <div class="metric-label">After: 30-day hot, 1% trace sampling, recording rules</div>
+          </div>
+        </div>
+
+        <ul>
+          <li><strong>Prometheus:</strong> Use recording rules to pre-aggregate. Drop high-cardinality labels you don't query. Set retention to 15 days locally, use Thanos/Cortex for long-term.</li>
+          <li><strong>Logs:</strong> 30-day hot retention, archive to S3 for compliance. Filter out health check logs at the collector level — they're 40% of log volume.</li>
+          <li><strong>Traces:</strong> Tail-based sampling (1% normal, 100% errors). Store traces for 7 days max.</li>
+        </ul>
+
+        <h2 id="federation">Prometheus Federation for Multi-Cluster</h2>
+        <pre><code># Central Prometheus scraping leaf clusters
+scrape_configs:
+  - job_name: cluster-us-east-1
+    honor_labels: true
+    metrics_path: /federate
+    params:
+      match[]:
+        - '{__name__=~"service:.*"}'     # Only recording rules
+        - '{__name__=~"kube_pod_.*"}'    # Pod metrics
+    static_configs:
+      - targets: ['prometheus-us-east-1.internal:9090']
+        labels:
+          cluster: us-east-1
+
+  - job_name: cluster-eu-west-1
+    honor_labels: true
+    metrics_path: /federate
+    params:
+      match[]:
+        - '{__name__=~"service:.*"}'
+    static_configs:
+      - targets: ['prometheus-eu-west-1.internal:9090']
+        labels:
+          cluster: eu-west-1</code></pre>
+
+        <div class="info-box success">
+          <h3>Observability Checklist</h3>
+          <ul class="icon-list">
+            <li>Metrics: Prometheus with recording rules and 15-day local retention</li>
+            <li>Logs: Structured JSON with correlation IDs, 30-day hot retention</li>
+            <li>Traces: OpenTelemetry with tail-based sampling (1% normal, 100% errors)</li>
+            <li>Dashboards: USE method for infra, RED method for services</li>
+            <li>Alerts: Error rate, latency p99, saturation — with runbook links</li>
+            <li>Correlation: Trace ID in every log line for cross-service debugging</li>
+            <li>Cost: Filter health check logs, use recording rules, sample traces</li>
+            <li>Vendor-neutral: OpenTelemetry Collector as the single telemetry pipeline</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

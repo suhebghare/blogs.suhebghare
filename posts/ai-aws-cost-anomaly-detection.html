@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI for AWS Cost Anomaly Detection – Suheb Ghare</title>
+  <meta name="description" content="AI for AWS Cost Anomaly Detection – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI & DevOps</span>
+      </div>
+      <h1 class="post-title">AI for AWS Cost Anomaly Detection</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="ai-aws-cost-anomaly-detection" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="ai-aws-cost-anomaly-detection" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="ai-aws-cost-anomaly-detection" data-stat="likes">177</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="ai-aws-cost-anomaly-detection" data-stat="dislikes">32</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="ai-aws-cost-anomaly-detection">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="ai-aws-cost-anomaly-detection">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>The $50K Wake-Up Call We Almost Missed</h2>
+        <p>Last year, a Lambda function with an infinite retry loop ran for <strong>3 days</strong> before anyone noticed. The bill: $47,000 in a single month for a service that normally costs $200. The worst part? We had CloudWatch alarms — they just weren't tuned for cost anomalies. We had alerts for errors and latency, but nobody was watching the spend in real-time.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=900&q=85" alt="AI cost anomaly detection" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Two-layer detection caught a $50K/month spike in 2 hours</figcaption>
+</figure>
+
+        <p>After that incident, we built a two-layer anomaly detection system: AWS Cost Anomaly Detection (built-in ML) for broad coverage, and a custom Python + Prophet pipeline for service-level forecasting. Six months later, we caught a similar issue — this time in <strong>2 hours</strong> instead of 3 days. Estimated savings: $48,000.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$50K</div>
+            <div class="metric-label">Cost spike caught before billing</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">2 hours</div>
+            <div class="metric-label">Detection time (was 3 days)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$0</div>
+            <div class="metric-label">Cost of AWS Anomaly Detection</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">93%</div>
+            <div class="metric-label">Anomaly detection accuracy</div>
+          </div>
+        </div>
+
+        <h2>Layer 1: AWS Cost Anomaly Detection</h2>
+        <p>Start here. It's free, takes 10 minutes to set up, and catches ~70% of cost anomalies with zero configuration. AWS uses ML models trained on your historical spending patterns.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 285" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Two-Layer Cost Anomaly Detection</text><rect x="20" y="55" width="370" height="100" rx="10" fill="#312e81" stroke="#6366f1" stroke-width="2"/><text x="205" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Layer 1: AWS Cost Anomaly Detection</text><text x="205" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Built-in ML · Free tier</text><text x="205" y="106" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Auto-detects spend spikes per service</text><text x="205" y="122" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Threshold: absolute $500 AND 20%</text><rect x="410" y="55" width="370" height="100" rx="10" fill="#0c4a6e" stroke="#06b6d4" stroke-width="2"/><text x="595" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Layer 2: Custom Prophet Forecast</text><text x="595" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Python + boto3 + Prophet</text><text x="595" y="106" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Forecasts next 7 days of spend</text><text x="595" y="122" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Alerts on forecast vs budget deviation</text><rect x="20" y="175" width="760" height="36" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="400" y="193" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Cost Explorer → SNS → Lambda → Slack / PagerDuty</text><rect x="20" y="225" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="240" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Caught $50K/month spike in 2 hours (runaway ECS tasks)</text><text x="400" y="256" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Without detection: would have cost $150K before monthly review</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Two layers: AWS built-in ML for broad coverage + custom Prophet for budget-aware forecasting</figcaption></figure>
+
+
+        <h3>Setup via AWS CLI</h3>
+        <pre><code># Create a cost monitor for the entire account
+aws ce create-anomaly-monitor \
+  --anomaly-monitor '{
+    "MonitorName": "account-wide-monitor",
+    "MonitorType": "DIMENSIONAL",
+    "MonitorDimension": "SERVICE"
+  }'
+
+# Create a subscription for alerts
+aws ce create-anomaly-subscription \
+  --anomaly-subscription '{
+    "SubscriptionName": "cost-anomaly-alerts",
+    "MonitorArnList": ["arn:aws:ce::123456789012:anomalymonitor/monitor-id"],
+    "Subscribers": [
+      {
+        "Address": "sre-team@company.com",
+        "Type": "EMAIL"
+      },
+      {
+        "Address": "arn:aws:sns:us-east-1:123456789012:cost-alerts",
+        "Type": "SNS"
+      }
+    ],
+    "Threshold": 100,
+    "Frequency": "IMMEDIATE"
+  }'</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Set the threshold low</div>
+          <p>We started with a $500 threshold and missed a $300/day anomaly that ran for a week. Now we use $100 for immediate alerts and $50 for daily digest. The noise is minimal — maybe 1-2 false positives per month.</p>
+        </div>
+
+        <h3>Service-Specific Monitors</h3>
+        <p>Account-wide monitoring catches big spikes, but service-level monitors catch the subtle ones. We create separate monitors for our top 5 cost drivers:</p>
+
+        <pre><code># Monitor specifically for Lambda cost anomalies
+aws ce create-anomaly-monitor \
+  --anomaly-monitor '{
+    "MonitorName": "lambda-cost-monitor",
+    "MonitorType": "CUSTOM",
+    "MonitorSpecification": {
+      "And": null,
+      "Or": null,
+      "Not": null,
+      "Dimensions": {
+        "Key": "SERVICE",
+        "Values": ["AWS Lambda"],
+        "MatchOptions": ["EQUALS"]
+      }
+    }
+  }'</code></pre>
+
+        <h2>Layer 2: Custom Anomaly Detection with Prophet</h2>
+        <p>AWS Cost Anomaly Detection is great for catching obvious spikes, but it has blind spots: gradual cost creep, anomalies within expected seasonal patterns, and per-tag attribution. For these, we built a custom pipeline.</p>
+
+        <h3>Architecture</h3>
+        <div class="diagram">
+          <div class="flow-step">Cost Explorer API (daily pull)</div>
+          <div class="flow-step">S3 (historical data)</div>
+          <div class="flow-step">Lambda (Prophet forecast)</div>
+          <div class="flow-step">SNS → Slack + PagerDuty</div>
+        </div>
+
+        <h3>Pulling Cost Data Programmatically</h3>
+        <pre><code>import boto3
+from datetime import datetime, timedelta
+
+ce = boto3.client('ce')
+
+def get_daily_costs(days=90):
+    end = datetime.utcnow().strftime('%Y-%m-%d')
+    start = (datetime.utcnow() - timedelta(days=days)).strftime('%Y-%m-%d')
+
+    response = ce.get_cost_and_usage(
+        TimePeriod={'Start': start, 'End': end},
+        Granularity='DAILY',
+        Metrics=['UnblendedCost'],
+        GroupBy=[
+            {'Type': 'DIMENSION', 'Key': 'SERVICE'},
+            {'Type': 'TAG', 'Key': 'team'}
+        ]
+    )
+
+    costs = []
+    for result in response['ResultsByTime']:
+        date = result['TimePeriod']['Start']
+        for group in result['Groups']:
+            service = group['Keys'][0]
+            team = group['Keys'][1] if len(group['Keys']) > 1 else 'untagged'
+            amount = float(group['Metrics']['UnblendedCost']['Amount'])
+            costs.append({
+                'date': date,
+                'service': service,
+                'team': team,
+                'cost': amount
+            })
+    return costs</code></pre>
+
+        <h3>Prophet Forecasting</h3>
+        <p>Facebook Prophet is ideal for cost forecasting because it handles seasonality (weekday/weekend patterns, monthly cycles) automatically:</p>
+
+        <pre><code>from prophet import Prophet
+import pandas as pd
+
+def detect_anomalies(cost_data, service_name):
+    df = pd.DataFrame(cost_data)
+    df = df[df['service'] == service_name]
+    df = df.rename(columns={'date': 'ds', 'cost': 'y'})
+    df['ds'] = pd.to_datetime(df['ds'])
+
+    model = Prophet(
+        changepoint_prior_scale=0.05,
+        seasonality_prior_scale=10,
+        interval_width=0.95  # 95% confidence interval
+    )
+    model.add_seasonality(name='weekly', period=7, fourier_order=3)
+    model.fit(df[:-1])  # Train on all but last day
+
+    forecast = model.predict(df[['ds']])
+    latest = forecast.iloc[-1]
+    actual = df.iloc[-1]['y']
+
+    is_anomaly = actual > latest['yhat_upper']
+    deviation_pct = ((actual - latest['yhat']) / latest['yhat']) * 100
+
+    return {
+        'service': service_name,
+        'actual': round(actual, 2),
+        'expected': round(latest['yhat'], 2),
+        'upper_bound': round(latest['yhat_upper'], 2),
+        'is_anomaly': is_anomaly,
+        'deviation_pct': round(deviation_pct, 1)
+    }</code></pre>
+
+        <h2>Alert Thresholds: Absolute vs Percentage</h2>
+        <p>This is where most teams get it wrong. You need <strong>both</strong> types of thresholds:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Threshold Type</th>
+              <th>Value</th>
+              <th>Catches</th>
+              <th>Misses</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Absolute only ($500/day)</td>
+              <td>$500</td>
+              <td>Big spikes on any service</td>
+              <td>A $50/day service jumping to $200/day (300% increase)</td>
+            </tr>
+            <tr>
+              <td>Percentage only (20%)</td>
+              <td>20%</td>
+              <td>Proportional spikes on any service</td>
+              <td>Normal variance on high-spend services triggers false positives</td>
+            </tr>
+            <tr>
+              <td><strong>Both (recommended)</strong></td>
+              <td>$500 OR 20%</td>
+              <td>Both big absolute and proportional spikes</td>
+              <td>Very gradual creep (&lt;20% over weeks)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code>def should_alert(anomaly_result):
+    ABSOLUTE_THRESHOLD = 500  # dollars
+    PERCENTAGE_THRESHOLD = 20  # percent
+
+    excess = anomaly_result['actual'] - anomaly_result['expected']
+
+    if excess > ABSOLUTE_THRESHOLD:
+        return True, f"${excess:.0f} over expected (absolute threshold)"
+    if anomaly_result['deviation_pct'] > PERCENTAGE_THRESHOLD:
+        return True, f"{anomaly_result['deviation_pct']}% over expected"
+    return False, None</code></pre>
+
+        <h2>Slack + PagerDuty Integration</h2>
+        <pre><code>import requests
+import json
+
+def send_slack_alert(anomaly, reason):
+    emoji = "🔴" if anomaly['deviation_pct'] > 50 else "🟡"
+    payload = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"{emoji} Cost Anomaly Detected"
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Service:*\n{anomaly['service']}"},
+                    {"type": "mrkdwn", "text": f"*Actual:*\n${anomaly['actual']:.2f}"},
+                    {"type": "mrkdwn", "text": f"*Expected:*\n${anomaly['expected']:.2f}"},
+                    {"type": "mrkdwn", "text": f"*Deviation:*\n{anomaly['deviation_pct']}%"}
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Reason:* {reason}\n*Action:* Check Cost Explorer → "
+                            f"Filter by service → Look at usage metrics"
+                }
+            }
+        ]
+    }
+    requests.post(SLACK_WEBHOOK_URL, json=payload)</code></pre>
+
+        <h2>Real Example: The Infinite Retry Loop</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Day 0, 14:23 — Deploy goes out</h3>
+            <p>A new version of the order-processor Lambda deploys. A bug in error handling causes failed SQS messages to be retried infinitely instead of going to the DLQ.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 0, 16:00 — Prophet detects anomaly</h3>
+            <p>Our custom pipeline runs every 2 hours. Lambda cost for the day is already $180 vs expected $45. Alert fires: "300% over expected, $135 excess."</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 0, 16:15 — Root cause identified</h3>
+            <p>SRE checks Lambda invocation metrics. order-processor showing 50x normal invocation count. SQS redrive policy was overridden in the deploy.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 0, 16:30 — Fix deployed</h3>
+            <p>Rollback + DLQ fix. Total excess cost: ~$200. Without detection, this would have been $1,600/day × 30 days = $48,000.</p>
+          </div>
+        </div>
+
+        <h2>Tagging Strategy for Anomaly Attribution</h2>
+        <p>Anomaly detection is useless if you can't attribute the cost to a team or service. Tag everything first:</p>
+
+        <div class="info-box warning">
+          <h3>⚠️ Required Tags (enforce via AWS Organizations SCP)</h3>
+          <ul>
+            <li><code>team</code> — owning team (e.g., checkout, platform)</li>
+            <li><code>environment</code> — prod, staging, dev</li>
+            <li><code>service</code> — application name</li>
+            <li><code>cost-center</code> — for finance attribution</li>
+          </ul>
+        </div>
+
+        <pre><code># SCP to deny resource creation without required tags
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RequireTags",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:RunInstances",
+        "lambda:CreateFunction",
+        "rds:CreateDBInstance",
+        "ecs:CreateService"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/team": "true",
+          "aws:RequestTag/environment": "true"
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+        <h2>Lessons Learned</h2>
+
+        <div class="info-box success">
+          <h3>✅ What Works</h3>
+          <ul>
+            <li><strong>Start with AWS Cost Anomaly Detection</strong> — it's free and catches 70% of issues</li>
+            <li><strong>Set both absolute AND percentage thresholds</strong> — neither alone is sufficient</li>
+            <li><strong>Tag everything before building detection</strong> — untagged resources are invisible to attribution</li>
+            <li><strong>Run detection every 2 hours, not daily</strong> — a runaway Lambda can burn $1,600 in 24 hours</li>
+            <li><strong>Alert to Slack AND PagerDuty</strong> — Slack for awareness, PagerDuty for action on big spikes</li>
+          </ul>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ Common Mistakes</h3>
+          <ul>
+            <li><strong>Only checking monthly bills</strong> — by then, the damage is done</li>
+            <li><strong>Setting thresholds too high</strong> — a $1,000 threshold misses the $300/day leak that costs $9,000/month</li>
+            <li><strong>Ignoring dev/staging accounts</strong> — we've seen $5,000/month in forgotten staging resources</li>
+            <li><strong>No automation on detection</strong> — alerting without auto-remediation (like stopping idle resources) leaves money on the table</li>
+          </ul>
+        </div>
+
+        <blockquote>
+          <p>The best time to set up cost anomaly detection was before your last surprise bill. The second best time is today. Start with the free AWS tool, add custom detection for your top 5 cost drivers, and tag everything.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

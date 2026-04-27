@@ -1,41 +1,201 @@
-# Tech Blog - blogs.suhebghare.tech
+# Tech Blog — blogs.suhebghare.tech
 
-A static website for tech blogging focused on DevOps, SRE, and cloud infrastructure topics.
+A static tech blog focused on DevOps, SRE, Cloud Infrastructure, and Automation — built with pure HTML/CSS and deployed on AWS S3 + CloudFront.
 
-## Blog Topics
+**Live:** [https://blogs.suhebghare.tech](https://blogs.suhebghare.tech)  
+**Portfolio:** [https://portfolio.suhebghare.tech](https://portfolio.suhebghare.tech)
 
-1. **Observability & Monitoring** - Setting up Grafana and monitoring platforms for uptime
-2. **Kubernetes Guide** - Why K8s matters and how it's transforming infrastructure
-3. **Infrastructure as Code** - Terraform and Ansible for modern infrastructure management
-4. **Linux Server Management** - How Linux revolutionized server-side computing
-5. **Security Best Practices** - Protecting web apps, backend services, and mitigation strategies
-6. **DevOps Automation & CI/CD** - Building robust CI/CD pipelines and deployment automation
-7. **Cloud Cost Optimization** - Strategies to reduce cloud spending without compromising performance
-8. **Incident Response & Postmortems** - Building effective incident response processes
+---
 
-## Deployment to AWS S3 + CloudFront
+## Blog Posts (37 Articles)
 
-### Prerequisites
+### CI/CD & Platform Engineering
+- [Designing Reusable CI/CD Templates](reusable-cicd-templates.html)
+- [Secrets Management Across Environments](secrets-management-environments.html)
+- [Argo Rollouts & Canary Deployments](argo-rollouts-canary-deployments.html)
+- [Self-Hosted Runners on EKS – Architecture & Pitfalls](self-hosted-runners-eks.html)
+- [Platform Engineering vs DevOps – What's the Difference?](platform-engineering-vs-devops.html)
+- [Building an Internal Developer Platform](building-internal-developer-platform.html)
+- [DevOps Automation & CI/CD](devops-automation.html)
 
-- AWS CLI installed and configured
-- AWS account with appropriate permissions
-- Domain name configured (blogs.suhebghare.tech)
+### AI & DevOps
+- [How AI Can Help SREs Reduce Alert Fatigue](ai-reduce-alert-fatigue.html)
+- [Using LLMs to Analyze Incident Logs](llm-analyze-incident-logs.html)
+- [AI for AWS Cost Anomaly Detection](ai-aws-cost-anomaly-detection.html)
+- [Can AI Replace On-Call Engineers?](can-ai-replace-oncall-engineers.html)
+- [Building an AI Agent for Your Infrastructure](building-ai-agent-infrastructure.html)
+- [MCP Servers and the Future of DevOps Automation](mcp-servers-devops-automation.html)
+- [ChatGPT + Terraform – Is It Safe?](chatgpt-terraform-safety.html)
 
-### Step 1: Create S3 Bucket
+### Security
+- [Designing WAF Rules That Stop Bots](waf-rules-bot-protection.html)
+- [Geo-Blocking vs Rate Limiting – What Works?](geo-blocking-vs-rate-limiting.html)
+- [Handling Credential Stuffing Attacks in AWS](credential-stuffing-aws.html)
+- [Secure Architecture Patterns for E-commerce](secure-ecommerce-architecture.html)
+- [ISO 27001 Controls for DevOps Engineers](iso27001-devops-controls.html)
+- [CloudFront + WAF Best Practices](cloudfront-waf-best-practices.html)
+- [Preventing API Abuse in Kubernetes](api-abuse-prevention-kubernetes.html)
+- [Security Best Practices](security-best-practices.html)
+
+### Kubernetes
+- [Reduced Black Friday AWS Spend by 52%](black-friday-aws-cost-reduction.html)
+- [Production-Grade Node Groups Strategy](production-node-groups-strategy.html)
+- [PodDisruptionBudgets: Common Misconfigurations](pod-disruption-budgets-guide.html)
+- [Running StatefulSets in Production](statefulsets-production-lessons.html)
+- [Karpenter vs Cluster Autoscaler](karpenter-vs-cluster-autoscaler.html)
+- [Multi-Environment EKS Design](multi-environment-eks.html)
+- [Kubernetes in Modern Infrastructure](kubernetes-guide.html)
+
+### Cloud & Infrastructure
+- [Cloud Cost Optimization](cloud-cost-optimization.html)
+- [Infrastructure as Code](infrastructure-as-code.html)
+- [AWS Serverless Architecture](aws-serverless-architecture.html)
+- [AWS Compute Types & Cost Optimization](aws-compute-types.html)
+- [AWS Storage Types & Optimization](aws-storage-types.html)
+- [Linux for Server Management](linux-server-management.html)
+
+### Observability & Incident Response
+- [Observability & Monitoring](observability-monitoring.html)
+- [Incident Response & Postmortems](incident-response-postmortems.html)
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Frontend | Static HTML, CSS, JavaScript |
+| Hosting | AWS S3 (Static Website Hosting) |
+| CDN | AWS CloudFront |
+| SSL | AWS ACM (Certificate Manager) |
+| DNS | Route 53 / Custom DNS |
+| CI/CD | GitHub Actions |
+| Container | Docker + Nginx (alternative deployment) |
+| GitOps | ArgoCD (for Kubernetes-based deployment) |
+
+---
+
+## Repository Structure
+
+```
+.
+├── .github/
+│   └── workflows/
+│       ├── deploy.yml                          # S3 + CloudFront deployment
+│       └── argocd-deploy.yml                   # ArgoCD/EKS deployment
+├── images/                                     # Blog post images & diagrams
+│   ├── app-sec1.jpg
+│   ├── eks-cluster.png
+│   ├── finops-1.png, finops-2.png, finops-3.png
+│   ├── grafana1.svg
+│   ├── k8s-cluster.svg
+│   ├── k8s-hpa-vs-vpa.gif
+│   ├── olly1.jpg
+│   ├── otel1.png
+│   └── waf1.png
+├── index.html                                  # Homepage with blog index
+├── styles.css                                  # Global stylesheet
+├── blog-stats.js                               # Client-side stats loader
+├── blog-stats.json                             # Stats data (gitignored)
+├── deploy.sh                                   # Manual deployment script
+├── Dockerfile                                  # Nginx container for K8s deployment
+├── .dockerignore
+├── .gitignore
+├── STATS_README.md                             # Blog stats system documentation
+├── README.md                                   # This file
+└── *.html                                      # 37 blog post pages
+```
+
+---
+
+## Deployment
+
+This project supports two deployment strategies:
+
+### Strategy 1: AWS S3 + CloudFront (Primary)
+
+Automated via GitHub Actions on push to `main`.
+
+**Workflow:** [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+
+```
+Push to main → GitHub Actions → Sync to S3 → Invalidate CloudFront Cache
+```
+
+**What the workflow does:**
+1. Checks out the code
+2. Configures AWS credentials from GitHub Secrets
+3. Downloads existing `blog-stats.json` from S3 (preserves read/like counters)
+4. Syncs all files to S3 (excluding `.git`, `.github`, `README.md`, `blog-stats.json`)
+5. Uploads `blog-stats.json` separately (to preserve stats)
+6. Invalidates CloudFront cache
+
+**Required GitHub Secrets:**
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | IAM access key |
+| `AWS_SECRET_ACCESS_KEY` | IAM secret key |
+| `REGION` | AWS region (e.g. `us-east-1`) |
+| `S3_BUCKET` | S3 bucket name |
+| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
+
+**Manual deployment:**
+```bash
+./deploy.sh
+```
+
+### Strategy 2: ArgoCD + EKS (Kubernetes)
+
+Automated via GitHub Actions on push to `staging`.
+
+**Workflow:** [`.github/workflows/argocd-deploy.yml`](.github/workflows/argocd-deploy.yml)
+
+```
+Push to staging → GitHub Actions → Build Docker Image → Push to ECR → Update ArgoCD values.yaml → ArgoCD syncs to EKS
+```
+
+**What the workflow does:**
+1. Checks out the code
+2. Fetches secrets from AWS Secrets Manager
+3. Builds a Docker image (Nginx serving static files)
+4. Pushes the image to Amazon ECR
+5. Clones the ArgoCD templates repo
+6. Updates `values.yaml` with the new image tag (git commit SHA)
+7. ArgoCD detects the change and deploys to EKS
+
+**Required GitHub Secrets:**
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | IAM access key (staging) |
+| `AWS_SECRET_ACCESS_KEY` | IAM secret key (staging) |
+| `AWS_ACCESS_KEY_ID_PROD` | IAM access key (production) |
+| `AWS_SECRET_ACCESS_KEY_PROD` | IAM secret key (production) |
+| `ARGOCD_SSH_PVT_KEY` | SSH private key for ArgoCD repo |
+| `ORG_PAT_TOKEN` | GitHub PAT for cloning ArgoCD templates |
+
+**Docker image:**
+```dockerfile
+FROM nginx:alpine
+COPY . /usr/share/nginx/html/
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+---
+
+## AWS Infrastructure Setup
+
+### S3 Bucket
 
 ```bash
-# Create S3 bucket
 aws s3 mb s3://blogs.suhebghare.tech --region us-east-1
 
-# Enable static website hosting
 aws s3 website s3://blogs.suhebghare.tech \
   --index-document index.html \
   --error-document index.html
 ```
 
-### Step 2: Configure Bucket Policy
-
-Create a file named `bucket-policy.json`:
+### Bucket Policy
 
 ```json
 {
@@ -52,203 +212,90 @@ Create a file named `bucket-policy.json`:
 }
 ```
 
-Apply the policy:
+### CloudFront Distribution
 
 ```bash
-aws s3api put-bucket-policy \
-  --bucket blogs.suhebghare.tech \
-  --policy file://bucket-policy.json
-```
-
-### Step 3: Upload Website Files
-
-```bash
-# Upload all files to S3
-aws s3 sync . s3://blogs.suhebghare.tech \
-  --exclude ".git/*" \
-  --exclude "README.md" \
-  --exclude "bucket-policy.json" \
-  --cache-control "max-age=3600"
-
-# Set longer cache for static assets
-aws s3 cp styles.css s3://blogs.suhebghare.tech/styles.css \
-  --cache-control "max-age=86400"
-```
-
-### Step 4: Create CloudFront Distribution
-
-```bash
-# Create CloudFront distribution (via AWS Console or CLI)
 aws cloudfront create-distribution \
   --origin-domain-name blogs.suhebghare.tech.s3-website-us-east-1.amazonaws.com \
   --default-root-object index.html
 ```
 
-Or use Terraform:
-
-```hcl
-resource "aws_cloudfront_distribution" "blog" {
-  origin {
-    domain_name = aws_s3_bucket.blog.bucket_regional_domain_name
-    origin_id   = "S3-blogs.suhebghare.tech"
-
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.blog.cloudfront_access_identity_path
-    }
-  }
-
-  enabled             = true
-  default_root_object = "index.html"
-  aliases             = ["blogs.suhebghare.tech"]
-
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-blogs.suhebghare.tech"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-    compress               = true
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.blog.arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
-  }
-}
-```
-
-### Step 5: Configure DNS
-
-Add a CNAME record in your DNS provider:
-
-```
-Type: CNAME
-Name: blogs
-Value: d1234567890.cloudfront.net (your CloudFront domain)
-TTL: 300
-```
-
-### Step 6: Request SSL Certificate (Optional but Recommended)
+### SSL Certificate
 
 ```bash
-# Request certificate in us-east-1 (required for CloudFront)
 aws acm request-certificate \
   --domain-name blogs.suhebghare.tech \
   --validation-method DNS \
   --region us-east-1
 ```
 
-Validate the certificate by adding the DNS records provided by ACM.
+### DNS
 
-### Updating the Website
-
-```bash
-# Sync changes to S3
-aws s3 sync . s3://blogs.suhebghare.tech \
-  --exclude ".git/*" \
-  --exclude "README.md" \
-  --delete
-
-# Invalidate CloudFront cache
-aws cloudfront create-invalidation \
-  --distribution-id YOUR_DISTRIBUTION_ID \
-  --paths "/*"
+```
+Type: CNAME
+Name: blogs
+Value: <cloudfront-distribution-domain>.cloudfront.net
+TTL: 300
 ```
 
-### Automated Deployment with GitHub Actions
+---
 
-Create `.github/workflows/deploy.yml`:
+## Blog Stats System
 
-```yaml
-name: Deploy to S3
+- Stats (reads, likes, dislikes) are stored in `blog-stats.json` on S3
+- The file is **gitignored** to avoid overwriting live counters
+- During deployment, stats are downloaded from S3 first, then re-uploaded after sync
+- Client-side JavaScript (`blog-stats.js`) loads stats dynamically on page load
+- Like/Dislike buttons update the display in-memory (static site — no backend persistence)
 
-on:
-  push:
-    branches: [main]
+> For production-grade analytics, consider AWS API Gateway + Lambda + DynamoDB or Google Analytics.
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      
-      - name: Sync to S3
-        run: |
-          aws s3 sync . s3://blogs.suhebghare.tech \
-            --exclude ".git/*" \
-            --exclude ".github/*" \
-            --delete
-      
-      - name: Invalidate CloudFront
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
-```
+See [STATS_README.md](STATS_README.md) for full details.
+
+---
 
 ## Local Development
 
-Simply open `index.html` in your browser to preview the website locally.
+```bash
+# Simply open in browser
+open index.html
 
-## Website Structure
+# Or serve with Python
+python3 -m http.server 8080
 
+# Or run with Docker
+docker build -t blog .
+docker run -p 8080:80 blog
 ```
-.
-├── index.html                          # Homepage with blog index
-├── styles.css                          # Global stylesheet
-├── observability-monitoring.html       # Observability blog post
-├── kubernetes-guide.html               # Kubernetes blog post
-├── infrastructure-as-code.html         # IaC blog post
-├── linux-server-management.html        # Linux blog post
-├── security-best-practices.html        # Security blog post
-├── devops-automation.html              # DevOps automation blog post
-├── cloud-cost-optimization.html        # Cost optimization blog post
-├── incident-response-postmortems.html  # Incident response blog post
-└── README.md                           # This file
-```
+
+---
 
 ## Features
 
-- Responsive design
-- Clean, modern UI
-- SEO-friendly structure
-- Fast loading (static HTML/CSS)
+- Responsive design with clean, modern UI
+- 37 in-depth blog posts across 6 categories
+- Blog stats (reads, likes, dislikes) per post
+- SEO-friendly static HTML/CSS
+- Fast loading — no JavaScript frameworks
 - CloudFront CDN for global performance
-- HTTPS enabled
-- Blog posts sorted by date (newest first)
+- HTTPS via ACM
+- Dual deployment: S3 + CloudFront and ArgoCD + EKS
+- Automated CI/CD with GitHub Actions
 
-## Cost Estimate
+---
 
-- S3 Storage: ~$0.023/GB/month
-- S3 Requests: ~$0.0004/1000 requests
-- CloudFront: ~$0.085/GB for first 10TB
-- Route53: ~$0.50/month per hosted zone
+## Cost Estimate (S3 + CloudFront)
 
-Expected monthly cost for low-traffic blog: $1-5/month
+| Service | Cost |
+|---------|------|
+| S3 Storage | ~$0.023/GB/month |
+| S3 Requests | ~$0.0004/1000 requests |
+| CloudFront | ~$0.085/GB (first 10TB) |
+| Route 53 | ~$0.50/month per hosted zone |
+
+**Expected monthly cost for low-traffic blog: $1–5/month**
+
+---
 
 ## License
 

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infrastructure as Code: Terraform & Ansible – Suheb Ghare</title>
+  <meta name="description" content="Infrastructure as Code: Terraform & Ansible – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Cloud</span>
+      </div>
+      <h1 class="post-title">Infrastructure as Code: Terraform & Ansible</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="infrastructure-as-code" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="infrastructure-as-code" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="infrastructure-as-code" data-stat="likes">164</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="infrastructure-as-code" data-stat="dislikes">41</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="infrastructure-as-code">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="infrastructure-as-code">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="lessons-at-scale">Terraform at Scale: Lessons from 50+ AWS Accounts</h2>
+        <p>I've managed Terraform across 50+ AWS accounts, 200+ state files, and teams of 30+ engineers. The patterns that work at 5 accounts break at 50. Here's what I've learned about structuring Terraform for real organizations.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=85" alt="Infrastructure as code with Terraform" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">GitOps IaC: plan on PR, apply on merge, drift detection daily</figcaption>
+</figure>
+
+        <h2 id="project-structure">Project Structure: Monorepo vs Polyrepo</h2>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>Monorepo (What We Use)</h3>
+            <ul>
+              <li>All Terraform in one repo</li>
+              <li>Shared modules, consistent tooling</li>
+              <li>Easier cross-team code review</li>
+              <li>Single CI/CD pipeline</li>
+              <li>Gets slow at very large scale (1000+ resources)</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <h3>Polyrepo</h3>
+            <ul>
+              <li>Separate repo per service/team</li>
+              <li>Independent deploy cycles</li>
+              <li>Harder to share modules</li>
+              <li>Module versioning via git tags</li>
+              <li>Better for autonomous teams</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 id="directory-layout">Directory Layout That Scales</h3>
+        <pre><code>terraform/
+├── modules/                    # Reusable modules
+│   ├── vpc/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── versions.tf
+│   ├── eks-cluster/
+│   ├── rds/
+│   └── s3-bucket/
+├── environments/               # Environment-specific configs
+│   ├── production/
+│   │   ├── us-east-1/
+│   │   │   ├── vpc/
+│   │   │   │   ├── main.tf     # Calls module with prod values
+│   │   │   │   ├── backend.tf  # S3 state config
+│   │   │   │   └── terraform.tfvars
+│   │   │   ├── eks/
+│   │   │   └── rds/
+│   │   └── eu-west-1/
+│   ├── staging/
+│   └── dev/
+└── global/                     # Account-level resources
+    ├── iam/
+    ├── organizations/
+    └── route53/</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">One State File Per Component Per Environment</div>
+          <p>The #1 mistake I see: everything in one state file. When your single state has 500 resources, <code>terraform plan</code> takes 8 minutes and a failed apply can leave you in a broken state. Split by component: VPC has its own state, EKS has its own state, RDS has its own state. Each plan takes seconds.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">IaC GitOps Workflow</text><rect x="20" y="60" width="110" height="60" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="75" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Engineer</text><text x="75" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">writes .tf</text><line x1="130" y1="90" x2="150" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="150" y="60" width="110" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="205" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">PR opened</text><text x="205" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">terraform plan</text><line x1="260" y1="90" x2="280" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="280" y="60" width="110" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="335" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Infracost</text><text x="335" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">estimate</text><line x1="390" y1="90" x2="410" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="410" y="60" width="110" height="60" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="465" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Review &</text><text x="465" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Approve</text><line x1="520" y1="90" x2="540" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="540" y="60" width="110" height="60" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Merge →</text><text x="595" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">terraform apply</text><line x1="650" y1="90" x2="670" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="670" y="60" width="110" height="60" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="725" y="80" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Drift</text><text x="725" y="98" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Detection</text><path d="M 795,90 Q 820,90 820,200 Q 820,230 400,230 Q 400,200 400,120" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="5,3" marker-end="url(#a)"/><text x="600" y="245" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">Daily drift detection: plan in CI, alert on diff</text><rect x="20" y="270" width="760" height="50" rx="8" fill="#3b1a1a" stroke="#ef4444" stroke-width="1.5"/><text x="400" y="288" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">State Surgery (use carefully): terraform state mv, terraform state rm, terraform import</text><text x="400" y="304" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Always backup state before surgery: aws s3 cp s3://tfstate/prod.tfstate ./backup.tfstate</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">GitOps IaC: every infrastructure change goes through PR review with cost estimate and automated plan</figcaption></figure>
+
+        </div>
+
+        <h2 id="state-management">State Management: The Foundation</h2>
+        <pre><code># backend.tf — every component gets this
+terraform {
+  backend "s3" {
+    bucket         = "mycompany-terraform-state"
+    key            = "production/us-east-1/eks/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}
+
+# State locking with DynamoDB
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}</code></pre>
+
+        <h3 id="cross-state">Cross-State Data Sources</h3>
+        <p>Components need to reference each other. The EKS cluster needs the VPC ID. Use <code>terraform_remote_state</code> or better — <code>data</code> sources.</p>
+
+        <pre><code># Option 1: Remote state (tightly coupled)
+data "terraform_remote_state" "vpc" {
+  backend = "s3"
+  config = {
+    bucket = "mycompany-terraform-state"
+    key    = "production/us-east-1/vpc/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+resource "aws_eks_cluster" "main" {
+  vpc_config {
+    subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+  }
+}
+
+# Option 2: Data sources (loosely coupled — preferred)
+data "aws_vpc" "main" {
+  tags = { Name = "production-vpc" }
+}
+
+data "aws_subnets" "private" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.main.id]
+  }
+  tags = { Tier = "private" }
+}</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Prefer Data Sources Over Remote State</div>
+          <p>Remote state creates a hard dependency between state files. If someone refactors the VPC module and changes output names, your EKS plan breaks. Data sources query AWS directly — they're resilient to Terraform refactoring.</p>
+        </div>
+
+        <h2 id="modules">Module Design: Reusable vs Environment-Specific</h2>
+
+        <pre><code># modules/eks-cluster/variables.tf — with validation
+variable "cluster_name" {
+  type        = string
+  description = "Name of the EKS cluster"
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{2,39}$", var.cluster_name))
+    error_message = "Cluster name must be lowercase alphanumeric, 3-40 chars."
+  }
+}
+
+variable "cluster_version" {
+  type        = string
+  default     = "1.29"
+  description = "Kubernetes version"
+  validation {
+    condition     = contains(["1.28", "1.29", "1.30"], var.cluster_version)
+    error_message = "Supported versions: 1.28, 1.29, 1.30."
+  }
+}
+
+variable "node_groups" {
+  type = map(object({
+    instance_types = list(string)
+    min_size       = number
+    max_size       = number
+    desired_size   = number
+    capacity_type  = optional(string, "ON_DEMAND")
+    labels         = optional(map(string), {})
+    taints = optional(list(object({
+      key    = string
+      value  = string
+      effect = string
+    })), [])
+  }))
+  description = "Map of node group configurations"
+}
+
+# modules/eks-cluster/main.tf
+resource "aws_eks_cluster" "this" {
+  name     = var.cluster_name
+  version  = var.cluster_version
+  role_arn = aws_iam_role.cluster.arn
+
+  vpc_config {
+    subnet_ids              = var.subnet_ids
+    endpoint_private_access = true
+    endpoint_public_access  = var.enable_public_access
+    security_group_ids      = [aws_security_group.cluster.id]
+  }
+
+  encryption_config {
+    provider { key_arn = var.kms_key_arn }
+    resources = ["secrets"]
+  }
+
+  enabled_cluster_log_types = ["api", "audit", "authenticator"]
+}</code></pre>
+
+        <h3 id="module-versioning">Module Versioning</h3>
+        <pre><code># Pin module versions — never use main branch
+module "eks" {
+  source  = "git::https://github.com/mycompany/terraform-modules.git//eks-cluster?ref=v2.3.1"
+  # Or from Terraform registry:
+  # source  = "terraform-aws-modules/eks/aws"
+  # version = "~> 20.0"
+
+  cluster_name    = "production-eks"
+  cluster_version = "1.29"
+  subnet_ids      = data.aws_subnets.private.ids
+}</code></pre>
+
+        <h2 id="cicd">CI/CD Pipeline: Plan on PR, Apply on Merge</h2>
+
+        <div class="diagram">
+          <div class="flow-step">PR Created<br><small>terraform fmt + validate</small></div>
+          <div class="flow-step">Plan + Cost Estimate<br><small>terraform plan + Infracost</small></div>
+          <div class="flow-step">Review<br><small>Plan output as PR comment</small></div>
+          <div class="flow-step">Merge to Main<br><small>terraform apply -auto-approve</small></div>
+          <div class="flow-step">Drift Detection<br><small>Scheduled plan (daily)</small></div>
+        </div>
+
+        <pre><code># .github/workflows/terraform.yml
+name: Terraform
+on:
+  pull_request:
+    paths: ['terraform/**']
+  push:
+    branches: [main]
+    paths: ['terraform/**']
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl
+        working-directory: terraform/environments/production/us-east-1/eks
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        working-directory: terraform/environments/production/us-east-1/eks
+
+      - name: Cost Estimation
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const plan = `${{ steps.plan.outputs.stdout }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan\n\`\`\`\n${plan}\n\`\`\``
+            });
+
+  apply:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init && terraform apply -auto-approve
+        working-directory: terraform/environments/production/us-east-1/eks</code></pre>
+
+        <h2 id="drift">Drift Detection and Handling</h2>
+        <p>Drift happens when someone makes a manual change in the AWS console. It's inevitable. The question is how fast you detect it.</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Real Drift Incident</div>
+          <p>An engineer manually changed a security group rule in the console to debug a connectivity issue. Forgot to revert it. Two weeks later, <code>terraform apply</code> on an unrelated change reverted the security group — breaking production. We now run <code>terraform plan</code> daily in CI and alert on any drift.</p>
+        </div>
+
+        <pre><code># Daily drift detection (scheduled GitHub Action)
+name: Drift Detection
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 8 AM UTC daily
+
+jobs:
+  detect-drift:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [vpc, eks, rds, iam]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Check Drift
+        id: plan
+        run: |
+          terraform init
+          terraform plan -detailed-exitcode -no-color 2>&1 | tee plan.txt
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+        working-directory: terraform/environments/production/us-east-1/${{ matrix.component }}
+        continue-on-error: true
+
+      - name: Alert on Drift
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"⚠️ Terraform drift detected in ${{ matrix.component }}\"}"</code></pre>
+
+        <h2 id="common-mistakes">Common Mistakes I've Seen</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Everything in One State File</h3>
+            <p>500+ resources, 8-minute plans, blast radius of the entire infrastructure. Split by component and environment. Each state should have 20-50 resources max.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>No Module Versioning</h3>
+            <p>Using <code>source = "../modules/vpc"</code> means any module change affects all environments simultaneously. Use git tags: <code>?ref=v1.2.0</code>. Promote versions: dev → staging → production.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Manual Changes Bypassing Terraform</h3>
+            <p>Console changes cause drift. Enforce with SCPs that deny console access to Terraform-managed resources, or at minimum run daily drift detection.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Hardcoded Values Instead of Variables</h3>
+            <p>AMI IDs, account numbers, CIDR blocks hardcoded in main.tf. Use variables with validation, locals for computed values, and data sources for dynamic lookups.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>No State Locking</h3>
+            <p>Two engineers run <code>terraform apply</code> simultaneously. State corruption. Always use DynamoDB locking with S3 backend. It's one table for all state files.</p>
+          </div>
+        </div>
+
+        <h2 id="testing">Testing Modules with Terratest</h2>
+        <pre><code>// test/eks_test.go
+package test
+
+import (
+    "testing"
+    "github.com/gruntwork-io/terratest/modules/terraform"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestEksCluster(t *testing.T) {
+    t.Parallel()
+    opts := &terraform.Options{
+        TerraformDir: "../modules/eks-cluster",
+        Vars: map[string]interface{}{
+            "cluster_name":    "test-cluster",
+            "cluster_version": "1.29",
+            "subnet_ids":      []string{"subnet-abc123"},
+        },
+    }
+    defer terraform.Destroy(t, opts)
+    terraform.InitAndApply(t, opts)
+
+    clusterName := terraform.Output(t, opts, "cluster_name")
+    assert.Equal(t, "test-cluster", clusterName)
+}</code></pre>
+
+        <div class="info-box success">
+          <h3>Terraform Best Practices Summary</h3>
+          <ul class="icon-list">
+            <li>One state file per component per environment (20-50 resources each)</li>
+            <li>Version all modules with git tags — never reference main branch</li>
+            <li>Plan on PR with cost estimation, apply on merge</li>
+            <li>Daily drift detection with Slack/PagerDuty alerts</li>
+            <li>Use data sources over remote state for loose coupling</li>
+            <li>Variable validation to catch misconfigurations early</li>
+            <li>DynamoDB state locking — always, no exceptions</li>
+            <li>Test modules with Terratest before promoting to production</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

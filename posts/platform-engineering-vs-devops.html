@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Engineering vs DevOps – What's the Difference? – Suheb Ghare</title>
+  <meta name="description" content="Platform Engineering vs DevOps – What's the Difference? – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">CI/CD</span>
+      </div>
+      <h1 class="post-title">Platform Engineering vs DevOps – What's the Difference?</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="platform-engineering-vs-devops" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="platform-engineering-vs-devops" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="platform-engineering-vs-devops" data-stat="likes">323</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="platform-engineering-vs-devops" data-stat="dislikes">20</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="platform-engineering-vs-devops">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="platform-engineering-vs-devops">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>The Industry Confusion</h2>
+        <p>Every conference in 2024 had a "Platform Engineering" track. Half the talks were rebranded DevOps presentations. The other half were genuinely different. The confusion is real, and it's costing organizations money — they're hiring "Platform Engineers" to do DevOps work, or expecting DevOps engineers to build internal products without product management skills.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=900&q=85" alt="Platform engineering team topology" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Platform teams reduce cognitive load — onboarding from 3 weeks to 2 hours</figcaption>
+</figure>
+        <p>Let me clarify this based on 8 years of doing both.</p>
+
+        <h2>DevOps: A Culture and Practice</h2>
+        <p>DevOps is a set of practices that combines software development and IT operations. It aims to shorten the development lifecycle and provide continuous delivery. The core principles:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 290" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Cognitive Load: Without vs With IDP</text><rect x="20" y="55" width="370" height="160" rx="12" fill="#3b1a1a" stroke="#ef4444" stroke-width="2"/><text x="205" y="75" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Without IDP</text><rect x="30" y="95" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="85" y="113" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Kubernetes</text><rect x="150" y="95" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="205" y="113" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Terraform</text><rect x="270" y="95" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="325" y="113" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Monitoring</text><rect x="30" y="145" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="85" y="163" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">CI/CD</text><rect x="150" y="145" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="205" y="163" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Secrets</text><rect x="270" y="145" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="325" y="163" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Networking</text><text x="205" y="200" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Dev team owns everything</text><rect x="410" y="55" width="370" height="160" rx="12" fill="#14532d" stroke="#22c55e" stroke-width="2"/><text x="595" y="75" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">With IDP</text><rect x="460" y="95" width="270" height="50" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="595" y="120" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">App Code Only</text><rect x="460" y="155" width="270" height="50" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="595" y="172" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Platform Team</text><text x="595" y="188" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Owns everything else</text><rect x="20" y="230" width="760" height="44" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="245" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Time to first deploy: 3 weeks → 2 hours</text><text x="400" y="262" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Developer satisfaction: 34% → 89%</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Platform engineering reduces cognitive load — developers focus on business logic, not infrastructure</figcaption></figure>
+
+        <ul>
+          <li><strong>Shared responsibility:</strong> "You build it, you run it" — developers own their services in production</li>
+          <li><strong>Automation:</strong> CI/CD pipelines, infrastructure as code, automated testing</li>
+          <li><strong>Collaboration:</strong> Breaking down silos between dev and ops teams</li>
+          <li><strong>Feedback loops:</strong> Monitoring, alerting, and incident response inform development</li>
+        </ul>
+        <p>DevOps is not a team. It's not a job title (though it became one). It's a cultural movement that says developers and operations should work together, share tools, and share responsibility.</p>
+
+        <h2>The "You Build It, You Run It" Problem at Scale</h2>
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ The Scaling Problem</div>
+          <p>When you have 5 teams, "you build it, you run it" works. Every team can learn Kubernetes, Terraform, Prometheus, and CI/CD. When you have 50+ teams, it breaks down. Not every team can — or should — be an expert in infrastructure.</p>
+        </div>
+        <p>Here's what we observed at our organization with 60 development teams:</p>
+        <ul class="icon-list cross">
+          <li>Each team spent 30-40% of their time on infrastructure instead of product features</li>
+          <li>15 different ways to deploy to Kubernetes across the org</li>
+          <li>Terraform modules copy-pasted and diverged — security drift everywhere</li>
+          <li>New teams took 3 weeks to get their first service deployed</li>
+          <li>On-call fatigue — developers were paged for infrastructure issues they didn't understand</li>
+        </ul>
+        <p>This is the exact problem Platform Engineering solves.</p>
+
+        <h2>Platform Engineering: A Product Discipline</h2>
+        <p>Platform Engineering is the discipline of designing and building toolchains and workflows that enable self-service capabilities for software engineering organizations. The key word is <strong>product</strong>.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Aspect</th><th>DevOps</th><th>Platform Engineering</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Focus</td><td>Culture &amp; practices</td><td>Product &amp; self-service</td></tr>
+            <tr><td>Users</td><td>The team itself</td><td>All development teams</td></tr>
+            <tr><td>Output</td><td>Pipelines, runbooks, automation</td><td>Internal Developer Platform (IDP)</td></tr>
+            <tr><td>Success metric</td><td>Deployment frequency, MTTR</td><td>Developer satisfaction, time-to-production</td></tr>
+            <tr><td>Mindset</td><td>"Automate everything"</td><td>"Abstract complexity, offer golden paths"</td></tr>
+            <tr><td>Team structure</td><td>Embedded in dev teams</td><td>Dedicated platform team</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Internal Developer Platform (IDP)</h2>
+        <p>An IDP is the product that platform engineers build. It's a layer on top of your infrastructure that provides self-service capabilities to developers. It's not a single tool — it's a combination of tools, APIs, and documentation that work together.</p>
+
+        <div class="diagram">
+          <div class="flow-step">Developer pushes code to Git</div>
+          <div class="flow-step">IDP triggers CI pipeline (standardized template)</div>
+          <div class="flow-step">IDP provisions infrastructure (Terraform modules)</div>
+          <div class="flow-step">IDP deploys to Kubernetes (Helm + ArgoCD)</div>
+          <div class="flow-step">IDP configures monitoring (Prometheus + Grafana)</div>
+          <div class="flow-step">Developer sees service running in portal</div>
+        </div>
+
+        <h3>Golden Paths</h3>
+        <p>Golden paths are opinionated, pre-built workflows that cover 80% of use cases. They're not mandatory — teams can deviate — but they're the recommended way to do things.</p>
+        <p>Our golden paths include:</p>
+        <ul class="icon-list">
+          <li>🛤️ <strong>New service:</strong> Backstage template → creates repo, CI pipeline, Helm chart, ArgoCD app, Grafana dashboard in 10 minutes</li>
+          <li>🛤️ <strong>New database:</strong> Self-service form → provisions RDS via Crossplane, sets up backups, creates monitoring alerts</li>
+          <li>🛤️ <strong>New environment:</strong> PR to infra repo → Terraform provisions VPC, EKS namespace, IAM roles</li>
+        </ul>
+
+        <h2>Real Impact: Cognitive Load Reduction</h2>
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">3 weeks → 2 hours</div>
+            <div class="metric-label">Time to first deploy (new team)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">40% → 12%</div>
+            <div class="metric-label">Time spent on infra (per team)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">15 → 1</div>
+            <div class="metric-label">Deployment patterns across org</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">72 → 91</div>
+            <div class="metric-label">Developer satisfaction score (NPS)</div>
+          </div>
+        </div>
+
+        <h2>Team Topologies: Stream-Aligned vs Platform Teams</h2>
+        <p>The <em>Team Topologies</em> framework by Matthew Skelton and Manuel Pais defines four team types. Platform Engineering maps directly to the "Platform Team" type:</p>
+
+        <div class="architecture-box">
+          <h3>Team Structure</h3>
+          <p><strong>Stream-Aligned Teams</strong> (50+ teams): Build and own business features. They consume the platform. They don't manage infrastructure directly.</p>
+          <p><strong>Platform Team</strong> (1 team, 6-8 engineers): Builds and maintains the IDP. Treats stream-aligned teams as customers. Runs user research, collects feedback, prioritizes features.</p>
+          <p><strong>Enabling Team</strong> (2-3 engineers): Helps stream-aligned teams adopt the platform. Writes documentation, runs workshops, provides migration support.</p>
+        </div>
+
+        <h2>What Platform Engineers Actually Do Day-to-Day</h2>
+        <p>A typical week for our platform team:</p>
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Monday</h3>
+            <p>Sprint planning. Review developer feedback from last week's survey. Prioritize: 3 teams requested self-service database provisioning. 1 team needs GPU node support.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Tuesday-Wednesday</h3>
+            <p>Build Crossplane compositions for RDS provisioning. Write Backstage plugin for the self-service form. Update Terraform modules for GPU node groups.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Thursday</h3>
+            <p>Internal demo to 3 pilot teams. Collect feedback. Fix UX issues in the Backstage form. Update documentation.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Friday</h3>
+            <p>Platform reliability work: upgrade ArgoCD, patch Kubernetes, review Prometheus alert rules. Write ADR (Architecture Decision Record) for GPU support design.</p>
+          </div>
+        </div>
+
+        <h2>When Do You Need Platform Engineering?</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Org Size</th><th>Teams</th><th>Recommendation</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Startup (1-20 eng)</td><td>1-3</td><td>DevOps practices. No platform team needed.</td></tr>
+            <tr><td>Growth (20-80 eng)</td><td>3-10</td><td>Shared DevOps/SRE team. Start standardizing.</td></tr>
+            <tr><td>Scale (80-300 eng)</td><td>10-30</td><td>Dedicated platform team (3-4 engineers). Build golden paths.</td></tr>
+            <tr><td>Enterprise (300+ eng)</td><td>30+</td><td>Full platform engineering org (6-12 engineers). Build IDP.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 The Threshold</div>
+          <p>If you're hearing the same infrastructure questions from 3+ different teams, it's time to start building a platform. If new teams take more than a week to deploy their first service, you're already late.</p>
+        </div>
+
+        <h2>Common Mistakes</h2>
+
+        <h3>Mistake 1: Building a Platform Nobody Uses</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Anti-Pattern</div>
+          <p>We spent 4 months building a custom deployment tool. When we launched it, teams said "we already have scripts that work." We hadn't talked to our users. The tool was technically superior but solved a problem nobody had.</p>
+        </div>
+        <p><strong>Fix:</strong> Start with user research. Interview 5 teams. Find the top 3 pain points. Build for those first. Ship in 2-week increments and get feedback.</p>
+
+        <h3>Mistake 2: Over-Engineering</h3>
+        <p>Your IDP doesn't need to be Backstage + Crossplane + ArgoCD + Terraform Cloud + custom CLI on day one. Start with a shared Helm chart library and standardized CI templates. That alone saves teams weeks.</p>
+
+        <h3>Mistake 3: Not Treating Developers as Customers</h3>
+        <p>Platform teams that operate like infrastructure teams — "here's the tool, read the docs" — fail. Successful platform teams run NPS surveys, have office hours, track adoption metrics, and iterate based on feedback.</p>
+
+        <div class="info-box success">
+          <p><strong>Our adoption metrics:</strong> We track weekly active users of each platform capability. If a golden path has less than 60% adoption after 3 months, we either improve it or kill it. Currently at 84% average adoption across all golden paths.</p>
+        </div>
+
+        <h2>The Relationship Between DevOps and Platform Engineering</h2>
+        <p>Platform Engineering doesn't replace DevOps. It's an evolution. DevOps principles (automation, shared responsibility, feedback loops) are the foundation. Platform Engineering applies product thinking on top of those principles to scale them across an organization.</p>
+        <blockquote>
+          <p>"DevOps is the culture. Platform Engineering is the product that scales that culture."</p>
+        </blockquote>
+        <p>Every platform engineer should understand DevOps deeply. But not every DevOps engineer needs to become a platform engineer. If you enjoy building tools that other engineers use, understanding developer workflows, and thinking about user experience — platform engineering is your path.</p>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Key Takeaway</div>
+          <p>DevOps says "automate and collaborate." Platform Engineering says "build a product that makes automation and collaboration the default." You need DevOps culture first. Platform Engineering is what you build when that culture needs to scale beyond what individual teams can maintain.</p>
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Compute Types & Cost Optimization – Suheb Ghare</title>
+  <meta name="description" content="AWS Compute Types & Cost Optimization – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Cloud</span>
+      </div>
+      <h1 class="post-title">AWS Compute Types & Cost Optimization</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="aws-compute-types" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="aws-compute-types" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="aws-compute-types" data-stat="likes">351</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="aws-compute-types" data-stat="dislikes">34</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="aws-compute-types">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="aws-compute-types">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="compute-landscape">The AWS Compute Landscape</h2>
+        <p>AWS offers 5 major compute options, and choosing the wrong one can cost you 3-10x more than necessary. After running workloads across all of them, here's my decision framework based on real cost data.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/finops-2.png" alt="AWS compute cost comparison" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">EC2 vs Fargate vs Lambda cost comparison at different request volumes</figcaption>
+</figure>
+
+        <div class="diagram">
+          <div class="flow-step">EC2<br><small>Full control, any workload</small></div>
+          <div class="flow-step">ECS Fargate<br><small>Containers, no servers</small></div>
+          <div class="flow-step">Lambda<br><small>Event-driven, short tasks</small></div>
+          <div class="flow-step">AWS Batch<br><small>HPC, ML, batch jobs</small></div>
+          <div class="flow-step">EKS<br><small>Kubernetes orchestration</small></div>
+        </div>
+
+        <h2 id="ec2-families">EC2 Instance Families: Choosing the Right One</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Family</th><th>Optimized For</th><th>Use Case</th><th>Example</th><th>vCPU:Memory Ratio</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>M6i/M7g</strong></td><td>General purpose</td><td>Web servers, app servers, microservices</td><td>m6i.xlarge</td><td>1:4 (4 vCPU, 16GB)</td></tr>
+            <tr><td><strong>C6i/C7g</strong></td><td>Compute</td><td>Batch processing, ML inference, gaming</td><td>c6i.2xlarge</td><td>1:2 (8 vCPU, 16GB)</td></tr>
+            <tr><td><strong>R6i/R7g</strong></td><td>Memory</td><td>Databases, in-memory caches, analytics</td><td>r6i.2xlarge</td><td>1:8 (8 vCPU, 64GB)</td></tr>
+            <tr><td><strong>I3/I4i</strong></td><td>Storage</td><td>Data warehouses, distributed filesystems</td><td>i4i.xlarge</td><td>High NVMe IOPS</td></tr>
+            <tr><td><strong>T3/T4g</strong></td><td>Burstable</td><td>Dev/test, low-traffic sites, small DBs</td><td>t3.medium</td><td>Baseline + burst credits</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">The T-Instance Trap</div>
+          <p>T3 instances are cheap but have CPU credits. Once credits are exhausted, performance drops to baseline (20-40% of a vCPU). I've seen production APIs go from 5ms to 500ms latency because they ran out of burst credits at 2 PM. Use T3 for dev/test only. Production gets M or C instances.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 390" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">AWS Compute: Cost at 1,000 req/min (Web API)</text><rect x="160" y="60" width="83" height="36" rx="4" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="155" y="78" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="end" dominant-baseline="middle">Lambda</text><text x="251" y="78" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="start" dominant-baseline="middle">$47/mo</text><rect x="160" y="112" width="158" height="36" rx="4" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="155" y="130" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="end" dominant-baseline="middle">Fargate</text><text x="326" y="130" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="start" dominant-baseline="middle">$89/mo</text><rect x="160" y="164" width="239" height="36" rx="4" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="155" y="182" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="end" dominant-baseline="middle">EC2 t3.medium</text><text x="407" y="182" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="start" dominant-baseline="middle">$134/mo</text><rect x="160" y="216" width="375" height="36" rx="4" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="155" y="234" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="end" dominant-baseline="middle">EC2 m5.large</text><text x="543" y="234" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="start" dominant-baseline="middle">$210/mo</text><rect x="160" y="268" width="500" height="36" rx="4" fill="#1e3a5f" stroke="#334155" stroke-width="1.5"/><text x="155" y="286" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="end" dominant-baseline="middle">EKS+EC2</text><text x="668" y="286" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#93c5fd" text-anchor="start" dominant-baseline="middle">$280/mo</text><rect x="20" y="330" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="348" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Graviton3 (ARM): 20% better price/performance — use c7g/m7g for compute-heavy workloads</text><text x="400" y="364" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Lambda wins for bursty workloads; EKS wins for steady high-throughput (>10K req/min)</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Lambda is cheapest for bursty/low-volume; EKS overhead pays off above ~10K sustained req/min</figcaption></figure>
+
+        </div>
+
+        <h2 id="purchasing-options">Purchasing Options: Real Cost Comparison</h2>
+
+        <p>Using m6i.xlarge (4 vCPU, 16GB) in us-east-1 as the baseline:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Option</th><th>Hourly Cost</th><th>Monthly Cost</th><th>Savings vs On-Demand</th><th>Commitment</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>On-Demand</td><td>$0.192</td><td>$140.16</td><td>—</td><td>None</td></tr>
+            <tr><td>Spot</td><td>~$0.058</td><td>~$42.34</td><td>~70%</td><td>None (can be interrupted)</td></tr>
+            <tr><td>1yr Savings Plan (No Upfront)</td><td>$0.121</td><td>$88.33</td><td>37%</td><td>1 year</td></tr>
+            <tr><td>3yr Savings Plan (All Upfront)</td><td>$0.073</td><td>$53.29</td><td>62%</td><td>3 years</td></tr>
+            <tr><td>1yr Reserved (No Upfront)</td><td>$0.121</td><td>$88.33</td><td>37%</td><td>1 year, specific type</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Savings Plans vs Reserved Instances</div>
+          <p>Always prefer Compute Savings Plans over Reserved Instances for most workloads. Same discount, but Savings Plans apply across instance families, regions, and even Fargate. RIs lock you into a specific instance type. The only exception: RIs give you capacity reservation in a specific AZ — useful if you've been hit by capacity issues.</p>
+        </div>
+
+        <h2 id="fargate">ECS Fargate: When It Beats EC2</h2>
+        <p>Fargate charges per vCPU-hour ($0.04048) and per GB-hour ($0.004445). No cluster management, no patching, no capacity planning.</p>
+
+        <div class="grid-2">
+          <div class="info-box success">
+            <h3>✅ Fargate Wins When</h3>
+            <ul>
+              <li>Small team (no dedicated infra engineers)</li>
+              <li>Bursty workloads (scale to zero possible with ECS)</li>
+              <li>Running &lt;20 containers</li>
+              <li>Operational simplicity matters more than cost</li>
+              <li>Short-lived tasks (batch jobs, CI runners)</li>
+            </ul>
+          </div>
+          <div class="info-box danger">
+            <h3>❌ EC2 Wins When</h3>
+            <ul>
+              <li>Running 50+ containers (EC2 bin-packing is cheaper)</li>
+              <li>Need GPU instances</li>
+              <li>Steady-state workloads (Savings Plans on EC2 are cheaper)</li>
+              <li>Need specific instance types (high memory, storage)</li>
+              <li>Cost is the primary concern at scale</li>
+            </ul>
+          </div>
+        </div>
+
+        <p><strong>Fargate cost for a typical web service:</strong> 0.5 vCPU + 1GB memory = $0.02024 + $0.004445 = $0.02469/hour = <strong>$18.02/month per task</strong>. Running 3 tasks for HA = $54.07/month.</p>
+
+        <h2 id="lambda">Lambda: The 1ms Billing Sweet Spot</h2>
+        <p>Lambda charges $0.0000166667 per GB-second (1ms granularity since 2020). Plus $0.20 per million invocations. It's the cheapest option for very bursty, short-duration workloads.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$0.20</div>
+            <div class="metric-label">Per 1M invocations</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$0.0000166667</div>
+            <div class="metric-label">Per GB-second</div>
+          </div>
+        </div>
+
+        <p><strong>When Lambda gets expensive:</strong> At high sustained throughput, Lambda's per-invocation cost adds up. A function running 256MB for 200ms at 1,000 req/min costs ~$47/month. At 10,000 req/min constant, that's $470/month — Fargate would be $146/month for the same workload.</p>
+
+        <h2 id="real-comparison">Real Cost Calculator: Web API at 1,000 req/min</h2>
+        <p>Same workload, three compute options. API serving JSON responses, 200ms average latency, 256MB memory footprint.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Metric</th><th>Lambda</th><th>Fargate</th><th>EC2 (On-Demand)</th><th>EC2 (Savings Plan)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Configuration</td><td>256MB, 200ms avg</td><td>2 tasks, 0.5 vCPU, 1GB</td><td>2x t3.medium</td><td>2x m6g.medium (1yr SP)</td></tr>
+            <tr><td>Monthly compute</td><td>$43.20</td><td>$36.04</td><td>$60.74</td><td>$38.27</td></tr>
+            <tr><td>Monthly invocations</td><td>$8.64</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Operational overhead</td><td>None</td><td>Low</td><td>Medium</td><td>Medium</td></tr>
+            <tr><td><strong>Total monthly</strong></td><td><strong>$51.84</strong></td><td><strong>$36.04</strong></td><td><strong>$60.74</strong></td><td><strong>$38.27</strong></td></tr>
+          </tbody>
+        </table>
+
+        <p>At 1K req/min, Fargate and EC2 with Savings Plans are comparable. Lambda is slightly more but requires zero operational overhead. At 10K req/min, Fargate pulls ahead significantly.</p>
+
+        <h2 id="graviton">Graviton3 (ARM): The No-Brainer Upgrade</h2>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">20%</div>
+            <div class="metric-label">Better price/performance vs x86</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">60%</div>
+            <div class="metric-label">Better energy efficiency</div>
+          </div>
+        </div>
+
+        <p>Graviton instances (suffix <code>g</code>: m7g, c7g, r7g) are 20% cheaper than equivalent Intel instances with equal or better performance. We migrated 80% of our fleet to Graviton in 3 weeks.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Instance</th><th>x86 Price</th><th>Graviton Price</th><th>Savings</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>xlarge (4 vCPU, 16GB)</td><td>m6i: $0.192/hr</td><td>m7g: $0.163/hr</td><td>15%</td></tr>
+            <tr><td>2xlarge (8 vCPU, 32GB)</td><td>m6i: $0.384/hr</td><td>m7g: $0.326/hr</td><td>15%</td></tr>
+            <tr><td>Fargate (1 vCPU, 2GB)</td><td>x86: $0.04948/hr</td><td>ARM: $0.03959/hr</td><td>20%</td></tr>
+            <tr><td>Lambda (1GB, 1s)</td><td>x86: $0.0000166667</td><td>ARM: $0.0000133334</td><td>20%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Migration Checklist for Graviton</div>
+          <p>Most workloads run on Graviton without changes. Watch out for: native compiled dependencies (C extensions in Python/Node), Docker images (must be multi-arch or arm64), and Java — use Corretto for best Graviton performance. Test with one service first, then roll out.</p>
+        </div>
+
+        <h2 id="batch">AWS Batch: For HPC and ML Workloads</h2>
+        <p>AWS Batch manages compute environments for batch processing. It's essentially a job scheduler that provisions EC2 or Fargate resources on demand. No charge for Batch itself — you pay only for the underlying compute.</p>
+
+        <ul>
+          <li><strong>Spot integration:</strong> Batch can use Spot instances with automatic retry on interruption. We run ML training jobs at 70% discount.</li>
+          <li><strong>Multi-node parallel jobs:</strong> For HPC workloads needing MPI across nodes.</li>
+          <li><strong>Array jobs:</strong> Run 10,000 parameter sweep jobs with one API call.</li>
+        </ul>
+
+        <h2 id="eks-cost">EKS: When the Overhead Is Worth It</h2>
+        <p>EKS costs $0.10/hour ($73/month) for the control plane, plus node costs. The operational overhead is significant — you need expertise in networking, RBAC, upgrades, and monitoring.</p>
+
+        <div class="grid-2">
+          <div class="info-box success">
+            <h3>✅ EKS Makes Sense</h3>
+            <ul>
+              <li>Running 50+ microservices</li>
+              <li>Need advanced scheduling (affinity, topology)</li>
+              <li>Multi-cloud or hybrid strategy</li>
+              <li>Team already knows Kubernetes</li>
+              <li>Need service mesh, custom operators</li>
+            </ul>
+          </div>
+          <div class="info-box danger">
+            <h3>❌ EKS Is Overkill</h3>
+            <ul>
+              <li>Running &lt;10 services</li>
+              <li>Small team without K8s expertise</li>
+              <li>Simple web apps or APIs</li>
+              <li>Tight budget (control plane + tooling adds up)</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2 id="decision-matrix">Decision Matrix</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Workload Pattern</th><th>Best Option</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Bursty API (&lt;1K req/min avg)</td><td>Lambda</td><td>Pay per request, scale to zero</td></tr>
+            <tr><td>Steady API (1-5K req/min)</td><td>Fargate</td><td>Simple, good cost/performance balance</td></tr>
+            <tr><td>High-throughput API (&gt;5K req/min)</td><td>EC2 + Savings Plans</td><td>Lowest cost at scale</td></tr>
+            <tr><td>Microservices platform (50+ services)</td><td>EKS on EC2</td><td>Orchestration, bin-packing, ecosystem</td></tr>
+            <tr><td>ML training / batch processing</td><td>AWS Batch + Spot</td><td>Managed scheduling, 70% Spot discount</td></tr>
+            <tr><td>Event processing (S3, SQS triggers)</td><td>Lambda</td><td>Native integration, no idle cost</td></tr>
+            <tr><td>Long-running jobs (&gt;15 min)</td><td>Fargate or EC2</td><td>Lambda has 15-min limit</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box success">
+          <h3>Key Takeaways</h3>
+          <ul class="icon-list">
+            <li>Start with Fargate for simplicity, move to EC2 when cost matters at scale</li>
+            <li>Lambda is cheapest for bursty, short-duration workloads — expensive for steady-state</li>
+            <li>Graviton instances are a free 20% discount — migrate everything you can</li>
+            <li>Compute Savings Plans over Reserved Instances for flexibility</li>
+            <li>EKS only when you need Kubernetes features and have the team to support it</li>
+            <li>Spot instances for fault-tolerant workloads — 70% savings</li>
+            <li>Don't use T-instances in production — burst credit exhaustion causes outages</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

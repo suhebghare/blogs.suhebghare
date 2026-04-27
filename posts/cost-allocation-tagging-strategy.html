@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Cost Allocation: The Tagging Strategy That Actually Scales – Suheb Ghare</title>
+  <meta name="description" content="A practical AWS tagging strategy that scales — mandatory tag taxonomy, enforcement with AWS Config and SCPs, Kubecost for EKS, and how we found $18K/month in untagged spend.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">Cloud</span></div>
+      <h1 class="post-title">AWS Cost Allocation: The Tagging Strategy That Actually Scales</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 December 30, 2024</span>
+        <span class="meta-item">⏱ 11 min read</span>
+        <span class="meta-item">👁 <span data-blog="cost-allocation-tagging-strategy" data-stat="reads">780</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="cost-allocation-tagging-strategy" data-stat="reads">780</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="cost-allocation-tagging-strategy" data-stat="likes">312</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="cost-allocation-tagging-strategy" data-stat="dislikes">16</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="cost-allocation-tagging-strategy">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="cost-allocation-tagging-strategy">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>Every organization I've worked with has the same story: someone set up AWS tagging "guidelines" in a Confluence page two years ago, half the team follows them, the other half uses different key names, and 40% of your spend is completely untagged. When finance asks "how much does Team X spend?" you spend a week in spreadsheets guessing.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/finops-3.png" alt="AWS cost allocation tagging" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Tag-based cost allocation across teams and environments</figcaption>
+</figure>
+
+        <p>We fixed this. It took about 6 weeks of focused effort, and the result was going from 38% untagged spend to under 3%, finding $18K/month in orphaned resources, and building dashboards that let every team see their own costs in real time. Here's the exact playbook.</p>
+
+        <h2>Why Most Tagging Strategies Fail</h2>
+
+        <p>I've seen the same failure modes at every company:</p>
+
+        <ul>
+          <li><strong>Too many tags.</strong> If your tagging policy has 15 mandatory tags, nobody will comply. Engineers will copy-paste wrong values just to get past the linter.</li>
+          <li><strong>Inconsistent naming.</strong> One team uses <code>env</code>, another uses <code>Environment</code>, a third uses <code>environment</code>. AWS tags are case-sensitive, so these are three different tags.</li>
+          <li><strong>No enforcement.</strong> Guidelines without enforcement are suggestions. Suggestions get ignored under deadline pressure.</li>
+          <li><strong>No value from tagging.</strong> If engineers never see the cost data their tags produce, they have no incentive to tag correctly. Tagging must produce visible, useful output.</li>
+        </ul>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The Tagging Paradox</div>
+          <p>The teams that need cost visibility the most (fast-growing, lots of experimentation) are the ones least likely to tag consistently. You need enforcement mechanisms that make tagging automatic, not optional.</p>
+        </div>
+
+        <h2>The Mandatory Tag Taxonomy</h2>
+
+        <p>We settled on exactly 5 mandatory tags. No more. Every resource in every account must have these:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 305" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Cloud Cost Optimization: 5-Phase Framework</text><rect x="20" y="50" width="140" height="100" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="90" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">1</text><text x="90" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Visibility</text><text x="90" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Tag everything</text><text x="90" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Cost Explorer</text><line x1="160" y1="100" x2="180" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="175" y="50" width="140" height="100" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="245" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">2</text><text x="245" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Right-size</text><text x="245" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">EC2/RDS</text><text x="245" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">recommendations</text><line x1="315" y1="100" x2="335" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="330" y="50" width="140" height="100" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="400" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">3</text><text x="400" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Waste</text><text x="400" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Idle resources</text><text x="400" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Orphaned EBS</text><line x1="470" y1="100" x2="490" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="485" y="50" width="140" height="100" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="555" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">4</text><text x="555" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Architecture</text><text x="555" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">S3 tiers</text><text x="555" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Serverless</text><line x1="625" y1="100" x2="645" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="640" y="50" width="140" height="100" rx="10" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="710" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">5</text><text x="710" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Commitments</text><text x="710" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Savings Plans</text><text x="710" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">vs RIs</text><rect x="20" y="170" width="760" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="188" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Result: $180K → $108K/month (40% reduction)</text><text x="400" y="204" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Biggest wins: right-sizing ($28K) + Savings Plans ($22K) + waste cleanup ($7.5K)</text><rect x="20" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="90" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Unattached EBS</text><text x="90" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$3,200</text><rect x="170" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="240" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Idle NAT GW</text><text x="240" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$1,800</text><rect x="320" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="390" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Old Snapshots</text><text x="390" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$1,400</text><rect x="470" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="540" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Unused EIPs</text><text x="540" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$600</text><rect x="620" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="690" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Idle LBs</text><text x="690" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$500</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Start with visibility — you can't optimize what you can't see. Tag first, optimize second</figcaption></figure>
+
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Tag Key</th><th>Example Values</th><th>Purpose</th><th>Who Sets It</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>Environment</code></td><td>production, staging, development, sandbox</td><td>Separate prod costs from non-prod</td><td>Terraform module</td></tr>
+            <tr><td><code>Team</code></td><td>platform, payments, search, data-eng</td><td>Cost allocation to teams</td><td>Terraform module</td></tr>
+            <tr><td><code>Service</code></td><td>api-gateway, order-service, user-auth</td><td>Per-service cost tracking</td><td>Terraform module</td></tr>
+            <tr><td><code>CostCenter</code></td><td>CC-1001, CC-1002, CC-2001</td><td>Finance chargeback mapping</td><td>Terraform module</td></tr>
+            <tr><td><code>Owner</code></td><td>suheb@company.com</td><td>Contact for orphaned resources</td><td>Terraform module</td></tr>
+          </tbody>
+        </table>
+
+        <p>We also have 3 optional tags that teams can add for their own tracking:</p>
+
+        <ul>
+          <li><code>Project</code> — for cross-team initiatives</li>
+          <li><code>Automation</code> — terraform, manual, cloudformation</li>
+          <li><code>ExpiresAt</code> — for temporary resources (sandbox environments, load test infra)</li>
+        </ul>
+
+        <div class="info-box">
+          <p><strong>Key decision:</strong> We use PascalCase for all tag keys. This was a deliberate choice — it's visually distinct from AWS's own lowercase tags (like <code>aws:cloudformation:stack-name</code>) and prevents the env/Env/environment inconsistency problem.</p>
+        </div>
+
+        <h2>Enforcing Tags with AWS Config Rules</h2>
+
+        <p>Guidelines don't work. Enforcement does. We use AWS Config rules to detect untagged resources and flag them for remediation:</p>
+
+<pre><code># AWS Config rule — checks for required tags on all taggable resources
+resource "aws_config_config_rule" "required_tags" {
+  name = "required-tags-check"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "REQUIRED_TAGS"
+  }
+
+  input_parameters = jsonencode({
+    tag1Key   = "Environment"
+    tag2Key   = "Team"
+    tag3Key   = "Service"
+    tag4Key   = "CostCenter"
+    tag5Key   = "Owner"
+  })
+
+  scope {
+    compliance_resource_types = [
+      "AWS::EC2::Instance",
+      "AWS::EC2::Volume",
+      "AWS::RDS::DBInstance",
+      "AWS::S3::Bucket",
+      "AWS::Lambda::Function",
+      "AWS::ECS::Service",
+      "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    ]
+  }
+}</code></pre>
+
+        <p>Config rules detect non-compliance but don't prevent it. For prevention, we use Service Control Policies (SCPs) at the AWS Organization level:</p>
+
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyEC2WithoutTags",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/Environment": "true",
+          "aws:RequestTag/Team": "true",
+          "aws:RequestTag/Service": "true"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRDSWithoutTags",
+      "Effect": "Deny",
+      "Action": [
+        "rds:CreateDBInstance",
+        "rds:CreateDBCluster"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/Environment": "true",
+          "aws:RequestTag/Team": "true"
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">SCP Gotcha: Start with Audit Mode</div>
+          <p>Don't deploy deny SCPs on day one. Start with AWS Config rules in audit mode for 2-4 weeks. Identify all non-compliant resources, fix them, then enable the deny SCPs. We learned this the hard way when an SCP blocked our CI/CD pipeline from launching build instances because the launch template was missing tags.</p>
+        </div>
+
+        <h2>The Terraform Tagging Module</h2>
+
+        <p>The single most effective thing we did was create a Terraform module that injects mandatory tags into every resource automatically. Engineers don't have to remember to tag — it happens by default:</p>
+
+<pre><code># modules/tags/main.tf
+variable "environment" {
+  type = string
+  validation {
+    condition     = contains(["production", "staging", "development", "sandbox"], var.environment)
+    error_message = "Environment must be one of: production, staging, development, sandbox."
+  }
+}
+
+variable "team" { type = string }
+variable "service" { type = string }
+variable "cost_center" { type = string }
+variable "owner" { type = string }
+
+locals {
+  mandatory_tags = {
+    Environment = var.environment
+    Team        = var.team
+    Service     = var.service
+    CostCenter  = var.cost_center
+    Owner       = var.owner
+    ManagedBy   = "terraform"
+  }
+}
+
+output "tags" {
+  value = local.mandatory_tags
+}
+
+# Usage in any module:
+module "tags" {
+  source       = "../modules/tags"
+  environment  = "production"
+  team         = "payments"
+  service      = "order-service"
+  cost_center  = "CC-1001"
+  owner        = "payments-team@company.com"
+}
+
+resource "aws_instance" "app" {
+  ami           = "ami-0abcdef1234567890"
+  instance_type = "m5.large"
+  tags          = module.tags.tags
+}
+
+resource "aws_s3_bucket" "data" {
+  bucket = "payments-order-data"
+  tags   = module.tags.tags
+}</code></pre>
+
+        <p>We also set <code>default_tags</code> in the AWS provider block as a safety net:</p>
+
+<pre><code>provider "aws" {
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      ManagedBy   = "terraform"
+      Environment = var.environment
+      Team        = var.team
+    }
+  }
+}</code></pre>
+
+        <h2>Tag Inheritance for EKS Workloads (Kubecost)</h2>
+
+        <p>EKS is the hardest environment to get cost allocation right. A single EC2 node runs pods from multiple teams and services. AWS Cost Explorer sees one EC2 instance — it has no idea that 60% of its CPU is used by the payments team and 40% by the search team.</p>
+
+        <p>We use <strong>Kubecost</strong> to solve this. Kubecost runs inside the cluster and allocates node costs to individual pods based on actual resource consumption. It reads Kubernetes labels and maps them to cost allocation categories:</p>
+
+<pre><code># Kubecost values.yaml — label-to-cost mapping
+kubecostModel:
+  allocationModel: proportional
+
+  # Map Kubernetes labels to cost allocation dimensions
+  labelMappingConfigs:
+    enabled: true
+    owner_label: "team"
+    product_label: "service"
+    environment_label: "environment"
+    department_label: "cost-center"
+
+# Every deployment must have these labels
+# (enforced by OPA Gatekeeper)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    team: payments
+    service: order-service
+    environment: production
+    cost-center: CC-1001</code></pre>
+
+        <p>We enforce these labels with OPA Gatekeeper. Any deployment missing the required labels is rejected by the admission controller:</p>
+
+<pre><code>apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: require-cost-labels
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+  parameters:
+    labels:
+      - key: "team"
+      - key: "service"
+      - key: "environment"</code></pre>
+
+        <h2>Showback vs. Chargeback</h2>
+
+        <p>There's an important distinction between these two models:</p>
+
+        <div class="grid-2">
+          <div class="architecture-box">
+            <h3>Showback</h3>
+            <p>Teams can <strong>see</strong> their costs but aren't financially responsible. Costs are informational. This is where you should start.</p>
+            <ul>
+              <li>Lower friction to adopt</li>
+              <li>Drives awareness and behavior change</li>
+              <li>No finance process changes needed</li>
+            </ul>
+          </div>
+          <div class="architecture-box">
+            <h3>Chargeback</h3>
+            <p>Teams are <strong>billed</strong> for their actual usage. Costs hit their department budget. This requires mature tagging and accurate allocation.</p>
+            <ul>
+              <li>Strongest incentive to optimize</li>
+              <li>Requires accurate, trusted data</li>
+              <li>Needs finance team buy-in</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>We started with showback. For the first 3 months, we sent weekly Slack reports to each team showing their top 10 most expensive resources. This alone drove a 15% cost reduction — teams started cleaning up resources they didn't know they were paying for.</p>
+
+        <p>After 6 months of clean showback data, we moved to chargeback for production workloads. Non-production environments remain showback.</p>
+
+        <h2>Finding $18K/Month in Untagged Spend</h2>
+
+        <p>When we first activated cost allocation tags in AWS Cost Explorer, we discovered that 38% of our monthly spend — roughly $47K — was completely untagged. We couldn't attribute it to any team or service.</p>
+
+        <p>Here's what we found when we dug in:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Resource Type</th><th>Monthly Cost</th><th>Root Cause</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Orphaned EBS volumes</td><td><span class="cost-badge high">$4,200</span></td><td>Detached from terminated instances</td><td>Deleted after backup</td></tr>
+            <tr><td>Unused Elastic IPs</td><td><span class="cost-badge low">$180</span></td><td>Allocated but not attached</td><td>Released</td></tr>
+            <tr><td>Old load balancers</td><td><span class="cost-badge high">$3,100</span></td><td>From decommissioned services</td><td>Deleted</td></tr>
+            <tr><td>Forgotten RDS instances</td><td><span class="cost-badge high">$6,800</span></td><td>Dev/test instances left running</td><td>Terminated</td></tr>
+            <tr><td>Unattached NAT Gateways</td><td><span class="cost-badge medium">$2,400</span></td><td>VPCs with no active workloads</td><td>Deleted</td></tr>
+            <tr><td>Oversized CloudWatch logs</td><td><span class="cost-badge medium">$1,300</span></td><td>Debug logging left on in prod</td><td>Retention policy set</td></tr>
+          </tbody>
+        </table>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$18K</div>
+            <div class="metric-label">Monthly waste found</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">38% → 3%</div>
+            <div class="metric-label">Untagged spend reduction</div>
+          </div>
+        </div>
+
+        <h2>Tag Drift Detection</h2>
+
+        <p>Tags drift over time. Someone creates a resource manually in the console. A Terraform state gets corrupted. A new service launches without the tagging module. You need automated detection.</p>
+
+        <p>We run a daily Lambda function that queries AWS Config for non-compliant resources and posts a report to Slack:</p>
+
+<pre><code>import boto3
+import json
+from datetime import datetime
+
+def lambda_handler(event, context):
+    config = boto3.client('config')
+    slack_webhook = boto3.client('secretsmanager').get_secret_value(
+        SecretId='slack-finops-webhook'
+    )['SecretString']
+
+    response = config.get_compliance_details_by_config_rule(
+        ConfigRuleName='required-tags-check',
+        ComplianceTypes=['NON_COMPLIANT'],
+        Limit=100
+    )
+
+    non_compliant = response['EvaluationResults']
+
+    if not non_compliant:
+        return {'statusCode': 200, 'body': 'All resources compliant'}
+
+    # Group by resource type
+    by_type = {}
+    for result in non_compliant:
+        resource_type = result['EvaluationResultIdentifier'][
+            'EvaluationResultQualifier']['ResourceType']
+        by_type.setdefault(resource_type, []).append(
+            result['EvaluationResultIdentifier'][
+                'EvaluationResultQualifier']['ResourceId']
+        )
+
+    # Post to Slack
+    blocks = [f"*{rtype}*: {len(ids)} non-compliant"
+              for rtype, ids in by_type.items()]
+    message = (
+        f":warning: *Tag Compliance Report — {datetime.now().strftime('%Y-%m-%d')}*\n"
+        f"Found {len(non_compliant)} untagged resources:\n"
+        + "\n".join(blocks)
+    )
+
+    # Send to Slack via webhook
+    import urllib.request
+    urllib.request.urlopen(urllib.request.Request(
+        json.loads(slack_webhook)['url'],
+        data=json.dumps({'text': message}).encode(),
+        headers={'Content-Type': 'application/json'}
+    ))
+
+    return {'statusCode': 200, 'body': f'{len(non_compliant)} non-compliant resources reported'}</code></pre>
+
+        <h2>Cost Explorer Dashboards</h2>
+
+        <p>The final piece is making cost data visible and useful. We create tag-based views in AWS Cost Explorer that answer the questions finance and engineering actually ask:</p>
+
+        <ul>
+          <li><strong>"How much does the payments team spend?"</strong> → Filter by <code>Team = payments</code>, group by <code>Service</code></li>
+          <li><strong>"What's our staging vs production cost ratio?"</strong> → Group by <code>Environment</code></li>
+          <li><strong>"Which service grew the most this month?"</strong> → Group by <code>Service</code>, compare to previous period</li>
+          <li><strong>"Who owns this $3K/month resource?"</strong> → Look up the <code>Owner</code> tag</li>
+        </ul>
+
+        <p>We also set up AWS Budgets with tag filters — each team has a monthly budget alert that fires at 80% and 100% of their allocated spend.</p>
+
+        <h2>Key Takeaways</h2>
+
+        <ul>
+          <li><strong>5 mandatory tags, no more.</strong> Environment, Team, Service, CostCenter, Owner. Keep it simple or nobody will comply.</li>
+          <li><strong>Enforce with automation, not documentation.</strong> Terraform modules, SCPs, OPA Gatekeeper, AWS Config rules.</li>
+          <li><strong>Start with showback.</strong> Let teams see their costs before you charge them. Visibility alone drives 10-15% savings.</li>
+          <li><strong>Audit untagged spend immediately.</strong> You will find orphaned resources. We found $18K/month.</li>
+          <li><strong>Detect drift daily.</strong> Tags rot without continuous monitoring.</li>
+          <li><strong>EKS needs Kubecost.</strong> AWS Cost Explorer can't see inside your cluster. Kubecost bridges the gap.</li>
+        </ul>
+
+        <blockquote>
+          <p>"You can't optimize what you can't measure. And you can't measure what you haven't tagged."</p>
+        </blockquote>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

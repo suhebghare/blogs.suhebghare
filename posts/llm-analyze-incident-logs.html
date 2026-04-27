@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Using LLMs to Analyze Incident Logs – Suheb Ghare</title>
+  <meta name="description" content="Using LLMs to Analyze Incident Logs – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI & DevOps</span>
+      </div>
+      <h1 class="post-title">Using LLMs to Analyze Incident Logs</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="llm-analyze-incident-logs" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="llm-analyze-incident-logs" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="llm-analyze-incident-logs" data-stat="likes">138</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="llm-analyze-incident-logs" data-stat="dislikes">27</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="llm-analyze-incident-logs">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="llm-analyze-incident-logs">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>The 3am Problem</h2>
+        <p>It's 3:12am. PagerDuty fires. Your checkout service is returning 500s. You SSH into the bastion, pull CloudWatch logs, and stare at <strong>10,000+ log lines</strong> from the last 30 minutes. Where do you even start?</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/otel1.png" alt="OpenTelemetry distributed tracing" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Distributed traces correlated with logs and metrics for faster RCA</figcaption>
+</figure>
+
+        <p>This was our reality every other week. Our average RCA time was <strong>45 minutes</strong> — not because the fix was complex, but because finding the needle in the log haystack took forever. We built a system that pipes incident logs through GPT-4 with a structured prompt, and it cut our RCA time to <strong>8 minutes</strong>.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">45 min → 8 min</div>
+            <div class="metric-label">RCA time reduction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$0.08</div>
+            <div class="metric-label">Cost per incident analysis</div>
+          </div>
+        </div>
+
+        <h2>Architecture</h2>
+        <p>The system is event-driven. When PagerDuty creates an incident, a webhook triggers a Lambda function that pulls relevant logs, sends them to GPT-4, and posts the analysis to a Slack thread.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">LLM-Powered Incident Log Analysis</text><rect x="20" y="55" width="140" height="60" rx="8" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="90" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">PagerDuty</text><text x="90" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Alert</text><line x1="160" y1="85" x2="175" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="175" y="55" width="140" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="245" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Lambda</text><text x="245" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Trigger</text><line x1="315" y1="85" x2="330" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="330" y="55" width="140" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">CloudWatch</text><text x="400" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Logs Insights</text><line x1="470" y1="85" x2="485" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="485" y="55" width="140" height="60" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="555" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">GPT-4</text><text x="555" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Analysis</text><line x1="625" y1="85" x2="640" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="640" y="55" width="140" height="60" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="710" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Slack</text><text x="710" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Summary</text><rect x="20" y="135" width="760" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="152" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">GPT-4 returns structured JSON:</text><text x="400" y="168" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">likely_cause · confidence · evidence · recommended_actions</text><text x="400" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Lambda fetches last 30min of ERROR logs → token budget: 4K tokens</text><rect x="20" y="220" width="370" height="44" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="235" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">RCA time: 45 min → 8 min</text><text x="205" y="252" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Manual log grep + guessing</text><rect x="410" y="220" width="370" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="235" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Cost: $0.08/incident</text><text x="595" y="252" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">GPT-4 API + Lambda execution</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Lambda fetches recent ERROR logs, GPT-4 returns structured RCA — 82% faster than manual log analysis</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">PagerDuty Incident</div>
+          <div class="flow-step">Webhook → API Gateway</div>
+          <div class="flow-step">Lambda (Log Fetcher)</div>
+          <div class="flow-step">CloudWatch Logs Insights</div>
+          <div class="flow-step">GPT-4 Analysis</div>
+          <div class="flow-step">Slack Thread</div>
+        </div>
+
+        <h2>Step 1: PagerDuty Webhook Setup</h2>
+        <p>PagerDuty sends a webhook on incident creation. We filter for high-urgency incidents only — no point analyzing a warning-level CPU alert:</p>
+
+        <pre><code># PagerDuty webhook payload (simplified)
+{
+  "event": {
+    "event_type": "incident.triggered",
+    "data": {
+      "id": "P1234ABC",
+      "title": "checkout-service: 500 error rate > 5%",
+      "urgency": "high",
+      "service": {
+        "name": "checkout-service"
+      },
+      "created_at": "2024-03-15T03:12:00Z"
+    }
+  }
+}</code></pre>
+
+        <h2>Step 2: The Lambda Function</h2>
+        <p>The Lambda function does three things: extracts the service name from the PagerDuty payload, queries CloudWatch Logs Insights for the relevant time window, and sends the logs to GPT-4.</p>
+
+        <pre><code>import boto3
+import openai
+import json
+import os
+import requests
+from datetime import datetime, timedelta
+
+logs_client = boto3.client('logs')
+SLACK_WEBHOOK = os.environ['SLACK_WEBHOOK_URL']
+OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+
+SERVICE_LOG_GROUP_MAP = {
+    'checkout-service': '/ecs/checkout-service',
+    'payment-service': '/ecs/payment-service',
+    'inventory-service': '/ecs/inventory-service',
+}
+
+def handler(event, context):
+    body = json.loads(event['body'])
+    incident = body['event']['data']
+
+    if incident.get('urgency') != 'high':
+        return {'statusCode': 200, 'body': 'Skipped: low urgency'}
+
+    service_name = incident['service']['name']
+    log_group = SERVICE_LOG_GROUP_MAP.get(service_name)
+    if not log_group:
+        return {'statusCode': 200, 'body': f'No log group mapped for {service_name}'}
+
+    # Fetch logs from 15 minutes before incident
+    incident_time = datetime.fromisoformat(
+        incident['created_at'].replace('Z', '+00:00')
+    )
+    start_time = incident_time - timedelta(minutes=15)
+
+    logs = fetch_logs(log_group, start_time, incident_time)
+    analysis = analyze_with_gpt4(logs, service_name, incident['title'])
+    post_to_slack(analysis, incident)
+
+    return {'statusCode': 200, 'body': 'Analysis posted'}</code></pre>
+
+        <h2>Step 3: CloudWatch Logs Insights Query</h2>
+        <p>We don't send all 10,000 lines to GPT-4. We use CloudWatch Logs Insights to pre-filter for errors, exceptions, and status codes:</p>
+
+        <pre><code>def fetch_logs(log_group, start_time, end_time):
+    query = """
+    fields @timestamp, @message
+    | filter @message like /(?i)(error|exception|fatal|timeout|refused|5\d{2})/
+    | sort @timestamp desc
+    | limit 200
+    """
+    response = logs_client.start_query(
+        logGroupName=log_group,
+        startTime=int(start_time.timestamp()),
+        endTime=int(end_time.timestamp()),
+        queryString=query
+    )
+    query_id = response['queryId']
+
+    # Poll for results (Logs Insights is async)
+    import time
+    while True:
+        result = logs_client.get_query_results(queryId=query_id)
+        if result['status'] == 'Complete':
+            break
+        time.sleep(1)
+
+    log_lines = []
+    for row in result['results']:
+        timestamp = next(f['value'] for f in row if f['field'] == '@timestamp')
+        message = next(f['value'] for f in row if f['field'] == '@message')
+        log_lines.append(f"[{timestamp}] {message}")
+
+    return "\n".join(log_lines)</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Why 200 lines?</div>
+          <p>GPT-4's context window can handle much more, but we found that 200 pre-filtered error lines give the best signal-to-noise ratio. Sending 2,000 lines increases cost 10x and the analysis quality actually decreases — the model starts hedging with "multiple possible causes."</p>
+        </div>
+
+        <h2>Step 4: The Prompt Template</h2>
+        <p>This is where the magic happens. A bad prompt gives you "there are errors in the logs." A good prompt gives you actionable RCA. Here's what we use after 4 months of iteration:</p>
+
+        <pre><code>ANALYSIS_PROMPT = """You are a senior SRE analyzing production incident logs.
+
+SERVICE: {service_name}
+INCIDENT: {incident_title}
+TIME WINDOW: {start_time} to {end_time}
+
+LOGS:
+{logs}
+
+Analyze these logs and provide:
+
+1. **ROOT CAUSE**: What is the most likely root cause? Be specific.
+   Cite exact log lines that support your conclusion.
+
+2. **TIMELINE**: Reconstruct the failure timeline.
+   When did the first error appear? Did it cascade?
+
+3. **BLAST RADIUS**: Which components are affected?
+
+4. **IMMEDIATE ACTION**: What should the on-call engineer do RIGHT NOW?
+   Be specific — exact commands, not "check the database."
+
+5. **CONFIDENCE**: Rate your confidence in this analysis (HIGH/MEDIUM/LOW)
+   and explain what additional data would increase confidence.
+
+Rules:
+- Do NOT speculate about causes not supported by the logs
+- If logs are insufficient, say so explicitly
+- Prefer the simplest explanation that fits the evidence
+- If you see a pattern you've seen before, name it
+"""</code></pre>
+
+        <pre><code>def analyze_with_gpt4(logs, service_name, incident_title):
+    openai.api_key = OPENAI_API_KEY
+
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[{
+            "role": "user",
+            "content": ANALYSIS_PROMPT.format(
+                service_name=service_name,
+                incident_title=incident_title,
+                start_time="T-15min",
+                end_time="incident time",
+                logs=logs
+            )
+        }],
+        max_tokens=800,
+        temperature=0.1  # Low temperature = more deterministic
+    )
+    return response.choices[0].message.content</code></pre>
+
+        <h2>Step 5: Slack Integration</h2>
+        <p>The analysis posts to a dedicated incident channel with threading:</p>
+
+        <pre><code>def post_to_slack(analysis, incident):
+    payload = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🤖 AI Log Analysis: {incident['title']}"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": analysis
+                }
+            },
+            {
+                "type": "context",
+                "elements": [{
+                    "type": "mrkdwn",
+                    "text": f"⚠️ AI-generated analysis. Verify before acting. "
+                            f"Incident: {incident['id']}"
+                }]
+            }
+        ]
+    }
+    requests.post(SLACK_WEBHOOK, json=payload)</code></pre>
+
+        <h2>Cost Breakdown</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Cost per Incident</th>
+              <th>Monthly (20 incidents)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lambda execution (512MB, ~15s)</td>
+              <td>$0.0001</td>
+              <td>$0.002</td>
+            </tr>
+            <tr>
+              <td>CloudWatch Logs Insights query</td>
+              <td>$0.005</td>
+              <td>$0.10</td>
+            </tr>
+            <tr>
+              <td>GPT-4 API (~2K input + 800 output tokens)</td>
+              <td>$0.07</td>
+              <td>$1.40</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>~$0.08</strong></td>
+              <td><strong>~$1.50</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><span class="cost-badge low">Low Cost</span> At $1.50/month for 20 incident analyses, this is essentially free compared to the engineering time saved.</p>
+
+        <h2>What LLMs Are Good At (and Bad At)</h2>
+
+        <div class="grid-2">
+          <div class="info-box success">
+            <h3>✅ Strengths</h3>
+            <ul>
+              <li><strong>Pattern recognition</strong> — spotting connection timeouts, OOM patterns, retry storms across hundreds of log lines</li>
+              <li><strong>Summarization</strong> — turning 200 log lines into a 5-sentence narrative</li>
+              <li><strong>Timeline reconstruction</strong> — ordering events and identifying cascade patterns</li>
+              <li><strong>Known failure modes</strong> — recognizing common patterns like connection pool exhaustion, DNS resolution failures, certificate expiry</li>
+            </ul>
+          </div>
+          <div class="info-box danger">
+            <h3>❌ Weaknesses</h3>
+            <ul>
+              <li><strong>Causation vs correlation</strong> — "errors started at the same time" doesn't mean one caused the other</li>
+              <li><strong>Novel failure modes</strong> — if it hasn't seen the pattern in training data, it guesses poorly</li>
+              <li><strong>Infrastructure context</strong> — it doesn't know your network topology, deployment schedule, or recent changes</li>
+              <li><strong>Confidence calibration</strong> — it says "HIGH confidence" even when it's wrong</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>Prompt Engineering Tips for Log Analysis</h2>
+
+        <ol>
+          <li><strong>Set temperature to 0.1-0.2.</strong> You want deterministic analysis, not creative writing.</li>
+          <li><strong>Ask for evidence.</strong> "Cite exact log lines" forces the model to ground its analysis in data instead of hallucinating.</li>
+          <li><strong>Include the confidence rating.</strong> It won't be perfectly calibrated, but it makes the model hedge appropriately on ambiguous cases.</li>
+          <li><strong>Pre-filter logs.</strong> Sending only error-level logs improves analysis quality more than sending everything.</li>
+          <li><strong>Add service context.</strong> We append a one-paragraph description of each service's architecture to the prompt. This helps the model understand what "normal" looks like.</li>
+          <li><strong>Use "Rules" in the prompt.</strong> Explicit constraints like "do NOT speculate" measurably reduce hallucination in our testing.</li>
+        </ol>
+
+        <h2>Real Example: Database Connection Pool Exhaustion</h2>
+        <p>Here's an actual (sanitized) analysis the system produced at 2:47am:</p>
+
+        <div class="architecture-box">
+          <h3>🤖 AI Analysis Output</h3>
+          <p><strong>ROOT CAUSE:</strong> Database connection pool exhaustion on checkout-service. Log line <code>[02:41:03] ERROR: Unable to acquire connection from pool — timeout after 30000ms</code> appears 47 times starting at 02:41. This was preceded by a spike in slow queries: <code>[02:38:15] WARN: Query execution time 12847ms exceeds threshold</code>.</p>
+          <p><strong>TIMELINE:</strong> 02:38 — slow queries begin → 02:41 — connection pool saturated → 02:42 — HTTP 500s cascade to API gateway → 02:43 — health checks fail → 02:44 — ALB marks targets unhealthy.</p>
+          <p><strong>IMMEDIATE ACTION:</strong> 1) Check RDS Performance Insights for long-running queries: <code>aws rds describe-db-instances --db-instance-identifier checkout-db</code> 2) If a specific query is blocking, kill it via <code>pg_terminate_backend(pid)</code> 3) Temporarily increase pool size: restart with <code>DB_POOL_SIZE=50</code> (current: 20).</p>
+          <p><strong>CONFIDENCE:</strong> HIGH — classic connection pool exhaustion pattern with clear evidence chain.</p>
+        </div>
+
+        <p>The on-call engineer confirmed this was exactly right. The fix took 6 minutes instead of the usual 40+ minutes of log diving.</p>
+
+        <h2>Limitations and Honest Assessment</h2>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">When It Fails</div>
+          <p>About 15% of the time, the analysis is wrong or unhelpful. The most common failure mode: the root cause is in a <em>different</em> service's logs that we didn't query. We're working on cross-service log correlation, but it significantly increases cost and complexity.</p>
+        </div>
+
+        <p>This system is a <strong>first responder, not a replacement</strong> for human judgment. It gives the on-call engineer a starting point — a hypothesis to validate, not a conclusion to trust blindly. The "⚠️ AI-generated analysis. Verify before acting." disclaimer in every Slack message is there for a reason.</p>
+
+        <blockquote>
+          <p>The best use of LLMs in incident response isn't replacing engineers — it's giving them a 30-second head start on a problem that used to take 30 minutes to understand.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

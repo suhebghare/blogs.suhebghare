@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zero-Downtime Database Migrations on Live Production Systems – Suheb Ghare</title>
+  <meta name="description" content="The expand-contract pattern, safe migration strategies for adding columns, renaming fields, and adding constraints — plus a real incident where ALTER TABLE locked production for 8 minutes.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">SRE</span></div>
+      <h1 class="post-title">Zero-Downtime Database Migrations on Live Production Systems</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 January 8, 2025</span>
+        <span class="meta-item">⏱ 15 min read</span>
+        <span class="meta-item">👁 <span data-blog="database-migrations-zero-downtime" data-stat="reads">1050</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="database-migrations-zero-downtime" data-stat="reads">1050</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="database-migrations-zero-downtime" data-stat="likes">421</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="database-migrations-zero-downtime" data-stat="dislikes">29</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="database-migrations-zero-downtime">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="database-migrations-zero-downtime">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>I've shipped hundreds of database migrations to production. Most of them were boring and uneventful — exactly how they should be. But the ones that went wrong? Those are the ones that taught me everything. Including the time an <code>ALTER TABLE</code> locked our primary PostgreSQL database for 8 minutes during peak traffic, causing a full service outage for 2.3 million active users.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=85" alt="Zero-downtime database migrations" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Expand-contract pattern: the only safe way to rename a column in production</figcaption>
+</figure>
+
+        <p>Database migrations are the scariest part of any deployment. Code can be rolled back in seconds. A bad database migration can corrupt data, lock tables, or create states that are impossible to undo. This article covers every pattern I've learned for making migrations safe, boring, and zero-downtime.</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The Golden Rule</div>
+          <p>Never assume you can roll back a migration. Design every migration to be forward-only and safe to run while the previous version of your application is still serving traffic.</p>
+        </div>
+
+        <h2>The Expand-Contract Pattern</h2>
+
+        <p>This is the only safe way to do schema changes on live production systems. Every migration follows two phases:</p>
+
+        <div class="diagram">
+          <div class="flow-step">Expand: Add new columns/tables. Old code still works. New code can use new schema.</div>
+          <div class="flow-step">Migrate: Backfill data. Both old and new schemas contain correct data.</div>
+          <div class="flow-step">Transition: Deploy new code that uses the new schema exclusively.</div>
+          <div class="flow-step">Contract: Remove old columns/tables. Only new schema remains.</div>
+        </div>
+
+        <p>The key insight: <strong>at every step, both the old and new versions of your application can run simultaneously</strong>. This is what makes zero-downtime possible. During a rolling deployment, some pods are running v1 (old code) and some are running v2 (new code). Both must work with the current database schema.</p>
+
+        <h2>Safe Migration: Adding a Column</h2>
+
+        <p>Adding a nullable column is the simplest and safest migration. It's a metadata-only operation in PostgreSQL — no table rewrite, no lock contention:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 275" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Expand-Contract Pattern: Zero-Downtime Column Rename</text><rect x="20" y="55" width="240" height="100" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Phase 1: Expand</text><text x="140" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Add new_col</text><text x="140" y="108" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Write to both</text><text x="140" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Deploy v1.1</text><line x1="260" y1="105" x2="280" y2="105" stroke="105" stroke-width="2" marker-end="url(#a)"/><rect x="280" y="55" width="240" height="100" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Phase 2: Migrate</text><text x="400" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Backfill new_col</text><text x="400" y="108" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">from old_col</text><text x="400" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Background job</text><line x1="520" y1="105" x2="540" y2="105" stroke="105" stroke-width="2" marker-end="url(#a)"/><rect x="540" y="55" width="240" height="100" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="660" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Phase 3: Contract</text><text x="660" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Drop old_col</text><text x="660" y="108" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Read from new_col</text><text x="660" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Deploy v1.2</text><line x1="40" y1="175" x2="760" y2="175" stroke="#334155" stroke-width="2"/><line x1="130" y1="168" x2="130" y2="182" stroke="#6366f1" stroke-width="2"/><text x="130" y="195" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">v1.1 deploy</text><line x1="310" y1="168" x2="310" y2="182" stroke="#6366f1" stroke-width="2"/><text x="310" y="195" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Backfill start</text><line x1="500" y1="168" x2="500" y2="182" stroke="#6366f1" stroke-width="2"/><text x="500" y="195" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Backfill done</text><line x1="680" y1="168" x2="680" y2="182" stroke="#6366f1" stroke-width="2"/><text x="680" y="195" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">v1.2 deploy</text><rect x="20" y="215" width="760" height="44" rx="8" fill="#3b1a1a" stroke="#ef4444" stroke-width="1.5"/><text x="400" y="230" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">⚠ ALTER TABLE without CONCURRENTLY = full table lock in PostgreSQL</text><text x="400" y="246" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Use CREATE INDEX CONCURRENTLY and pg_repack for large tables</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Expand-contract: add new column first, migrate data, then remove old — zero downtime throughout</figcaption></figure>
+
+
+<pre><code>-- Safe: adds a nullable column, no table lock
+ALTER TABLE orders ADD COLUMN shipping_notes TEXT;
+
+-- Also safe: with a non-volatile default (PostgreSQL 11+)
+ALTER TABLE orders ADD COLUMN priority INTEGER DEFAULT 0;</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">PostgreSQL 11+ Changed Everything</div>
+          <p>Before PostgreSQL 11, adding a column with a DEFAULT value required rewriting the entire table. On a 500GB table, that could take hours and hold an ACCESS EXCLUSIVE lock the entire time. PostgreSQL 11+ stores the default in the catalog metadata, making it instant. If you're on an older version, always add the column as nullable first, then set the default separately.</p>
+        </div>
+
+        <h2>Dangerous Migration: Renaming a Column</h2>
+
+        <p>Renaming a column seems simple. It's not. If you run <code>ALTER TABLE orders RENAME COLUMN status TO order_status</code>, every query referencing <code>status</code> will break instantly. During a rolling deployment, old pods still reference the old column name.</p>
+
+        <p>The safe approach is a 3-step process spread across 3 separate deployments:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Deploy 1: Expand</h3>
+            <p>Add the new column. Set up a trigger to keep both columns in sync. Backfill existing data.</p>
+<pre><code>-- Step 1: Add new column
+ALTER TABLE orders ADD COLUMN order_status VARCHAR(50);
+
+-- Step 2: Backfill existing data
+UPDATE orders SET order_status = status WHERE order_status IS NULL;
+-- Do this in batches for large tables:
+-- UPDATE orders SET order_status = status
+-- WHERE id BETWEEN 1 AND 100000 AND order_status IS NULL;
+
+-- Step 3: Create trigger to keep columns in sync
+CREATE OR REPLACE FUNCTION sync_order_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    IF NEW.order_status IS NULL AND NEW.status IS NOT NULL THEN
+      NEW.order_status := NEW.status;
+    ELSIF NEW.status IS NULL AND NEW.order_status IS NOT NULL THEN
+      NEW.status := NEW.order_status;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_order_status
+BEFORE INSERT OR UPDATE ON orders
+FOR EACH ROW EXECUTE FUNCTION sync_order_status();</code></pre>
+          </div>
+          <div class="timeline-item">
+            <h3>Deploy 2: Transition</h3>
+            <p>Update application code to read from and write to <code>order_status</code>. The trigger keeps <code>status</code> in sync for any old pods still running.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Deploy 3: Contract</h3>
+            <p>Once all pods are on the new code and you've verified everything works, remove the old column and trigger.</p>
+<pre><code>-- Remove the sync trigger
+DROP TRIGGER trg_sync_order_status ON orders;
+DROP FUNCTION sync_order_status();
+
+-- Remove old column
+ALTER TABLE orders DROP COLUMN status;</code></pre>
+          </div>
+        </div>
+
+        <p>Yes, this is three deployments for a column rename. That's the cost of zero downtime. If you think this is overkill, you haven't been paged at 2 AM for a broken migration yet.</p>
+
+        <h2>Adding a NOT NULL Constraint Without Locking</h2>
+
+        <p>Adding a <code>NOT NULL</code> constraint requires PostgreSQL to scan the entire table to verify no null values exist. On a large table, this holds an <code>ACCESS EXCLUSIVE</code> lock for the duration of the scan. Here's the safe approach:</p>
+
+<pre><code>-- Step 1: Add a CHECK constraint as NOT VALID (instant, no scan)
+ALTER TABLE orders
+ADD CONSTRAINT orders_email_not_null
+CHECK (email IS NOT NULL) NOT VALID;
+
+-- Step 2: Validate the constraint (scans table but only holds
+-- a SHARE UPDATE EXCLUSIVE lock — reads and writes still work)
+ALTER TABLE orders VALIDATE CONSTRAINT orders_email_not_null;
+
+-- Step 3 (optional): Convert to a proper NOT NULL constraint
+-- In PostgreSQL 12+, if a valid CHECK constraint exists,
+-- adding NOT NULL is instant because PG trusts the CHECK
+ALTER TABLE orders ALTER COLUMN email SET NOT NULL;
+
+-- Step 4: Drop the now-redundant CHECK constraint
+ALTER TABLE orders DROP CONSTRAINT orders_email_not_null;</code></pre>
+
+        <div class="info-box success">
+          <p><strong>Why this works:</strong> The <code>NOT VALID</code> flag tells PostgreSQL to enforce the constraint for new rows immediately but skip validation of existing rows. The <code>VALIDATE CONSTRAINT</code> step scans existing rows but uses a weaker lock that allows concurrent reads and writes.</p>
+        </div>
+
+        <h2>Index Creation: Always Use CONCURRENTLY</h2>
+
+        <p>A standard <code>CREATE INDEX</code> holds a lock that blocks all writes to the table for the entire duration of index creation. On a 100M row table, that could be 10-30 minutes of write downtime.</p>
+
+<pre><code>-- WRONG: Blocks all writes for the duration
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
+
+-- RIGHT: Builds index without blocking writes
+CREATE INDEX CONCURRENTLY idx_orders_customer_id ON orders(customer_id);</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">CONCURRENTLY Gotchas</div>
+          <p><code>CREATE INDEX CONCURRENTLY</code> cannot run inside a transaction. If your migration framework wraps everything in a transaction (most do), you need to configure it to run this statement outside a transaction. In Rails, use <code>disable_ddl_transaction!</code>. In Django, use <code>SeparateDatabaseAndState</code>. In Flyway, use a separate migration file.</p>
+        </div>
+
+        <p>Also watch out for failed concurrent index builds. If the build fails partway through, PostgreSQL leaves behind an <code>INVALID</code> index that still consumes space and slows down writes. Always check for invalid indexes after a migration:</p>
+
+<pre><code>-- Find invalid indexes
+SELECT indexrelid::regclass AS index_name,
+       indrelid::regclass AS table_name
+FROM pg_index
+WHERE NOT indisvalid;
+
+-- Drop and retry if found
+DROP INDEX CONCURRENTLY idx_orders_customer_id;
+CREATE INDEX CONCURRENTLY idx_orders_customer_id ON orders(customer_id);</code></pre>
+
+        <h2>pt-online-schema-change vs gh-ost</h2>
+
+        <p>For MySQL, you don't have the luxury of PostgreSQL's transactional DDL. Schema changes on large tables require external tools that create a shadow copy of the table, apply the change, and swap them.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Feature</th><th>pt-online-schema-change</th><th>gh-ost</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Mechanism</td><td>Triggers on original table</td><td>Reads binlog stream</td></tr>
+            <tr><td>Trigger overhead</td><td>Yes — adds write latency</td><td>No triggers</td></tr>
+            <tr><td>Pausable</td><td>Limited</td><td>Yes — can pause/resume</td></tr>
+            <tr><td>Testable</td><td>Limited</td><td>Yes — can test on replica first</td></tr>
+            <tr><td>Foreign keys</td><td>Partial support</td><td>No support</td></tr>
+            <tr><td>Cut-over</td><td>RENAME TABLE (brief lock)</td><td>Atomic cut-over (brief lock)</td></tr>
+            <tr><td>Recommended for</td><td>Simpler schemas, FK support</td><td>Large tables, production safety</td></tr>
+          </tbody>
+        </table>
+
+        <p>We use <strong>gh-ost</strong> for all MySQL migrations on tables over 1GB. The ability to pause, throttle based on replication lag, and test on a replica before running on primary is invaluable. A typical gh-ost command:</p>
+
+<pre><code>gh-ost \
+  --host=primary-db.internal \
+  --database=production \
+  --table=orders \
+  --alter="ADD COLUMN shipping_notes TEXT" \
+  --chunk-size=1000 \
+  --max-lag-millis=1500 \
+  --throttle-control-replicas="replica-1.internal,replica-2.internal" \
+  --cut-over=default \
+  --exact-rowcount \
+  --concurrent-rowcount \
+  --default-retries=120 \
+  --verbose \
+  --execute</code></pre>
+
+        <h2>Migrations in the CI/CD Pipeline</h2>
+
+        <p>Our migration pipeline enforces safety at every stage:</p>
+
+        <div class="diagram">
+          <div class="flow-step">PR opened → Migration linter checks for unsafe operations (table locks, missing CONCURRENTLY, etc.)</div>
+          <div class="flow-step">CI → Migration runs against a clone of production schema. Verifies forward and backward compatibility.</div>
+          <div class="flow-step">Staging → Migration runs against staging DB with production-like data volume.</div>
+          <div class="flow-step">Production → Migration runs before code deployment. Canary period. Then full rollout.</div>
+        </div>
+
+        <p>Our migration linter catches these patterns and fails the PR:</p>
+
+        <ul class="icon-list cross">
+          <li><code>ALTER TABLE ... RENAME COLUMN</code> — must use expand-contract</li>
+          <li><code>ALTER TABLE ... DROP COLUMN</code> — must be in a separate deploy from code changes</li>
+          <li><code>CREATE INDEX</code> without <code>CONCURRENTLY</code></li>
+          <li><code>ALTER TABLE ... ADD COLUMN ... NOT NULL</code> without a default</li>
+          <li><code>ALTER TABLE ... ALTER COLUMN ... TYPE</code> — column type changes rewrite the table</li>
+          <li>Any migration that takes longer than 10 seconds on the schema clone</li>
+        </ul>
+
+        <h2>Rollback Strategy</h2>
+
+        <p>Here's the uncomfortable truth: <strong>most database migrations cannot be rolled back</strong>. If you've added a column and deployed code that writes to it, rolling back the column means losing that data. If you've dropped a column, the data is gone.</p>
+
+        <p>Our rollback strategy is based on the expand-contract pattern itself:</p>
+
+        <ul>
+          <li><strong>Expand phase:</strong> Rollback is easy — just drop the new column/table. No data loss because nothing was writing to it yet.</li>
+          <li><strong>Transition phase:</strong> Rollback means redeploying old code. The old schema still exists, so old code works fine.</li>
+          <li><strong>Contract phase:</strong> No rollback possible. This is why we wait at least 1 week between transition and contract, and take a logical backup before contracting.</li>
+        </ul>
+
+        <div class="info-box danger">
+          <p><strong>Always take a backup before the contract phase.</strong> We use <code>pg_dump</code> of the specific table before dropping columns. It's saved us twice — once when we discovered a reporting query that still referenced the old column name 3 weeks after the migration.</p>
+        </div>
+
+        <h2>The Incident: ALTER TABLE That Locked Production</h2>
+
+        <p>This is the incident that changed how we do migrations forever. A developer ran what seemed like a simple migration:</p>
+
+<pre><code>-- This looks innocent. It is not.
+ALTER TABLE users ALTER COLUMN email SET NOT NULL;</code></pre>
+
+        <p>The <code>users</code> table had 47 million rows. PostgreSQL needed to scan every row to verify no nulls existed. This acquired an <code>ACCESS EXCLUSIVE</code> lock — blocking all reads and writes to the table.</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>T+0:00 — Migration starts</h3>
+            <p>ALTER TABLE begins. Lock acquired. All queries to the users table start queuing.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+0:30 — Connection pool saturates</h3>
+            <p>Queued queries consume all available connections. New requests can't get a connection. API starts returning 503s.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+2:00 — Cascading failure</h3>
+            <p>Services that depend on the users table start timing out. Health checks fail. Kubernetes starts killing pods. Load balancer removes backends.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+5:00 — Incident declared</h3>
+            <p>On-call engineer identifies the locked query via <code>pg_stat_activity</code>. Debates whether to kill it (losing progress) or wait.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>T+8:00 — Migration completes</h3>
+            <p>Lock released. Queued queries flood the database. Brief spike in latency, then recovery. Total downtime: 8 minutes.</p>
+          </div>
+        </div>
+
+        <p>The fix was the <code>CHECK NOT VALID</code> + <code>VALIDATE CONSTRAINT</code> pattern described above. The same migration, done safely, took 45 minutes to validate but caused zero downtime because it used a weaker lock.</p>
+
+        <h2>Migration Safety Checklist</h2>
+
+        <p>We run through this checklist for every migration before it hits production:</p>
+
+        <ul class="icon-list">
+          <li>Can the old version of the application run with this schema change?</li>
+          <li>Can the new version of the application run without this schema change?</li>
+          <li>Does this migration acquire an ACCESS EXCLUSIVE lock? For how long?</li>
+          <li>Is there a backfill? How long will it take on production data volume?</li>
+          <li>Is <code>CREATE INDEX CONCURRENTLY</code> used for all new indexes?</li>
+          <li>Is the migration idempotent? Can it be safely re-run?</li>
+          <li>What's the rollback plan? Is data loss possible?</li>
+          <li>Has this been tested against a production-sized dataset?</li>
+        </ul>
+
+        <blockquote>
+          <p>"A boring migration is a successful migration. If your migration is exciting, something has gone wrong."</p>
+        </blockquote>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real Lessons from Running StatefulSets in Production – Suheb Ghare</title>
+  <meta name="description" content="Real Lessons from Running StatefulSets in Production – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Kubernetes</span>
+      </div>
+      <h1 class="post-title">Real Lessons from Running StatefulSets in Production</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="statefulsets-production-lessons" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="statefulsets-production-lessons" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="statefulsets-production-lessons" data-stat="likes">414</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="statefulsets-production-lessons" data-stat="dislikes">39</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="statefulsets-production-lessons">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="statefulsets-production-lessons">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>When to Use StatefulSets</h2>
+        <p>StatefulSets exist for workloads that need one or more of these guarantees:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/k8s-cluster.svg" alt="Kubernetes StatefulSet architecture" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">StatefulSets provide stable network identity and ordered deployment</figcaption>
+</figure>
+        <ul>
+          <li><strong>Stable network identity:</strong> Each pod gets a predictable DNS name (<code>redis-0.redis-headless.ns.svc.cluster.local</code>)</li>
+          <li><strong>Ordered deployment and scaling:</strong> Pods are created sequentially (0, 1, 2) and terminated in reverse order</li>
+          <li><strong>Persistent storage:</strong> Each pod gets its own PVC that survives pod restarts and rescheduling</li>
+        </ul>
+        <p>If your workload doesn't need any of these, use a Deployment. StatefulSets add complexity that isn't worth it for stateless services.</p>
+
+        <h3>Real Use Cases We Run in Production</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Workload</th><th>Why StatefulSet</th><th>Replicas</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Redis Sentinel</td><td>Stable identity for sentinel discovery, persistent AOF</td><td>3</td></tr>
+            <tr><td>Kafka</td><td>Broker IDs tied to pod ordinals, persistent log segments</td><td>5</td></tr>
+            <tr><td>Elasticsearch</td><td>Node roles (master, data), persistent indices</td><td>6</td></tr>
+            <tr><td>PostgreSQL HA</td><td>Primary/replica identity, WAL persistence</td><td>3</td></tr>
+          </tbody>
+        </table>
+
+        <h2>PVC Management</h2>
+        <h3>StorageClass Selection</h3>
+        <p>Choosing the right StorageClass directly impacts performance and cost:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 345" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="380" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">StatefulSet: Ordered Deployment & Stable Identity</text><rect x="60" y="60" width="160" height="60" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="82" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">web-0</text><text x="140" y="100" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Stable DNS: web-0.svc</text><rect x="60" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="140" y="160" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">PVC: data-web-0</text><line x1="220" y1="90" x2="240" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><line x1="140" y1="120" x2="140" y2="140" stroke="#312e81" stroke-width="2" marker-end="url(#a)"/><rect x="280" y="60" width="160" height="60" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="360" y="82" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">web-1</text><text x="360" y="100" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Stable DNS: web-1.svc</text><rect x="280" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="360" y="160" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">PVC: data-web-1</text><line x1="440" y1="90" x2="460" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><line x1="360" y1="120" x2="360" y2="140" stroke="#0c4a6e" stroke-width="2" marker-end="url(#a)"/><rect x="500" y="60" width="160" height="60" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="580" y="82" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">web-2</text><text x="580" y="100" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Stable DNS: web-2.svc</text><rect x="500" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="580" y="160" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">PVC: data-web-2</text><line x1="580" y1="120" x2="580" y2="140" stroke="#1a3a2a" stroke-width="2" marker-end="url(#a)"/><text x="380" y="200" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Ordered: 0→1→2 on scale-up  ·  2→1→0 on scale-down</text><rect x="20" y="220" width="720" height="44" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="380" y="242" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Headless Service (clusterIP: None) → DNS: web-0.web.ns.svc.cluster.local</text><rect x="20" y="280" width="720" height="44" rx="8" fill="#3b1a1a" stroke="#f59e0b" stroke-width="1.5"/><text x="380" y="302" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">⚠ Rolling update stalls if pod-0 is unhealthy — requires manual intervention (kubectl delete pod)</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Each StatefulSet pod gets a stable hostname and its own PVC — deleted pods don't lose their data</figcaption></figure>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>StorageClass</th><th>EBS Type</th><th>IOPS</th><th>Cost (100GB)</th><th>Use Case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>gp3-standard</td><td>gp3</td><td>3,000 (baseline)</td><td><span class="cost-badge low">$8/mo</span></td><td>Redis AOF, general databases</td></tr>
+            <tr><td>gp3-high-perf</td><td>gp3</td><td>16,000 (provisioned)</td><td><span class="cost-badge medium">$73/mo</span></td><td>Kafka, high-throughput writes</td></tr>
+            <tr><td>io2-critical</td><td>io2</td><td>64,000 (provisioned)</td><td><span class="cost-badge high">$650/mo</span></td><td>PostgreSQL primary, latency-critical</td></tr>
+          </tbody>
+        </table>
+
+<pre><code>apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3-standard
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  fsType: ext4
+  encrypted: "true"
+reclaimPolicy: Retain  # CRITICAL: don't delete PVs on PVC deletion
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ Always Use reclaimPolicy: Retain</div>
+          <p>The default <code>Delete</code> policy destroys the EBS volume when the PVC is deleted. For stateful workloads, this means permanent data loss. We learned this when a developer deleted a test StatefulSet and lost 2 weeks of Elasticsearch indices. Use <code>Retain</code> and clean up volumes manually.</p>
+        </div>
+
+        <h3>VolumeClaimTemplates</h3>
+<pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3-standard
+        resources:
+          requests:
+            storage: 50Gi</code></pre>
+        <p>Each pod gets its own PVC: <code>redis-data-redis-0</code>, <code>redis-data-redis-1</code>, <code>redis-data-redis-2</code>. These PVCs persist even if the StatefulSet is deleted (with <code>Retain</code> policy).</p>
+
+        <h3>PVC Retention Policy (Kubernetes 1.27+)</h3>
+<pre><code>spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain   # keep PVCs when StatefulSet is deleted
+    whenScaled: Delete    # delete PVCs when scaling down</code></pre>
+        <p>This is a game-changer. Before 1.27, scaling down from 5 to 3 replicas left orphaned PVCs (<code>redis-data-redis-3</code>, <code>redis-data-redis-4</code>) that you had to clean up manually. Now Kubernetes handles it.</p>
+
+        <h2>Ordered vs Parallel Pod Management</h2>
+<pre><code>spec:
+  podManagementPolicy: OrderedReady  # default — sequential
+  # or
+  podManagementPolicy: Parallel      # all pods start simultaneously</code></pre>
+        <p><strong>OrderedReady</strong> (default): Pods start one at a time. Pod-1 doesn't start until Pod-0 is Running and Ready. Use this for databases where the primary must be up before replicas join.</p>
+        <p><strong>Parallel:</strong> All pods start simultaneously. Use this for workloads where pods are independent (e.g., Elasticsearch data nodes after master election).</p>
+
+        <h2>Headless Service and DNS</h2>
+<pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+spec:
+  clusterIP: None  # headless — no load balancing
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379</code></pre>
+        <p>With a headless service, each pod gets a DNS A record:</p>
+        <ul>
+          <li><code>redis-0.redis-headless.production.svc.cluster.local</code></li>
+          <li><code>redis-1.redis-headless.production.svc.cluster.local</code></li>
+          <li><code>redis-2.redis-headless.production.svc.cluster.local</code></li>
+        </ul>
+        <p>Clients can connect to specific pods by name. Redis Sentinel uses this to discover and monitor individual Redis instances.</p>
+
+        <h2>The Hard Lessons</h2>
+
+        <h3>Lesson 1: Rolling Update Stuck on Unhealthy Pod</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Real Incident</div>
+          <p>We updated our Kafka StatefulSet with a new image. Pod kafka-4 was terminated and recreated, but the new version had a config error that prevented it from joining the cluster. The readiness probe failed. Kubernetes waited for kafka-4 to become Ready before proceeding to kafka-3. The rolling update was stuck. For 2 hours, we had a partially-updated Kafka cluster with mixed versions.</p>
+        </div>
+        <p><strong>Fix:</strong> Set <code>spec.updateStrategy.rollingUpdate.maxUnavailable: 1</code> (Kubernetes 1.24+) and monitor rolling updates with alerts on <code>kube_statefulset_status_update_revision != kube_statefulset_status_current_revision</code> for more than 15 minutes.</p>
+        <p>For emergency recovery: <code>kubectl rollout undo statefulset/kafka</code> or patch the StatefulSet to use the previous image.</p>
+
+        <h3>Lesson 2: PVCs Not Deleted When StatefulSet Deleted</h3>
+        <p>Deleting a StatefulSet does <em>not</em> delete its PVCs. This is by design (data safety), but it means orphaned PVCs accumulate. We had 47 orphaned PVCs costing $180/month before we noticed.</p>
+<pre><code># Find orphaned PVCs (PVCs not bound to any running pod)
+kubectl get pvc -A --no-headers | while read ns name status rest; do
+  if [ "$status" = "Bound" ]; then
+    pv=$(kubectl get pvc $name -n $ns -o jsonpath='{.spec.volumeName}')
+    pod=$(kubectl get pods -n $ns --field-selector=status.phase=Running \
+      -o json | jq -r ".items[].spec.volumes[]?.persistentVolumeClaim.claimName" \
+      | grep "^${name}$")
+    if [ -z "$pod" ]; then
+      echo "ORPHANED: $ns/$name ($pv)"
+    fi
+  fi
+done</code></pre>
+
+        <h3>Lesson 3: Pod Anti-Affinity Is Critical for HA</h3>
+        <p>Without anti-affinity, Kubernetes might schedule all 3 Redis pods on the same node. If that node fails, you lose your entire Redis cluster.</p>
+<pre><code>spec:
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values: ["redis"]
+              topologyKey: kubernetes.io/hostname</code></pre>
+        <p>Use <code>requiredDuringScheduling</code> for critical stateful workloads. This guarantees each pod runs on a different node. For less critical workloads, <code>preferredDuringScheduling</code> is more flexible.</p>
+
+        <h3>Lesson 4: Backup Strategy for PVCs</h3>
+        <p>EBS snapshots are your backup mechanism. We use Velero for automated PVC backups:</p>
+<pre><code>apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: redis-backup
+  namespace: velero
+spec:
+  schedule: "0 */6 * * *"  # every 6 hours
+  template:
+    includedNamespaces:
+      - production
+    includedResources:
+      - persistentvolumeclaims
+      - persistentvolumes
+    labelSelector:
+      matchLabels:
+        app: redis
+    snapshotVolumes: true
+    ttl: 168h  # retain for 7 days</code></pre>
+
+        <h2>Real Redis Sentinel StatefulSet</h2>
+<pre><code>apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: production
+spec:
+  serviceName: redis-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: redis
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3-standard
+        resources:
+          requests:
+            storage: 50Gi
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Delete
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values: ["redis"]
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "memory-optimized"
+          effect: "NoSchedule"
+      nodeSelector:
+        node-group: memory-optimized
+      containers:
+        - name: redis
+          image: redis:7.2-alpine
+          ports:
+            - containerPort: 6379
+          command: ["redis-server", "/etc/redis/redis.conf"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "4Gi"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-config
+              mountPath: /etc/redis
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config</code></pre>
+
+        <h2>When to Use an Operator Instead</h2>
+        <div class="info-box">
+          <p>Raw StatefulSets work for simple setups. For complex operational tasks (automated failover, backup scheduling, version upgrades, cluster rebalancing), use an operator:</p>
+        </div>
+        <ul class="icon-list">
+          <li>🐘 <strong>PostgreSQL:</strong> CloudNativePG or Zalando Postgres Operator</li>
+          <li>📨 <strong>Kafka:</strong> Strimzi Operator</li>
+          <li>🔍 <strong>Elasticsearch:</strong> ECK (Elastic Cloud on Kubernetes)</li>
+          <li>🔴 <strong>Redis:</strong> Redis Operator by Spotahome or Redis Enterprise Operator</li>
+        </ul>
+        <p>Operators encode operational knowledge (failover procedures, backup logic, scaling rules) into code. They handle the scenarios that would otherwise require 3 AM manual intervention.</p>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Key Takeaway</div>
+          <p>StatefulSets are powerful but unforgiving. Always use <code>reclaimPolicy: Retain</code>, always set pod anti-affinity, always have a backup strategy, and always monitor rolling updates. If your stateful workload needs automated failover or complex lifecycle management, skip raw StatefulSets and use an operator from day one. The operational overhead of managing StatefulSets manually at 3 AM isn't worth the simplicity.</p>
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

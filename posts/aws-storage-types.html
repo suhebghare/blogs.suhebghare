@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Storage Types & Cost Optimization – Suheb Ghare</title>
+  <meta name="description" content="AWS Storage Types & Cost Optimization – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Cloud</span>
+      </div>
+      <h1 class="post-title">AWS Storage Types & Cost Optimization</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="aws-storage-types" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="aws-storage-types" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="aws-storage-types" data-stat="likes">232</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="aws-storage-types" data-stat="dislikes">26</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="aws-storage-types">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="aws-storage-types">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="choosing-storage">Choosing the Right AWS Storage</h2>
+        <p>AWS has 15+ storage options. Most teams only need 4: S3, EBS, EFS, and occasionally FSx. The trick is knowing which one fits your access pattern — and the cost difference between getting it right and wrong can be 5-10x.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=85" alt="AWS storage types comparison" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">S3, EBS, EFS, FSx — choosing the right storage saves $5K+/month</figcaption>
+</figure>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Storage</th><th>Type</th><th>Access Pattern</th><th>Latency</th><th>Cost (GB/mo)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>S3 Standard</strong></td><td>Object</td><td>HTTP API, any frequency</td><td>~50-100ms first byte</td><td>$0.023</td></tr>
+            <tr><td><strong>EBS gp3</strong></td><td>Block</td><td>Single EC2 instance</td><td>&lt;1ms</td><td>$0.08</td></tr>
+            <tr><td><strong>EFS</strong></td><td>File (NFS)</td><td>Multi-instance shared</td><td>~1-5ms</td><td>$0.30</td></tr>
+            <tr><td><strong>FSx Lustre</strong></td><td>File (POSIX)</td><td>HPC, ML training</td><td>&lt;1ms</td><td>$0.14</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="s3-deep-dive">S3: The Swiss Army Knife</h2>
+
+        <h3 id="storage-classes">Storage Classes and When to Use Each</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Class</th><th>Cost/GB/mo</th><th>Retrieval Cost</th><th>Min Duration</th><th>Use Case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Standard</td><td>$0.023</td><td>Free</td><td>None</td><td>Frequently accessed data</td></tr>
+            <tr><td>Intelligent-Tiering</td><td>$0.023 → auto</td><td>Free</td><td>None</td><td>Unknown/changing access patterns</td></tr>
+            <tr><td>Standard-IA</td><td>$0.0125</td><td>$0.01/GB</td><td>30 days</td><td>Infrequent but fast access needed</td></tr>
+            <tr><td>One Zone-IA</td><td>$0.01</td><td>$0.01/GB</td><td>30 days</td><td>Reproducible infrequent data</td></tr>
+            <tr><td>Glacier Instant</td><td>$0.004</td><td>$0.03/GB</td><td>90 days</td><td>Archive with millisecond access</td></tr>
+            <tr><td>Glacier Flexible</td><td>$0.0036</td><td>$0.01/GB + time</td><td>90 days</td><td>Archive, 1-12 hour retrieval</td></tr>
+            <tr><td>Glacier Deep Archive</td><td>$0.00099</td><td>$0.02/GB + time</td><td>180 days</td><td>Compliance, 12-48 hour retrieval</td></tr>
+          </tbody>
+        </table>
+
+        <h3 id="intelligent-tiering">Intelligent-Tiering: The Default Choice</h3>
+        <p>For most workloads, Intelligent-Tiering is the right answer. It automatically moves objects between tiers based on access patterns. No retrieval fees, no minimum duration penalty. The only cost is a small monitoring fee ($0.0025 per 1,000 objects/month).</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">AWS Storage Decision Matrix</text><rect x="20" y="50" width="100" height="30" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="70" y="65" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Storage</text><rect x="120" y="50" width="90" height="30" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="165" y="65" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Type</text><rect x="210" y="50" width="80" height="30" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="250" y="65" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Latency</text><rect x="290" y="50" width="80" height="30" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="330" y="65" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Cost/GB</text><rect x="370" y="50" width="310" height="30" rx="0" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="525" y="65" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Best For</text><rect x="20" y="80" width="100" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="70" y="97" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">S3</text><rect x="120" y="80" width="90" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="165" y="97" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Object</text><rect x="210" y="80" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="250" y="97" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">ms–s</text><rect x="290" y="80" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="330" y="97" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">$0.023</text><rect x="370" y="80" width="310" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="525" y="97" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Static files, backups, data lake</text><rect x="20" y="116" width="100" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="70" y="133" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">EBS gp3</text><rect x="120" y="116" width="90" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="165" y="133" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Block</text><rect x="210" y="116" width="80" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="250" y="133" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle"><1ms</text><rect x="290" y="116" width="80" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="330" y="133" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">$0.08</text><rect x="370" y="116" width="310" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="525" y="133" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">EC2 root volumes, databases</text><rect x="20" y="152" width="100" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="70" y="169" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">EBS io2</text><rect x="120" y="152" width="90" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="165" y="169" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Block</text><rect x="210" y="152" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="250" y="169" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle"><0.5ms</text><rect x="290" y="152" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="330" y="169" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">$0.125</text><rect x="370" y="152" width="310" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="525" y="169" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">High-IOPS databases (RDS)</text><rect x="20" y="188" width="100" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="70" y="205" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">EFS</text><rect x="120" y="188" width="90" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="165" y="205" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">File (NFS)</text><rect x="210" y="188" width="80" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="250" y="205" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">1–10ms</text><rect x="290" y="188" width="80" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="330" y="205" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">$0.30</text><rect x="370" y="188" width="310" height="34" rx="0" fill="#1e3a5f" stroke="#334155" stroke-width="0.5"/><text x="525" y="205" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Shared filesystem, containers</text><rect x="20" y="224" width="100" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="70" y="241" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">FSx Lustre</text><rect x="120" y="224" width="90" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="165" y="241" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">HPC File</text><rect x="210" y="224" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="250" y="241" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">sub-ms</text><rect x="290" y="224" width="80" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="330" y="241" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">$0.14</text><rect x="370" y="224" width="310" height="34" rx="0" fill="#1e293b" stroke="#334155" stroke-width="0.5"/><text x="525" y="241" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">ML training, HPC workloads</text><rect x="20" y="270" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="288" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">gp3 vs gp2: gp3 is 20% cheaper AND lets you tune IOPS independently. Migrate all gp2 volumes.</text><text x="400" y="304" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">aws ec2 modify-volume --volume-type gp3 --volume-id vol-xxx</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Choose storage by access pattern: object for files, block for databases, file for shared mounts</figcaption></figure>
+
+
+        <pre><code>resource "aws_s3_bucket_intelligent_tiering_configuration" "data_lake" {
+  bucket = aws_s3_bucket.data_lake.id
+  name   = "full-bucket-tiering"
+
+  tiering {
+    access_tier = "ARCHIVE_ACCESS"
+    days        = 90
+  }
+  tiering {
+    access_tier = "DEEP_ARCHIVE_ACCESS"
+    days        = 180
+  }
+}</code></pre>
+
+        <h3 id="lifecycle-policies">Lifecycle Policies: $12K → $7K/Month</h3>
+        <p>We had 60TB of application logs in S3 Standard. Analysis showed: last 7 days accessed frequently, 7-30 days accessed occasionally, 30-90 days rarely, 90+ days never (but needed for compliance).</p>
+
+        <pre><code>resource "aws_s3_bucket_lifecycle_configuration" "logs" {
+  bucket = aws_s3_bucket.app_logs.id
+
+  rule {
+    id     = "log-lifecycle"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+    transition {
+      days          = 90
+      storage_class = "GLACIER_IR"    # Glacier Instant Retrieval
+    }
+    transition {
+      days          = 365
+      storage_class = "DEEP_ARCHIVE"
+    }
+    expiration {
+      days = 2555  # 7 years for compliance
+    }
+  }
+}</code></pre>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$12,000/mo</div>
+            <div class="metric-label">Before: 60TB all in S3 Standard</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$7,000/mo</div>
+            <div class="metric-label">After: Lifecycle policies applied</div>
+          </div>
+        </div>
+
+        <h3 id="s3-performance">S3 Performance Tips</h3>
+        <ul>
+          <li><strong>Multipart upload:</strong> Required for files &gt;5GB, recommended for &gt;100MB. Parallel uploads dramatically improve throughput.</li>
+          <li><strong>S3 Transfer Acceleration:</strong> Uses CloudFront edge locations for faster uploads from distant regions. 50-500% faster for cross-region transfers. Costs $0.04/GB.</li>
+          <li><strong>Prefix partitioning:</strong> S3 supports 5,500 GET/s and 3,500 PUT/s per prefix. Spread objects across prefixes for high-throughput workloads.</li>
+        </ul>
+
+        <h2 id="ebs-deep-dive">EBS: Block Storage for EC2</h2>
+
+        <h3 id="volume-types">Volume Types: gp3 vs gp2 vs io2</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Type</th><th>Cost/GB/mo</th><th>Baseline IOPS</th><th>Max IOPS</th><th>Throughput</th><th>Use Case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>gp3</strong></td><td>$0.08</td><td>3,000 (free)</td><td>16,000</td><td>125-1,000 MB/s</td><td>Most workloads — default choice</td></tr>
+            <tr><td><strong>gp2</strong></td><td>$0.10</td><td>3 IOPS/GB (burst to 3,000)</td><td>16,000</td><td>250 MB/s</td><td>Legacy — migrate to gp3</td></tr>
+            <tr><td><strong>io2</strong></td><td>$0.125 + $0.065/IOPS</td><td>Provisioned</td><td>64,000</td><td>1,000 MB/s</td><td>Databases needing consistent IOPS</td></tr>
+            <tr><td><strong>st1</strong></td><td>$0.045</td><td>40 MB/s per TB</td><td>500 MB/s</td><td>Throughput-optimized</td><td>Big data, log processing</td></tr>
+            <tr><td><strong>sc1</strong></td><td>$0.015</td><td>12 MB/s per TB</td><td>250 MB/s</td><td>Cold storage</td><td>Infrequent access archives</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">gp3 vs gp2: Migrate Everything</div>
+          <p>gp3 is 20% cheaper than gp2 AND gives you 3,000 IOPS baseline (gp2 only gives 3,000 if your volume is 1TB+). Plus gp3 lets you independently tune IOPS and throughput. There is zero reason to use gp2 for new volumes. Migrate existing gp2 volumes — it's a live operation with no downtime.</p>
+        </div>
+
+        <pre><code># Migrate gp2 to gp3 (no downtime)
+aws ec2 modify-volume \
+  --volume-id vol-0123456789abcdef0 \
+  --volume-type gp3 \
+  --iops 3000 \
+  --throughput 125
+
+# Monitor migration progress
+aws ec2 describe-volumes-modifications \
+  --volume-ids vol-0123456789abcdef0</code></pre>
+
+        <h3 id="snapshot-strategy">Snapshot Strategy</h3>
+        <pre><code># Automated snapshots with lifecycle policy
+resource "aws_dlm_lifecycle_policy" "ebs_snapshots" {
+  description        = "EBS snapshot lifecycle"
+  execution_role_arn = aws_iam_role.dlm.arn
+  state              = "ENABLED"
+
+  policy_details {
+    resource_types = ["VOLUME"]
+    target_tags    = { Backup = "true" }
+
+    schedule {
+      name = "daily-snapshots"
+      create_rule { interval = 24; interval_unit = "HOURS"; times = ["03:00"] }
+      retain_rule { count = 14 }  # Keep 14 daily snapshots
+      copy_tags = true
+    }
+  }
+}</code></pre>
+
+        <h2 id="ebs-incident">Real Incident: gp2 Burst Credit Exhaustion</h2>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The 3 AM Page</div>
+          <p>Our RDS instance (500GB gp2 volume) started showing 200ms query latency spikes every afternoon. The volume had 1,500 baseline IOPS (3 IOPS/GB × 500GB) but the database needed 2,500 IOPS during peak hours. It was burning through burst credits during the day and running out by 3 PM. Migrated to gp3 with 3,000 baseline IOPS — latency dropped to 2ms and the cost went DOWN by 20%.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$50/mo</div>
+            <div class="metric-label">gp2 500GB ($0.10/GB)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$40/mo</div>
+            <div class="metric-label">gp3 500GB ($0.08/GB) + 3K IOPS free</div>
+          </div>
+        </div>
+
+        <h2 id="efs">EFS: Shared Filesystem for Containers</h2>
+        <p>EFS is NFS-as-a-service. It's the only option when multiple EC2 instances or containers need to read/write the same files simultaneously.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Feature</th><th>EFS Standard</th><th>EFS One Zone</th><th>EBS</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Multi-AZ</td><td>Yes</td><td>No</td><td>No</td></tr>
+            <tr><td>Multi-attach</td><td>Unlimited instances</td><td>Unlimited instances</td><td>1 instance (io2 supports multi)</td></tr>
+            <tr><td>Cost/GB/mo</td><td>$0.30</td><td>$0.16</td><td>$0.08 (gp3)</td></tr>
+            <tr><td>Auto-scaling</td><td>Yes (petabyte scale)</td><td>Yes</td><td>No (fixed size)</td></tr>
+            <tr><td>Latency</td><td>~1-5ms</td><td>~1-5ms</td><td>&lt;1ms</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">EFS Cost Warning</div>
+          <p>EFS is 3.75x more expensive than EBS per GB. Only use it when you genuinely need shared access. I've seen teams use EFS for single-instance workloads because "it auto-scales" — they were paying $0.30/GB instead of $0.08/GB for no benefit. Use EFS for: shared config, shared uploads directory, CMS media files accessed by multiple containers.</p>
+        </div>
+
+        <h3 id="efs-throughput">EFS Throughput Modes</h3>
+        <ul>
+          <li><strong>Bursting:</strong> Throughput scales with storage size. 50 KB/s per GB baseline. A 100GB filesystem gets 5 MB/s baseline with burst to 100 MB/s. Fine for most workloads.</li>
+          <li><strong>Elastic (recommended):</strong> Automatically scales throughput up to 10 GB/s. Pay per GB transferred. Best for unpredictable workloads.</li>
+          <li><strong>Provisioned:</strong> Fixed throughput regardless of size. Use when you need consistent high throughput on a small filesystem.</li>
+        </ul>
+
+        <h2 id="fsx">FSx: Specialized Filesystems</h2>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>FSx for Windows (SMB)</h3>
+            <ul>
+              <li>Windows file shares with Active Directory</li>
+              <li>SMB protocol, DFS namespaces</li>
+              <li>Migrating on-prem Windows file servers</li>
+              <li>From $0.013/GB/month (single-AZ HDD)</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <h3>FSx for Lustre (HPC)</h3>
+            <ul>
+              <li>Sub-millisecond latency, hundreds of GB/s throughput</li>
+              <li>Integrates with S3 (lazy-load data)</li>
+              <li>ML training, genomics, financial modeling</li>
+              <li>From $0.14/GB/month</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2 id="decision-matrix">Storage Decision Matrix</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Requirement</th><th>Best Choice</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Object storage (images, backups, logs)</td><td>S3</td><td>Cheapest, most durable (11 9s), unlimited scale</td></tr>
+            <tr><td>Database storage</td><td>EBS gp3 or io2</td><td>Low latency, consistent IOPS</td></tr>
+            <tr><td>Shared files across containers</td><td>EFS</td><td>NFS mount, multi-attach, auto-scaling</td></tr>
+            <tr><td>ML training data</td><td>FSx for Lustre + S3</td><td>High throughput, S3 integration</td></tr>
+            <tr><td>Windows file shares</td><td>FSx for Windows</td><td>SMB, Active Directory integration</td></tr>
+            <tr><td>Boot volumes</td><td>EBS gp3</td><td>Low cost, sufficient performance</td></tr>
+            <tr><td>Static website assets</td><td>S3 + CloudFront</td><td>Global CDN, pennies per month</td></tr>
+            <tr><td>Data lake</td><td>S3 Intelligent-Tiering</td><td>Auto-tiering, query with Athena</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box success">
+          <h3>Key Takeaways</h3>
+          <ul class="icon-list">
+            <li>S3 Intelligent-Tiering should be your default for object storage</li>
+            <li>Migrate all gp2 volumes to gp3 — 20% cheaper, better baseline IOPS</li>
+            <li>EFS only when you need multi-instance shared access — it's 3.75x the cost of EBS</li>
+            <li>Lifecycle policies on S3 can save 40-60% on storage costs</li>
+            <li>Monitor EBS burst credits (gp2) or switch to gp3 to avoid latency spikes</li>
+            <li>Use S3 Transfer Acceleration for cross-region uploads</li>
+            <li>Snapshot lifecycle policies prevent snapshot sprawl (we found $1,800/mo in old snapshots)</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

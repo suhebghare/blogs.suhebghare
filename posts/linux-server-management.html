@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux: The Backbone of Modern Infrastructure – Suheb Ghare</title>
+  <meta name="description" content="Linux: The Backbone of Modern Infrastructure – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Cloud</span>
+      </div>
+      <h1 class="post-title">Linux: The Backbone of Modern Infrastructure</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="linux-server-management" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="linux-server-management" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="linux-server-management" data-stat="likes">154</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="linux-server-management" data-stat="dislikes">24</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="linux-server-management">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="linux-server-management">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="troubleshooting-toolkit">The Performance Troubleshooting Toolkit</h2>
+        <p>In 8 years of managing production Linux servers — from bare metal to EC2 to Kubernetes nodes — I've narrowed my toolkit to a handful of commands that solve 95% of performance issues. The key isn't knowing every flag; it's knowing which tool to reach for first.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=85" alt="Linux server performance tools" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">The USE method: Utilization, Saturation, Errors — systematic diagnosis</figcaption>
+</figure>
+
+        <h3 id="use-method">The USE Method: Systematic Diagnosis</h3>
+        <p>Before diving into tools, use Brendan Gregg's USE method. For every resource (CPU, memory, disk, network), check three things:</p>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>USE Method</h3>
+            <ul>
+              <li><strong>Utilization</strong> — How busy is the resource? (% time busy)</li>
+              <li><strong>Saturation</strong> — Is work queuing? (queue length)</li>
+              <li><strong>Errors</strong> — Are there error events? (device errors, drops)</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <h3>Quick Reference</h3>
+            <ul>
+              <li>CPU: <code>mpstat</code>, <code>vmstat</code>, <code>top</code></li>
+              <li>Memory: <code>free -h</code>, <code>vmstat</code>, <code>sar -r</code></li>
+              <li>Disk: <code>iostat -xz</code>, <code>iotop</code></li>
+              <li>Network: <code>ss -s</code>, <code>sar -n DEV</code>, <code>nstat</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <h2 id="scenario-cpu">Scenario 1: High CPU — Finding the Culprit</h2>
+        <p>You get paged: "Server CPU at 98%." Here's exactly what I run, in order:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 270" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">USE Method: Linux Troubleshooting Decision Tree</text><rect x="280" y="50" width="240" height="36" rx="8" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="400" y="68" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Performance Issue</text><line x1="400" y1="86" x2="400" y2="105" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="105" x2="120" y2="105" stroke="#334155" stroke-width="1.5"/><rect x="40" y="105" width="160" height="44" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="120" y="118" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">CPU High?</text><line x1="120" y1="149" x2="120" y2="165" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="40" y="165" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="120" y="178" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">top / htop</text><line x1="120" y1="201" x2="120" y2="215" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="40" y="215" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="120" y="226" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">strace / perf</text><line x1="400" y1="86" x2="400" y2="105" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="105" x2="310" y2="105" stroke="#334155" stroke-width="1.5"/><rect x="230" y="105" width="160" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="310" y="118" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Memory</text><text x="310" y="132" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Pressure?</text><line x1="310" y1="149" x2="310" y2="165" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="230" y="165" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="310" y="178" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">free / vmstat</text><line x1="310" y1="201" x2="310" y2="215" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="230" y="215" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="310" y="226" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">OOM killer</text><text x="310" y="240" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">huge pages</text><line x1="400" y1="86" x2="400" y2="105" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="105" x2="500" y2="105" stroke="#334155" stroke-width="1.5"/><rect x="420" y="105" width="160" height="44" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="500" y="118" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Disk I/O?</text><line x1="500" y1="149" x2="500" y2="165" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="420" y="165" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="500" y="178" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">iostat / iotop</text><line x1="500" y1="201" x2="500" y2="215" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="420" y="215" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="500" y="226" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">iowait / fio</text><line x1="400" y1="86" x2="400" y2="105" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="105" x2="690" y2="105" stroke="#334155" stroke-width="1.5"/><rect x="610" y="105" width="160" height="44" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="690" y="118" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Network?</text><line x1="690" y1="149" x2="690" y2="165" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="610" y="165" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="690" y="178" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">ss / netstat</text><line x1="690" y1="201" x2="690" y2="215" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="610" y="215" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="690" y="226" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">tcpdump</text><text x="690" y="240" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">packet loss</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">USE method: for each resource check Utilization, Saturation, Errors — systematic, not guessing</figcaption></figure>
+
+
+        <pre><code># Step 1: What's the overall picture?
+$ uptime
+ 14:23:01 up 45 days, load average: 12.34, 8.21, 4.56
+# Load average > number of CPUs = saturated
+# Rising load (4 → 8 → 12) = getting worse
+
+# Step 2: Which processes are eating CPU?
+$ top -bn1 -o %CPU | head -20
+# -b = batch mode, -n1 = one iteration
+# Look at the top consumers
+
+# Step 3: Is it user space or kernel?
+$ mpstat -P ALL 1 5
+# %usr high = application code
+# %sys high = kernel/syscalls (possibly I/O)
+# %iowait high = waiting on disk (not CPU-bound)
+
+# Step 4: What's the process actually doing?
+$ strace -cp 12345
+# Counts syscalls for PID 12345 over a few seconds
+# High read/write = I/O bound disguised as CPU
+# High futex = lock contention
+
+# Step 5: For Java/Node — get a thread dump
+$ kill -3 12345          # Java thread dump to stdout
+$ node --prof-process    # Node.js profiling</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The iowait Trap</div>
+          <p>High <code>%iowait</code> in <code>top</code> looks like CPU usage but it's actually disk I/O. The CPU is idle, waiting for disk. Don't scale up CPU — fix the disk bottleneck. I've seen teams add 8 more cores to a server that needed faster storage.</p>
+        </div>
+
+        <h2 id="scenario-memory">Scenario 2: Memory Pressure and the OOM Killer</h2>
+        <pre><code># Step 1: Current memory state
+$ free -h
+              total    used    free    shared  buff/cache   available
+Mem:           62Gi     58Gi    512Mi   1.2Gi      3.8Gi       2.1Gi
+Swap:         4.0Gi    3.8Gi    200Mi
+# available is what matters, not free
+# Swap usage > 0 = memory pressure
+
+# Step 2: Who's using memory?
+$ ps aux --sort=-%mem | head -10
+# Or for a live view:
+$ top -bn1 -o %MEM | head -15
+
+# Step 3: Has the OOM killer fired?
+$ dmesg | grep -i "oom\|killed"
+# Or check journal:
+$ journalctl -k | grep -i oom
+
+# Step 4: Per-process memory breakdown
+$ cat /proc/12345/status | grep -i vm
+VmPeak:  4521892 kB    # Peak virtual memory
+VmRSS:   3218456 kB    # Resident (actual physical memory)
+VmSwap:   102400 kB    # Swapped out
+
+# Step 5: What's in the page cache?
+$ cat /proc/meminfo | grep -E "Cached|Buffers|Slab"</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">OOM Killer Scoring</div>
+          <p>The kernel picks victims based on <code>oom_score</code>. Higher score = more likely to be killed. Check with <code>cat /proc/PID/oom_score</code>. Protect critical processes: <code>echo -1000 > /proc/PID/oom_score_adj</code>. But be careful — if nothing can be killed, the entire system hangs.</p>
+        </div>
+
+        <h2 id="scenario-disk">Scenario 3: Disk I/O Bottleneck</h2>
+        <pre><code># Step 1: Is I/O the problem?
+$ iostat -xz 1 5
+Device  r/s    w/s    rkB/s   wkB/s  await  svctm  %util
+nvme0n1 2500   800    45000   12000  4.2    0.3    85.0
+# %util > 80% = saturated
+# await > 10ms on SSD = something's wrong
+# r/s + w/s = total IOPS
+
+# Step 2: Which process is doing I/O?
+$ iotop -oP
+# -o = only show processes doing I/O
+# -P = show processes, not threads
+
+# Step 3: Benchmark the disk
+$ fio --name=randread --ioengine=libaio --iodepth=32 \
+    --rw=randread --bs=4k --direct=1 --size=1G \
+    --numjobs=4 --runtime=30 --group_reporting
+# Compare results to expected IOPS for your volume type
+# gp3 EBS: 3,000 baseline IOPS
+# io2: up to 64,000 IOPS
+
+# Step 4: Check for filesystem issues
+$ df -h          # Space usage
+$ df -i          # Inode usage (can run out before space!)
+$ tune2fs -l /dev/nvme0n1p1 | grep -i count</code></pre>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The Inode Exhaustion Incident</div>
+          <p>We had a server with 50% disk space free but couldn't create files. <code>df -i</code> showed 100% inode usage. A logging library was creating millions of tiny temp files. <code>find /tmp -type f -mtime +1 | wc -l</code> returned 12 million. Always monitor inode usage alongside disk space.</p>
+        </div>
+
+        <h2 id="scenario-network">Scenario 4: Network Issues</h2>
+        <pre><code># Step 1: Connection overview
+$ ss -s
+Total: 15234
+TCP:   12891 (estab 8432, closed 3201, orphaned 12, timewait 1246)
+# High TIME_WAIT = lots of short-lived connections
+# High CLOSE_WAIT = application not closing connections
+
+# Step 2: TCP retransmits (packet loss indicator)
+$ nstat -az | grep -i retrans
+TcpRetransSegs    45892    0.0
+# High retransmits = network congestion or packet loss
+
+# Step 3: Connection states breakdown
+$ ss -tan | awk '{print $1}' | sort | uniq -c | sort -rn
+   8432 ESTAB
+   1246 TIME-WAIT
+    892 CLOSE-WAIT
+    234 SYN-SENT
+# CLOSE-WAIT piling up = your app has a connection leak
+
+# Step 4: Bandwidth per interface
+$ sar -n DEV 1 5
+# Or real-time:
+$ nload eth0
+
+# Step 5: DNS resolution issues
+$ dig +trace example.com
+$ time nslookup example.com
+# Slow DNS = slow everything</code></pre>
+
+        <h2 id="systemd">Systemd: Managing Services in Production</h2>
+        <pre><code># Production-grade systemd unit file
+[Unit]
+Description=Order Processing Service
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=notify
+User=appuser
+Group=appuser
+WorkingDirectory=/opt/order-service
+ExecStart=/opt/order-service/bin/server --config /etc/order-service/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/order-service /var/lib/order-service
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=order-service
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+        <pre><code># Essential journalctl commands
+$ journalctl -u order-service -f              # Follow logs
+$ journalctl -u order-service --since "1h ago" # Last hour
+$ journalctl -u order-service -p err           # Errors only
+$ journalctl -u order-service --no-pager -n 100 | grep "ERROR"
+$ journalctl --disk-usage                      # Check log storage
+$ journalctl --vacuum-size=1G                  # Reclaim space</code></pre>
+
+        <h2 id="cgroups">Cgroups: How Containers Use Them</h2>
+        <p>Every container is just a process with cgroup limits. Understanding cgroups helps you debug container resource issues.</p>
+
+        <pre><code># See cgroup limits for a container (cgroups v2)
+$ cat /sys/fs/cgroup/system.slice/docker-CONTAINER_ID.scope/memory.max
+536870912    # 512MB memory limit
+
+$ cat /sys/fs/cgroup/system.slice/docker-CONTAINER_ID.scope/cpu.max
+50000 100000  # 50% of one CPU (50000/100000)
+
+# Check if a container is being throttled
+$ cat /sys/fs/cgroup/.../cpu.stat
+usage_usec 1234567890
+user_usec 1000000000
+system_usec 234567890
+nr_throttled 4521        # &lt;-- This many times throttled
+throttled_usec 89012345  # Total time spent throttled</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Container CPU Throttling</div>
+          <p>If <code>nr_throttled</code> is high, your container's CPU limit is too low. In Kubernetes, this shows up as high latency with low CPU usage in metrics — confusing until you check throttling. This is why many teams remove CPU limits and only set CPU requests.</p>
+        </div>
+
+        <h2 id="kernel-tuning">Kernel Tuning for Production</h2>
+        <pre><code># /etc/sysctl.d/99-production.conf
+
+# Network performance
+net.core.somaxconn = 65535
+net.core.netdev_max_backlog = 65535
+net.ipv4.tcp_max_syn_backlog = 65535
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.ip_local_port_range = 1024 65535
+
+# TCP keepalive (detect dead connections faster)
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 10
+net.ipv4.tcp_keepalive_probes = 6
+
+# Memory
+vm.swappiness = 10              # Prefer killing over swapping
+vm.overcommit_memory = 0        # Heuristic overcommit
+vm.dirty_ratio = 15
+vm.dirty_background_ratio = 5
+
+# File descriptors
+fs.file-max = 2097152
+fs.inotify.max_user_watches = 524288
+
+# Connection tracking (important for k8s nodes)
+net.netfilter.nf_conntrack_max = 1048576</code></pre>
+
+        <pre><code># Apply without reboot
+$ sysctl --system
+
+# Verify
+$ sysctl net.core.somaxconn
+net.core.somaxconn = 65535</code></pre>
+
+        <h2 id="ssh-hardening">SSH Hardening</h2>
+        <pre><code># /etc/ssh/sshd_config — production hardening
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+MaxAuthTries 3
+MaxSessions 5
+ClientAliveInterval 300
+ClientAliveCountMax 2
+X11Forwarding no
+AllowTcpForwarding no
+PermitEmptyPasswords no
+Protocol 2
+
+# Restrict to specific users/groups
+AllowGroups ssh-users
+
+# Use strong ciphers only
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+KexAlgorithms curve25519-sha256,diffie-hellman-group16-sha512</code></pre>
+
+        <h2 id="automation-patterns">Shell Scripting Patterns for Automation</h2>
+        <pre><code>#!/bin/bash
+# Production-safe script template
+set -euo pipefail
+IFS=$'\n\t'
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly LOG_FILE="/var/log/maintenance/$(date +%Y%m%d_%H%M%S).log"
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+die() { log "FATAL: $*"; exit 1; }
+
+# Cleanup trap
+cleanup() {
+    local exit_code=$?
+    log "Script exiting with code $exit_code"
+    # Release locks, remove temp files
+    rm -f /tmp/maintenance.lock
+    exit $exit_code
+}
+trap cleanup EXIT
+
+# Prevent concurrent execution
+exec 200>/tmp/maintenance.lock
+flock -n 200 || die "Another instance is already running"
+
+# Disk cleanup: remove files older than 7 days
+log "Starting disk cleanup..."
+find /var/log/app -name "*.log" -mtime +7 -delete 2>/dev/null || true
+find /tmp -type f -mtime +3 -user appuser -delete 2>/dev/null || true
+
+# Check disk space after cleanup
+USAGE=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
+if (( USAGE > 85 )); then
+    log "WARNING: Disk usage still at ${USAGE}%"
+    # Send alert
+fi
+
+log "Cleanup complete"</code></pre>
+
+        <h2 id="cheat-sheet">Quick Reference Cheat Sheet</h2>
+        <div class="info-box success">
+          <h3>First 60 Seconds on a Problem Server</h3>
+          <ol>
+            <li><code>uptime</code> — load averages, how long has this been going on?</li>
+            <li><code>dmesg -T | tail</code> — kernel errors, OOM kills?</li>
+            <li><code>vmstat 1 5</code> — CPU, memory, I/O overview</li>
+            <li><code>iostat -xz 1 3</code> — disk saturation?</li>
+            <li><code>free -h</code> — memory and swap</li>
+            <li><code>ss -s</code> — connection states</li>
+            <li><code>top -bn1 | head -20</code> — top consumers</li>
+            <li><code>journalctl -p err --since "10m ago"</code> — recent errors</li>
+          </ol>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

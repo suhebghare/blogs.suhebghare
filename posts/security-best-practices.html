@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Best Practices for Modern Applications – Suheb Ghare</title>
+  <meta name="description" content="Security Best Practices for Modern Applications – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Security</span>
+      </div>
+      <h1 class="post-title">Security Best Practices for Modern Applications</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="security-best-practices" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="security-best-practices" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="security-best-practices" data-stat="likes">217</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="security-best-practices" data-stat="dislikes">46</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="security-best-practices">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="security-best-practices">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>A Comprehensive Checklist from 8 Years of Cloud Security</h2>
+        <p>After 8 years of building and securing cloud-native applications on AWS, I've distilled the most impactful security practices into a layered checklist. This isn't theoretical — every item here is something I've either implemented in production or learned the hard way after an incident.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/app-sec1.jpg" alt="Cloud-native security layers" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Seven-layer security model from identity to incident response</figcaption>
+</figure>
+        <p>The checklist is organized by layer, from identity (the most common attack vector) to detection and response (your safety net when prevention fails).</p>
+
+        <div class="diagram">
+          <div class="flow-step">Layer 1: Identity — Who can access what?</div>
+          <div class="flow-step">Layer 2: Network — What can talk to what?</div>
+          <div class="flow-step">Layer 3: Data — Is everything encrypted?</div>
+          <div class="flow-step">Layer 4: Compute — Are workloads hardened?</div>
+          <div class="flow-step">Layer 5: Application — Is the code secure?</div>
+          <div class="flow-step">Layer 6: Detection — Can you see attacks?</div>
+          <div class="flow-step">Layer 7: Response — Can you react fast?</div>
+        </div>
+
+        <h2>Layer 1: Identity & Access Management</h2>
+        <p>Identity is the #1 attack vector in cloud environments. Over 60% of cloud breaches involve compromised credentials or excessive permissions.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 310" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">7-Layer Security Model</text><rect x="20" y="55" width="760" height="30" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="400" y="70" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Response: Runbooks · Isolation</text><rect x="70" y="90" width="660" height="30" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="400" y="105" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Detection: GuardDuty · CloudTrail</text><rect x="120" y="125" width="560" height="30" rx="6" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="400" y="140" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Identity: IAM · MFA · IRSA</text><rect x="170" y="160" width="460" height="30" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="175" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Network: VPC · SGs · NACLs</text><rect x="220" y="195" width="360" height="30" rx="6" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="400" y="210" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Compute: IMDSv2 · Non-root</text><rect x="270" y="230" width="260" height="30" rx="6" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="245" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Application: SAST · Secrets scan</text><rect x="320" y="265" width="160" height="30" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="400" y="280" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Data: Encryption · KMS</text><text x="60" y="170" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Outer</text><text x="740" y="170" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Outer</text><text x="60" y="265" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Inner</text><text x="740" y="265" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Inner</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Defense in depth: 7 layers from data encryption at the core to incident response at the perimeter</figcaption></figure>
+
+
+        <h3>Least Privilege IAM</h3>
+        <ul>
+          <li>✅ No IAM users with long-lived access keys — use AWS SSO/Identity Center for human access</li>
+          <li>✅ Service accounts use IRSA (IAM Roles for Service Accounts) in EKS</li>
+          <li>✅ IAM policies scoped to specific resources, never <code>Resource: "*"</code> for write operations</li>
+          <li>✅ Use IAM Access Analyzer to identify unused permissions</li>
+        </ul>
+        <pre><code># Find unused IAM roles (no activity in 90 days)
+aws iam generate-service-last-accessed-details \
+  --arn "arn:aws:iam::123456789:role/my-role"
+
+# Enable IAM Access Analyzer
+aws accessanalyzer create-analyzer \
+  --analyzer-name "account-analyzer" \
+  --type ACCOUNT</code></pre>
+
+        <h3>No Long-Lived Credentials</h3>
+        <pre><code># IRSA setup for EKS service accounts
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-app
+  namespace: production
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/my-app-role
+---
+# Pod automatically gets temporary credentials via IRSA
+# No access keys stored anywhere</code></pre>
+
+        <h3>MFA Everywhere</h3>
+        <pre><code># IAM policy requiring MFA for all actions
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyAllExceptMFASetupWithoutMFA",
+      "Effect": "Deny",
+      "NotAction": [
+        "iam:CreateVirtualMFADevice",
+        "iam:EnableMFADevice",
+        "iam:GetUser",
+        "iam:ListMFADevices",
+        "sts:GetSessionToken"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "BoolIfExists": {
+          "aws:MultiFactorAuthPresent": "false"
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+        <h2>Layer 2: Network Security</h2>
+        <h3>VPC Design</h3>
+        <ul>
+          <li>✅ Separate VPCs for production, staging, and development</li>
+          <li>✅ Private subnets for all workloads — no EC2 instances in public subnets</li>
+          <li>✅ NAT Gateway for outbound internet access from private subnets</li>
+          <li>✅ VPC endpoints for AWS services (S3, DynamoDB, ECR, STS, CloudWatch)</li>
+        </ul>
+
+        <h3>Security Groups: Principle of Least Access</h3>
+        <pre><code>resource "aws_security_group" "app" {
+  name_prefix = "app-"
+  vpc_id      = aws_vpc.main.id
+
+  # Inbound: only from ALB on app port
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "ALB to app"
+  }
+
+  # Outbound: only to database and AWS services
+  egress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds.id]
+    description     = "App to RDS"
+  }
+
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
+    description     = "App to S3 via VPC endpoint"
+  }
+
+  # NO open egress to 0.0.0.0/0
+}</code></pre>
+
+        <h3>VPC Endpoints: Keep Traffic Off the Internet</h3>
+        <pre><code>resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.us-east-1.ecr.api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+}</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 VPC Endpoints Save Money Too</div>
+          <p>VPC endpoints for S3 and DynamoDB are free (Gateway type). Interface endpoints cost $0.01/hour + data processing, but they eliminate NAT Gateway data processing charges ($0.045/GB). For ECR image pulls alone, this saved us $300/month.</p>
+        </div>
+
+        <h2>Layer 3: Data Protection</h2>
+        <h3>Encryption at Rest</h3>
+        <ul>
+          <li>✅ Account-level default EBS encryption enabled</li>
+          <li>✅ S3 bucket default encryption with SSE-KMS</li>
+          <li>✅ RDS encryption enabled (cannot be enabled after creation — plan ahead)</li>
+          <li>✅ KMS key rotation enabled (automatic annual rotation)</li>
+        </ul>
+        <pre><code># Enable account-level default EBS encryption
+aws ec2 enable-ebs-encryption-by-default
+
+# S3 bucket policy: deny unencrypted uploads
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyUnencryptedUploads",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::my-bucket/*",
+      "Condition": {
+        "StringNotEquals": {
+          "s3:x-amz-server-side-encryption": "aws:kms"
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+        <h3>No Public S3 Buckets</h3>
+        <pre><code># Account-level S3 Block Public Access
+aws s3control put-public-access-block \
+  --account-id 123456789 \
+  --public-access-block-configuration \
+    BlockPublicAcls=true,\
+    IgnorePublicAcls=true,\
+    BlockPublicPolicy=true,\
+    RestrictPublicBuckets=true</code></pre>
+
+        <h2>Layer 4: Compute Security</h2>
+        <h3>IMDSv2 Only</h3>
+        <p>IMDSv1 is the most exploited EC2 vulnerability. It allows SSRF attacks to steal instance credentials. Enforce IMDSv2 (requires a token):</p>
+        <pre><code># Enforce IMDSv2 on all new instances
+aws ec2 modify-instance-metadata-defaults \
+  --http-tokens required \
+  --http-put-response-hop-limit 1</code></pre>
+
+        <h3>No SSH — Use SSM Session Manager</h3>
+        <pre><code># SSM Session Manager — no SSH keys, no port 22, full audit trail
+aws ssm start-session --target i-0123456789abcdef0
+
+# All sessions logged to CloudWatch and S3 automatically</code></pre>
+
+        <h3>Container Security</h3>
+        <pre><code># Kubernetes SecurityContext — non-root, read-only filesystem
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: app
+          image: my-app:v1.2.3@sha256:abc123...
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}</code></pre>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Never Run Privileged Containers</div>
+          <p>A privileged container has full access to the host. If compromised, the attacker owns the node — and potentially the entire cluster. Use <code>allowPrivilegeEscalation: false</code> and <code>capabilities.drop: ["ALL"]</code> on every container. Enforce this with OPA Gatekeeper or Kyverno admission policies.</p>
+        </div>
+
+        <h2>Layer 5: Application Security</h2>
+        <h3>Security Scanning in CI/CD</h3>
+        <pre><code># GitHub Actions security scanning pipeline
+name: Security Scan
+on: [pull_request]
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      # Secret detection
+      - uses: gitleaks/gitleaks-action@v2
+
+      # Container image scanning
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE }}'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      # IaC scanning
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+
+      # Dependency scanning
+      - name: Dependency check
+        run: |
+          npm audit --audit-level=high
+          # Fail on high/critical vulnerabilities</code></pre>
+
+        <h3>Secrets Detection</h3>
+        <pre><code># Pre-commit hook with gitleaks
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks</code></pre>
+
+        <h2>Layer 6: Detection</h2>
+        <h3>Enable Everything</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>What It Detects</th>
+              <th>Monthly Cost (typical)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GuardDuty</td>
+              <td>Compromised instances, credential exfiltration, crypto mining</td>
+              <td>$30-100</td>
+            </tr>
+            <tr>
+              <td>Security Hub</td>
+              <td>Aggregates findings, compliance scoring</td>
+              <td>$10-30</td>
+            </tr>
+            <tr>
+              <td>CloudTrail</td>
+              <td>All AWS API calls (who did what, when)</td>
+              <td>$2-10 (S3 storage)</td>
+            </tr>
+            <tr>
+              <td>VPC Flow Logs</td>
+              <td>Network traffic patterns, rejected connections</td>
+              <td>$50-200 (depends on volume)</td>
+            </tr>
+            <tr>
+              <td>Config</td>
+              <td>Resource configuration changes, compliance drift</td>
+              <td>$20-50</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code># Enable GuardDuty with all protection plans
+aws guardduty create-detector \
+  --enable \
+  --finding-publishing-frequency FIFTEEN_MINUTES \
+  --features '[
+    {"Name": "S3_DATA_EVENTS", "Status": "ENABLED"},
+    {"Name": "EKS_AUDIT_LOGS", "Status": "ENABLED"},
+    {"Name": "EBS_MALWARE_PROTECTION", "Status": "ENABLED"},
+    {"Name": "RDS_LOGIN_EVENTS", "Status": "ENABLED"},
+    {"Name": "LAMBDA_NETWORK_LOGS", "Status": "ENABLED"}
+  ]'</code></pre>
+
+        <h2>Layer 7: Incident Response</h2>
+        <h3>Automated Isolation Runbook</h3>
+        <p>When GuardDuty detects a compromised instance, a Lambda function automatically isolates it:</p>
+        <pre><code># Lambda auto-remediation for compromised EC2
+import boto3
+
+def handler(event, context):
+    instance_id = event['detail']['resource']['instanceDetails']['instanceId']
+    ec2 = boto3.client('ec2')
+
+    # Create forensic security group (no ingress, no egress)
+    sg = ec2.create_security_group(
+        GroupName=f'forensic-isolation-{instance_id}',
+        Description='Isolation SG for compromised instance',
+        VpcId=vpc_id
+    )
+
+    # Replace all security groups with isolation SG
+    ec2.modify_instance_attribute(
+        InstanceId=instance_id,
+        Groups=[sg['GroupId']]
+    )
+
+    # Create EBS snapshots for forensics
+    volumes = ec2.describe_volumes(
+        Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}]
+    )
+    for vol in volumes['Volumes']:
+        ec2.create_snapshot(
+            VolumeId=vol['VolumeId'],
+            Description=f'Forensic snapshot - {instance_id}'
+        )
+
+    # Tag instance
+    ec2.create_tags(
+        Resources=[instance_id],
+        Tags=[{'Key': 'SecurityStatus', 'Value': 'ISOLATED'}]
+    )
+
+    # Notify security team
+    sns = boto3.client('sns')
+    sns.publish(
+        TopicArn='arn:aws:sns:us-east-1:123456789:security-incidents',
+        Subject=f'Instance {instance_id} isolated - GuardDuty finding',
+        Message=f'Instance automatically isolated. Review GuardDuty finding.'
+    )</code></pre>
+
+        <h3>Incident Runbooks</h3>
+        <div class="info-box warning">
+          <p><strong>Every team should have runbooks for these scenarios:</strong> compromised IAM credentials, compromised EC2 instance, exposed S3 bucket, DDoS attack, data exfiltration alert. Write them before you need them — you won't have time during an incident.</p>
+        </div>
+
+        <h2>Security Posture Summary</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Key Actions</th>
+              <th>Effort</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Identity</td>
+              <td>SSO + MFA + IRSA + Access Analyzer</td>
+              <td>Medium</td>
+              <td>Critical</td>
+            </tr>
+            <tr>
+              <td>Network</td>
+              <td>Private subnets + SGs + VPC endpoints</td>
+              <td>Medium</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td>Data</td>
+              <td>KMS encryption + no public buckets</td>
+              <td>Low</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td>Compute</td>
+              <td>IMDSv2 + SSM + non-root containers</td>
+              <td>Low</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td>Application</td>
+              <td>SAST/DAST + dependency scanning + secrets detection</td>
+              <td>Medium</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td>Detection</td>
+              <td>GuardDuty + Security Hub + CloudTrail</td>
+              <td>Low</td>
+              <td>Critical</td>
+            </tr>
+            <tr>
+              <td>Response</td>
+              <td>Auto-isolation + runbooks + postmortems</td>
+              <td>High</td>
+              <td>Critical</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Key Takeaways</h2>
+        <ul>
+          <li><strong>Start with identity</strong> — it's the most common attack vector and the highest-impact fix</li>
+          <li><strong>No long-lived credentials anywhere</strong> — use IRSA, SSO, and temporary tokens</li>
+          <li><strong>Encrypt everything by default</strong> — enable account-level EBS encryption and S3 block public access</li>
+          <li><strong>IMDSv2 is non-negotiable</strong> — IMDSv1 is the most exploited EC2 vulnerability</li>
+          <li><strong>Scan in CI/CD, not after deployment</strong> — shift security left</li>
+          <li><strong>Enable GuardDuty</strong> — it's cheap and catches things you'd never notice manually</li>
+          <li><strong>Automate incident response</strong> — humans are too slow for initial containment</li>
+          <li><strong>Write runbooks before incidents</strong> — you won't have time during one</li>
+        </ul>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

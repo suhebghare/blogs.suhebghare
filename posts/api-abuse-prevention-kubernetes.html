@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preventing API Abuse in Kubernetes – Suheb Ghare</title>
+  <meta name="description" content="Preventing API Abuse in Kubernetes – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Kubernetes</span>
+      </div>
+      <h1 class="post-title">Preventing API Abuse in Kubernetes</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="api-abuse-prevention-kubernetes" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="api-abuse-prevention-kubernetes" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="api-abuse-prevention-kubernetes" data-stat="likes">200</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="api-abuse-prevention-kubernetes" data-stat="dislikes">15</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="api-abuse-prevention-kubernetes">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="api-abuse-prevention-kubernetes">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Rate Limiting at Every Layer</h2>
+        <p>When a scraper hit our product catalog API at 10,000 requests per minute, our application-level rate limiter caught it — but not before the pods had autoscaled to 24 replicas and our Redis cluster was at 90% memory. The scraper was costing us $400/day in compute before we even noticed.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/waf1.png" alt="API abuse prevention layers" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Three-layer rate limiting: Ingress → Service mesh → Application</figcaption>
+</figure>
+        <p>That incident taught us that API abuse prevention in Kubernetes requires defense at every layer: ingress, service mesh, and application. Each layer catches different attack patterns, and relying on just one leaves gaps that attackers will find.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">10K/min</div>
+            <div class="metric-label">Scraper request rate (before mitigation)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">3 layers</div>
+            <div class="metric-label">Rate limiting depth</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$400/day</div>
+            <div class="metric-label">Cost of unmitigated scraping</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">99.7%</div>
+            <div class="metric-label">Abuse traffic blocked after implementation</div>
+          </div>
+        </div>
+
+        <h2>Layer 1: Ingress-Level Rate Limiting (Nginx)</h2>
+        <p>The first line of defense is at the ingress controller. Nginx Ingress supports rate limiting via annotations, and it's the cheapest place to block traffic — before it reaches your service mesh or application pods.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 255" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">3-Layer API Rate Limiting in Kubernetes</text><rect x="20" y="55" width="240" height="120" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Layer 1</text><text x="140" y="90" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Nginx Ingress</text><text x="140" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">100 req/min per IP</text><text x="140" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Catches:</text><text x="140" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Brute force</text><text x="140" y="158" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">DDoS</text><line x1="260" y1="105" x2="280" y2="105" stroke="105" stroke-width="2" marker-end="url(#a)"/><rect x="280" y="55" width="240" height="120" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Layer 2</text><text x="400" y="90" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Istio EnvoyFilter</text><text x="400" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Per-user with Redis</text><text x="400" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Catches:</text><text x="400" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Authenticated</text><text x="400" y="158" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">abuse</text><line x1="520" y1="105" x2="540" y2="105" stroke="105" stroke-width="2" marker-end="url(#a)"/><rect x="540" y="55" width="240" height="120" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="660" y="72" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Layer 3</text><text x="660" y="90" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Application</text><text x="660" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Per-endpoint
+business logic</text><text x="660" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Catches:</text><text x="660" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Business rule</text><text x="660" y="158" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">violations</text><rect x="20" y="195" width="760" height="44" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="210" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Request → Ingress (IP limit) → Envoy (user limit) → App (business limit) → Response</text><text x="400" y="226" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Each layer passes through what it can't catch — defense in depth</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Three layers: infrastructure blocks volume attacks, service mesh blocks per-user abuse, app enforces business rules</figcaption></figure>
+
+
+        <h3>Nginx Ingress Rate Limit Annotations</h3>
+        <pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: product-catalog-api
+  annotations:
+    # Global rate limit: 60 requests per minute per IP
+    nginx.ingress.kubernetes.io/limit-rps: "1"
+    nginx.ingress.kubernetes.io/limit-rpm: "60"
+
+    # Burst allowance: allow 20 requests above limit before blocking
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "20"
+
+    # Rate limit by source IP
+    nginx.ingress.kubernetes.io/limit-whitelist: "10.0.0.0/8,172.16.0.0/12"
+
+    # Return 429 Too Many Requests (not 503)
+    nginx.ingress.kubernetes.io/custom-http-errors: "429"
+
+    # Connection limits
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-catalog
+                port:
+                  number: 8080</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ Nginx Rate Limiting Gotcha</div>
+          <p>If you're behind a load balancer or CDN, the source IP seen by Nginx is the load balancer's IP — not the client's. You must configure <code>use-forwarded-headers: "true"</code> in the Nginx ConfigMap and set <code>proxy-real-ip-cidr</code> to your load balancer's CIDR range. Otherwise, all traffic gets rate-limited as a single client.</p>
+        </div>
+
+        <pre><code># Nginx ConfigMap for proper IP detection behind ALB
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-controller
+  namespace: ingress-nginx
+data:
+  use-forwarded-headers: "true"
+  compute-full-forwarded-for: "true"
+  proxy-real-ip-cidr: "10.0.0.0/8"  # Your VPC CIDR
+  forwarded-for-header: "X-Forwarded-For"</code></pre>
+
+        <h2>Layer 2: Service Mesh Rate Limiting (Istio + Envoy)</h2>
+        <p>Istio's EnvoyFilter gives us fine-grained rate limiting with a Redis backend for distributed state. This catches abuse that bypasses ingress (internal service-to-service calls) and supports per-user rate limits based on JWT claims.</p>
+
+        <h3>Istio Rate Limit Service with Redis</h3>
+        <pre><code># Deploy rate limit service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratelimit
+  namespace: istio-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ratelimit
+  template:
+    metadata:
+      labels:
+        app: ratelimit
+    spec:
+      containers:
+        - name: ratelimit
+          image: envoyproxy/ratelimit:v1.4.0
+          ports:
+            - containerPort: 8081
+              name: grpc
+          env:
+            - name: REDIS_SOCKET_TYPE
+              value: "tcp"
+            - name: REDIS_URL
+              value: "redis.istio-system.svc.cluster.local:6379"
+            - name: RUNTIME_ROOT
+              value: "/data"
+            - name: RUNTIME_SUBDIRECTORY
+              value: "ratelimit"
+          volumeMounts:
+            - name: config
+              mountPath: /data/ratelimit/config
+      volumes:
+        - name: config
+          configMap:
+            name: ratelimit-config
+---
+# Rate limit configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ratelimit-config
+  namespace: istio-system
+data:
+  config.yaml: |
+    domain: product-api
+    descriptors:
+      # Per-IP rate limit
+      - key: remote_address
+        rate_limit:
+          unit: minute
+          requests_per_unit: 60
+      # Per-user rate limit (from JWT)
+      - key: user_id
+        rate_limit:
+          unit: minute
+          requests_per_unit: 120
+      # Per-user, per-endpoint rate limit
+      - key: user_id
+        descriptors:
+          - key: path
+            value: "/api/v1/products/search"
+            rate_limit:
+              unit: minute
+              requests_per_unit: 30</code></pre>
+
+        <h3>EnvoyFilter for Rate Limit Integration</h3>
+        <pre><code>apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: ratelimit-filter
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.ratelimit
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            domain: product-api
+            failure_mode_deny: false
+            rate_limit_service:
+              grpc_service:
+                envoy_grpc:
+                  cluster_name: rate_limit_cluster
+              transport_api_version: V3</code></pre>
+
+        <h2>Layer 3: Application-Level Rate Limiting</h2>
+        <p>Application-level rate limiting is the most granular — it can rate limit based on business logic (per-user quotas, per-API-key limits, per-subscription-tier). We use a middleware pattern with Redis as the backing store.</p>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Why All Three Layers?</div>
+          <p>Ingress catches volumetric attacks cheaply. Service mesh catches distributed abuse across services. Application-level catches business logic abuse (e.g., a user scraping within their rate limit but across many endpoints). Each layer has a different cost-to-catch ratio.</p>
+        </div>
+
+        <h2>Authentication: JWT Validation at Ingress vs In-App</h2>
+        <p>Where you validate JWTs matters for both security and performance:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Approach</th>
+              <th>Pros</th>
+              <th>Cons</th>
+              <th>When to Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>At Ingress (Istio RequestAuthentication)</strong></td>
+              <td>Rejects invalid tokens before they reach pods; centralized policy</td>
+              <td>Can't do fine-grained authorization; limited claim inspection</td>
+              <td>Always — as a first pass</td>
+            </tr>
+            <tr>
+              <td><strong>In Application</strong></td>
+              <td>Full claim inspection; business logic authorization; role-based access</td>
+              <td>Every service must implement; tokens already consumed resources</td>
+              <td>Always — for authorization decisions</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code># Istio JWT validation at ingress
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: product-catalog
+  jwtRules:
+    - issuer: "https://auth.example.com"
+      jwksUri: "https://auth.example.com/.well-known/jwks.json"
+      forwardOriginalToken: true
+      outputPayloadToHeader: "x-jwt-payload"
+---
+# Require valid JWT for all requests
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: require-jwt
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: product-catalog
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ["*"]</code></pre>
+
+        <h2>Real Incident: Product Catalog Scraper</h2>
+        <p>In September 2023, a competitor deployed a scraper against our product catalog API. Here's how we detected and stopped it:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Day 1 — Anomaly Detected</h3>
+            <p>Grafana alert fires: product-catalog pod CPU usage jumped from 40% to 85%. HPA scaled from 6 to 24 replicas. Investigation reveals a single API key making 10,000 requests/minute to <code>/api/v1/products?page=N</code>, systematically paginating through our entire catalog.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, +30min — Immediate Mitigation</h3>
+            <p>Revoked the API key. But the scraper switched to unauthenticated requests from 200+ residential IPs, each making 50 requests/minute — below our per-IP rate limit.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, +2hrs — Pattern-Based Blocking</h3>
+            <p>Deployed an EnvoyFilter that detects sequential pagination patterns (page=1, page=2, page=3...) from the same IP within a short window. Any IP requesting more than 20 sequential pages in 5 minutes gets blocked for 1 hour.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 2 — Long-Term Fix</h3>
+            <p>Implemented cursor-based pagination (replacing page numbers with opaque tokens), added per-endpoint rate limits at the application level, and deployed a NetworkPolicy restricting the product-catalog service's egress.</p>
+          </div>
+        </div>
+
+        <h2>Network Policies for Lateral Movement Prevention</h2>
+        <p>If an attacker compromises one service, NetworkPolicies prevent them from reaching other services. Here's our default-deny policy with explicit allowlists:</p>
+        <pre><code># Default deny all ingress and egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow product-catalog to receive traffic only from ingress and API gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-product-catalog-ingress
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: product-catalog
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# Allow product-catalog egress only to database and Redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-product-catalog-egress
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: product-catalog
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53</code></pre>
+
+        <h2>mTLS Between Services</h2>
+        <p>Istio's PeerAuthentication enforces mutual TLS between all services, preventing traffic sniffing and man-in-the-middle attacks within the cluster:</p>
+        <pre><code>apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: strict-mtls
+  namespace: production
+spec:
+  mtls:
+    mode: STRICT</code></pre>
+
+        <div class="info-box success">
+          <p>With mTLS in STRICT mode, even if an attacker gains access to a pod, they can't make requests to other services without a valid Istio-issued certificate. Combined with NetworkPolicies, this creates a zero-trust network within your cluster.</p>
+        </div>
+
+        <h2>Key Takeaways</h2>
+        <ul>
+          <li><strong>Rate limit at every layer:</strong> Ingress (cheap, volumetric), service mesh (distributed, per-user), application (business logic)</li>
+          <li><strong>Fix the X-Forwarded-For problem first</strong> — without proper IP detection, all your rate limits are useless</li>
+          <li><strong>Validate JWTs at ingress AND in-app</strong> — ingress for authentication, app for authorization</li>
+          <li><strong>Default-deny NetworkPolicies</strong> are non-negotiable in production</li>
+          <li><strong>mTLS in STRICT mode</strong> prevents lateral movement even if a pod is compromised</li>
+          <li><strong>Monitor for abuse patterns</strong>, not just volume — sequential pagination, unusual endpoint combinations, and timing patterns</li>
+          <li><strong>Cursor-based pagination</strong> is harder to scrape than page-number pagination</li>
+        </ul>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

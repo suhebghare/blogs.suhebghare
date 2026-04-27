@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Cost Optimization: Doing More with Less – Suheb Ghare</title>
+  <meta name="description" content="Cloud Cost Optimization: Doing More with Less – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Cloud</span>
+      </div>
+      <h1 class="post-title">Cloud Cost Optimization: Doing More with Less</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="cloud-cost-optimization" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="cloud-cost-optimization" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="cloud-cost-optimization" data-stat="likes">313</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="cloud-cost-optimization" data-stat="dislikes">37</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="cloud-cost-optimization">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="cloud-cost-optimization">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="the-result">The Result: $180K → $108K/Month</h2>
+        <p>Over 4 months, we reduced our AWS bill by 40% — saving $72K/month ($864K/year) — without degrading performance or removing any services. Here's the exact framework and every optimization we made.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/finops-2.png" alt="AWS cost optimization strategies" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Five-phase framework: Visibility → Right-sizing → Waste → Architecture → Commitments</figcaption>
+</figure>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$180K</div>
+            <div class="metric-label">Monthly AWS spend (before)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$108K</div>
+            <div class="metric-label">Monthly AWS spend (after)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">40%</div>
+            <div class="metric-label">Total reduction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$864K</div>
+            <div class="metric-label">Annual savings</div>
+          </div>
+        </div>
+
+        <h2 id="framework">The 5-Phase Framework</h2>
+        <div class="diagram">
+          <div class="flow-step">1. Visibility<br><small>Tag everything, build dashboards</small></div>
+          <div class="flow-step">2. Right-sizing<br><small>Match resources to actual usage</small></div>
+          <div class="flow-step">3. Waste Elimination<br><small>Kill unused resources</small></div>
+          <div class="flow-step">4. Architecture Optimization<br><small>Redesign expensive patterns</small></div>
+          <div class="flow-step">5. Commitment Discounts<br><small>Savings Plans & RIs</small></div>
+        </div>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Order Matters</div>
+          <p>Don't buy Savings Plans first. I've seen teams commit to Reserved Instances before right-sizing — they locked in the wrong instance types for 1 year. Always optimize first, commit last.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 305" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Cloud Cost Optimization: 5-Phase Framework</text><rect x="20" y="50" width="140" height="100" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="90" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">1</text><text x="90" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Visibility</text><text x="90" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Tag everything</text><text x="90" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Cost Explorer</text><line x1="160" y1="100" x2="180" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="175" y="50" width="140" height="100" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="245" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">2</text><text x="245" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Right-size</text><text x="245" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">EC2/RDS</text><text x="245" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">recommendations</text><line x1="315" y1="100" x2="335" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="330" y="50" width="140" height="100" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="400" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">3</text><text x="400" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Waste</text><text x="400" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Idle resources</text><text x="400" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Orphaned EBS</text><line x1="470" y1="100" x2="490" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="485" y="50" width="140" height="100" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="555" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">4</text><text x="555" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Architecture</text><text x="555" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">S3 tiers</text><text x="555" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Serverless</text><line x1="625" y1="100" x2="645" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="640" y="50" width="140" height="100" rx="10" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="710" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">5</text><text x="710" y="90" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Commitments</text><text x="710" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Savings Plans</text><text x="710" y="132" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">vs RIs</text><rect x="20" y="170" width="760" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="188" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Result: $180K → $108K/month (40% reduction)</text><text x="400" y="204" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Biggest wins: right-sizing ($28K) + Savings Plans ($22K) + waste cleanup ($7.5K)</text><rect x="20" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="90" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Unattached EBS</text><text x="90" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$3,200</text><rect x="170" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="240" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Idle NAT GW</text><text x="240" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$1,800</text><rect x="320" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="390" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Old Snapshots</text><text x="390" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$1,400</text><rect x="470" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="540" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Unused EIPs</text><text x="540" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$600</text><rect x="620" y="240" width="140" height="44" rx="6" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="690" y="254" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Idle LBs</text><text x="690" y="270" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">$500</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Start with visibility — you can't optimize what you can't see. Tag first, optimize second</figcaption></figure>
+
+        </div>
+
+        <h2 id="phase-1">Phase 1: Visibility — You Can't Optimize What You Can't See</h2>
+        <p>We started by tagging every resource with <code>team</code>, <code>environment</code>, <code>service</code>, and <code>cost-center</code>. Then built per-team dashboards in AWS Cost Explorer.</p>
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/finops-2.png" alt="AWS cost breakdown by service" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">Cost breakdown by service — compute dominates at 60%, making it the highest-ROI optimization target</figcaption>
+</figure>
+
+        <pre><code># Enforce tagging with AWS Config rule
+resource "aws_config_config_rule" "required_tags" {
+  name = "required-tags"
+  source {
+    owner             = "AWS"
+    source_identifier = "REQUIRED_TAGS"
+  }
+  input_parameters = jsonencode({
+    tag1Key   = "team"
+    tag2Key   = "environment"
+    tag3Key   = "service"
+    tag4Key   = "cost-center"
+  })
+}
+
+# SCP to prevent untagged resource creation
+resource "aws_organizations_policy" "require_tags" {
+  name    = "require-tags"
+  content = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "DenyUntaggedEC2"
+      Effect    = "Deny"
+      Action    = ["ec2:RunInstances"]
+      Resource  = ["arn:aws:ec2:*:*:instance/*"]
+      Condition = {
+        "StringEquals" = {
+          "aws:RequestTag/team" = ""
+        }
+      }
+    }]
+  })
+}</code></pre>
+
+        <p>Within 2 weeks, we had visibility into which team was spending what. The data team was 42% of the bill — mostly oversized EMR clusters running 24/7 for jobs that ran 3 hours/day.</p>
+
+        <h2 id="phase-2">Phase 2: Right-Sizing — The Biggest Single Win</h2>
+        <p>Right-sizing EC2 instances saved us $28K/month alone. Most instances were using less than 20% of their allocated CPU.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Service</th><th>Before</th><th>After</th><th>Monthly Savings</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>API servers (12x)</td><td>m5.2xlarge</td><td>m6i.xlarge</td><td>$4,800</td></tr>
+            <tr><td>RDS Primary</td><td>r5.4xlarge</td><td>r6g.2xlarge (Graviton)</td><td>$3,200</td></tr>
+            <tr><td>ElastiCache</td><td>r5.2xlarge (3 nodes)</td><td>r6g.xlarge (3 nodes)</td><td>$2,400</td></tr>
+            <tr><td>Worker nodes (8x)</td><td>c5.4xlarge</td><td>c6g.2xlarge (Graviton)</td><td>$6,100</td></tr>
+            <tr><td>EMR clusters</td><td>24/7 m5.4xlarge x10</td><td>Scheduled, Spot instances</td><td>$11,500</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Graviton = Free Money</div>
+          <p>Switching to Graviton (ARM) instances gave us 20% better price/performance. Same workload, lower cost. We moved all stateless services to Graviton in 2 weeks. The only blocker was one service with a native x86 dependency — we kept that on Intel.</p>
+        </div>
+
+        <h2 id="phase-3">Phase 3: Waste Elimination — The Low-Hanging Fruit</h2>
+        <p>We wrote a script that runs weekly to find waste. Here's what we found in the first scan:</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$3,200/mo</div>
+            <div class="metric-label">Unattached EBS volumes (47 volumes)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$1,800/mo</div>
+            <div class="metric-label">Old EBS snapshots (>90 days, 2.3TB)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$2,100/mo</div>
+            <div class="metric-label">Idle NAT Gateways (3 unused VPCs)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$450/mo</div>
+            <div class="metric-label">Unused Elastic IPs (18 addresses)</div>
+          </div>
+        </div>
+
+        <pre><code># Find unattached EBS volumes
+aws ec2 describe-volumes \
+  --filters "Name=status,Values=available" \
+  --query 'Volumes[*].{ID:VolumeId,Size:Size,Created:CreateTime,Type:VolumeType}' \
+  --output table
+
+# Find unused Elastic IPs
+aws ec2 describe-addresses \
+  --query 'Addresses[?AssociationId==null].{IP:PublicIp,AllocID:AllocationId}' \
+  --output table
+
+# Find old snapshots (>90 days)
+aws ec2 describe-snapshots --owner-ids self \
+  --query "Snapshots[?StartTime<='$(date -d '-90 days' +%Y-%m-%d)'].{ID:SnapshotId,Size:VolumeSize,Date:StartTime}" \
+  --output table</code></pre>
+
+        <h2 id="phase-4">Phase 4: Architecture Optimization</h2>
+
+        <h3 id="s3-tiering">S3 Intelligent-Tiering: $8K/Month Saved</h3>
+        <p>We had 45TB in S3 Standard. Analysis showed 70% of objects hadn't been accessed in 30+ days. Instead of manually managing lifecycle policies, we enabled Intelligent-Tiering.</p>
+
+        <pre><code>resource "aws_s3_bucket_intelligent_tiering_configuration" "main" {
+  bucket = aws_s3_bucket.data.id
+  name   = "full-bucket-tiering"
+
+  tiering {
+    access_tier = "DEEP_ARCHIVE_ACCESS"
+    days        = 180
+  }
+  tiering {
+    access_tier = "ARCHIVE_ACCESS"
+    days        = 90
+  }
+}</code></pre>
+
+        <div class="cost-badge medium">S3 Standard: $0.023/GB → Intelligent-Tiering Archive: $0.004/GB (83% cheaper)</div>
+
+        <h3 id="cloudfront-caching">CloudFront Caching: Reduced Data Transfer by 60%</h3>
+        <p>Our API responses were cacheable for 60 seconds but we weren't using CloudFront. Adding a CDN with cache-control headers cut our data transfer costs from $12K to $4.8K/month.</p>
+
+        <h3 id="lambda-vs-ec2">Lambda for Bursty Workloads</h3>
+        <p>We had 4 EC2 instances running 24/7 for a webhook processor that was busy 2 hours/day. Moved to Lambda — cost went from $1,200/month to $85/month.</p>
+
+        <h2 id="phase-5">Phase 5: Commitment Discounts</h2>
+        <p>After 3 months of optimized spending, we had stable baseline usage to commit against.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Strategy</th><th>Discount</th><th>Flexibility</th><th>Best For</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Compute Savings Plans</strong></td><td>Up to 66%</td><td>Any instance family, region, OS</td><td>Most workloads — start here</td></tr>
+            <tr><td><strong>EC2 Instance Savings Plans</strong></td><td>Up to 72%</td><td>Specific instance family + region</td><td>Stable, predictable workloads</td></tr>
+            <tr><td><strong>Reserved Instances</strong></td><td>Up to 72%</td><td>Specific instance type + AZ</td><td>Databases, fixed infrastructure</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Coverage Target: 70-80%</div>
+          <p>Don't try to cover 100% of your spend with commitments. Aim for 70-80% coverage of your steady-state baseline. The remaining 20-30% should be On-Demand or Spot for flexibility. We committed $65K/month in Compute Savings Plans (1-year, no upfront) — saving an additional $22K/month.</p>
+        </div>
+
+        <h2 id="monthly-review">The Monthly Cost Review Process</h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Week 1: Automated Waste Scan</h3>
+            <p>Script runs, generates report of unattached volumes, idle resources, underutilized instances. Auto-tags resources for review.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 2: Team Cost Review</h3>
+            <p>Each team reviews their spend vs budget. Top 3 cost drivers identified. Action items assigned.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 3: Architecture Review</h3>
+            <p>Review any service spending >$5K/month. Can it be optimized? Different instance type? Different architecture?</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 4: Commitment Review</h3>
+            <p>Review Savings Plan utilization and coverage. Adjust commitments if usage patterns changed.</p>
+          </div>
+        </div>
+
+        <h2 id="savings-breakdown">Final Savings Breakdown</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Optimization</th><th>Monthly Savings</th><th>% of Total</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Right-sizing (EC2, RDS, ElastiCache)</td><td>$28,000</td><td>39%</td></tr>
+            <tr><td>Commitment discounts (Savings Plans)</td><td>$22,000</td><td>31%</td></tr>
+            <tr><td>S3 Intelligent-Tiering</td><td>$8,000</td><td>11%</td></tr>
+            <tr><td>Waste elimination</td><td>$7,550</td><td>10%</td></tr>
+            <tr><td>CloudFront caching</td><td>$5,350</td><td>7%</td></tr>
+            <tr><td>Lambda migration (bursty workloads)</td><td>$1,100</td><td>2%</td></tr>
+            <tr><td><strong>Total</strong></td><td><strong>$72,000</strong></td><td><strong>100%</strong></td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box success">
+          <h3>Key Takeaways</h3>
+          <ul class="icon-list">
+            <li>Tag everything — you can't optimize what you can't measure</li>
+            <li>Right-size before committing — don't lock in the wrong instance types</li>
+            <li>Graviton instances are a free 20% discount for most workloads</li>
+            <li>Run waste detection weekly, not quarterly</li>
+            <li>S3 Intelligent-Tiering is almost always the right choice</li>
+            <li>Aim for 70-80% Savings Plan coverage, not 100%</li>
+            <li>Make cost a team metric, not just a finance metric</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>
