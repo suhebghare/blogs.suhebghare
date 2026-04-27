@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incident Response & Postmortems: Learning from Failure – Suheb Ghare</title>
+  <meta name="description" content="Incident Response & Postmortems: Learning from Failure – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Observability</span>
+      </div>
+      <h1 class="post-title">Incident Response & Postmortems: Learning from Failure</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="incident-response-postmortems" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="incident-response-postmortems" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="incident-response-postmortems" data-stat="likes">327</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="incident-response-postmortems" data-stat="dislikes">28</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="incident-response-postmortems">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="incident-response-postmortems">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>How We Cut MTTR by 60%</h2>
+        <p>Two years ago, our mean time to resolution (MTTR) for production incidents was 47 minutes. Today it's 19 minutes. The difference wasn't better tooling or faster engineers — it was a structured incident response process that eliminates confusion, assigns clear roles, and prioritizes mitigation over root cause analysis.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/olly1.jpg" alt="Incident response war room" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Structured incident response reduces MTTR from 47 to 19 minutes</figcaption>
+</figure>
+        <p>This is our complete incident response playbook: severity levels, escalation policies, war room procedures, postmortem templates, and the tracking system that ensures action items actually get done.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">47min → 19min</div>
+            <div class="metric-label">MTTR reduction (60%)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">94%</div>
+            <div class="metric-label">Postmortem completion rate</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">87%</div>
+            <div class="metric-label">Action item closure rate (within 30 days)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">5 phases</div>
+            <div class="metric-label">Structured response process</div>
+          </div>
+        </div>
+
+        <h2>The 5 Phases of Incident Response</h2>
+        <div class="diagram">
+          <div class="flow-step">1. DETECT — Automated alerting catches the issue</div>
+          <div class="flow-step">2. TRIAGE — Assess severity, assign Incident Commander</div>
+          <div class="flow-step">3. MITIGATE — Stop the bleeding (don't find root cause yet)</div>
+          <div class="flow-step">4. RESOLVE — Fix the underlying issue</div>
+          <div class="flow-step">5. REVIEW — Blameless postmortem within 48 hours</div>
+        </div>
+
+        <h2>Severity Levels</h2>
+        <p>Clear severity definitions eliminate the "is this a SEV1 or SEV2?" debate during an incident. We define severity by customer impact, not by technical complexity:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">5-Phase Incident Response Timeline (SEV1)</text><rect x="20" y="55" width="135" height="70" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="87" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Detect</text><text x="87" y="98" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle"><2 min</text><line x1="155" y1="90" x2="172" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="172" y="55" width="135" height="70" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="239" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Triage</text><text x="239" y="98" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle"><5 min</text><line x1="307" y1="90" x2="324" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="324" y="55" width="135" height="70" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="391" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Mitigate</text><text x="391" y="98" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle"><15 min</text><line x1="459" y1="90" x2="476" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="476" y="55" width="135" height="70" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="543" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Resolve</text><text x="543" y="98" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle"><60 min</text><line x1="611" y1="90" x2="628" y2="90" stroke="90" stroke-width="2" marker-end="url(#a)"/><rect x="628" y="55" width="135" height="70" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="695" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Review</text><text x="695" y="98" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle"><48 hrs</text><rect x="20" y="145" width="370" height="55" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="165" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Before: MTTR 47 min</text><text x="205" y="182" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">No runbooks, ad-hoc response</text><rect x="410" y="145" width="370" height="55" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="165" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">After: MTTR 19 min</text><text x="595" y="182" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Structured phases + automation</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Structured phases with time targets — detect fast, mitigate first, resolve second, review always</figcaption></figure>
+
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Definition</th>
+              <th>Response Time</th>
+              <th>Escalation</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SEV1</strong></td>
+              <td>Complete service outage or data breach affecting all users</td>
+              <td>5 minutes</td>
+              <td>VP Engineering + CTO notified</td>
+              <td>Production database down, payment processing failed</td>
+            </tr>
+            <tr>
+              <td><strong>SEV2</strong></td>
+              <td>Major feature degraded, affecting &gt;10% of users</td>
+              <td>15 minutes</td>
+              <td>Engineering Manager notified</td>
+              <td>Search broken, checkout slow (>10s), login failures for subset</td>
+            </tr>
+            <tr>
+              <td><strong>SEV3</strong></td>
+              <td>Minor feature degraded, workaround available</td>
+              <td>1 hour</td>
+              <td>Team lead notified</td>
+              <td>Email notifications delayed, non-critical API errors</td>
+            </tr>
+            <tr>
+              <td><strong>SEV4</strong></td>
+              <td>Cosmetic issue or minor bug, no user impact</td>
+              <td>Next business day</td>
+              <td>None — handled in sprint</td>
+              <td>Dashboard rendering glitch, log formatting error</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ When in Doubt, Escalate Up</div>
+          <p>If you're debating between SEV2 and SEV1, call it SEV1. It's far better to over-escalate and stand down than to under-escalate and lose time. We've never had anyone criticized for escalating too aggressively. We have had incidents where under-escalation cost us 30+ minutes.</p>
+        </div>
+
+        <h2>PagerDuty Escalation Policy</h2>
+        <p>Our PagerDuty escalation policy ensures the right people are engaged at the right time:</p>
+        <pre><code># PagerDuty Escalation Policy (Terraform)
+resource "pagerduty_escalation_policy" "production" {
+  name      = "Production Incidents"
+  num_loops = 3
+
+  rule {
+    escalation_delay_in_minutes = 5
+    target {
+      type = "schedule_reference"
+      id   = pagerduty_schedule.primary_oncall.id
+    }
+  }
+
+  rule {
+    escalation_delay_in_minutes = 10
+    target {
+      type = "schedule_reference"
+      id   = pagerduty_schedule.secondary_oncall.id
+    }
+    target {
+      type = "user_reference"
+      id   = pagerduty_user.engineering_manager.id
+    }
+  }
+
+  rule {
+    escalation_delay_in_minutes = 15
+    target {
+      type = "user_reference"
+      id   = pagerduty_user.vp_engineering.id
+    }
+  }
+}</code></pre>
+
+        <div class="info-box">
+          <p><strong>Escalation timeline:</strong> On-call engineer has 5 minutes to acknowledge. If no ack, secondary on-call + engineering manager paged at 10 minutes. If still no ack, VP Engineering paged at 15 minutes. After 3 loops (45 minutes), the incident auto-escalates to the executive on-call.</p>
+        </div>
+
+        <h2>The War Room</h2>
+        <p>For SEV1 and SEV2 incidents, we immediately open a war room (Slack channel + Zoom bridge). Clear roles prevent the chaos of 15 people all trying to fix the same thing.</p>
+
+        <h3>War Room Roles</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Responsibility</th>
+              <th>Who</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Incident Commander (IC)</strong></td>
+              <td>Coordinates response, makes decisions, delegates tasks. Does NOT debug.</td>
+              <td>On-call engineer or senior engineer</td>
+            </tr>
+            <tr>
+              <td><strong>Communications Lead</strong></td>
+              <td>Updates stakeholders, status page, customer support. Shields IC from interruptions.</td>
+              <td>Engineering manager or designated comms person</td>
+            </tr>
+            <tr>
+              <td><strong>Scribe</strong></td>
+              <td>Documents timeline, actions taken, decisions made. This becomes the postmortem timeline.</td>
+              <td>Any available engineer</td>
+            </tr>
+            <tr>
+              <td><strong>Subject Matter Experts</strong></td>
+              <td>Debug and fix. Called in by IC as needed based on the affected system.</td>
+              <td>Database, networking, application owners</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Communication Cadence</h3>
+        <ul>
+          <li><strong>SEV1:</strong> Status update every 15 minutes to stakeholders, every 30 minutes to customers (via status page)</li>
+          <li><strong>SEV2:</strong> Status update every 30 minutes to stakeholders</li>
+          <li><strong>Internal Slack channel:</strong> Real-time updates from IC and SMEs</li>
+          <li><strong>Status page:</strong> Updated within 5 minutes of SEV1 declaration</li>
+        </ul>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 The IC Does Not Debug</div>
+          <p>This is the single most important rule. The Incident Commander coordinates — they assign tasks, make decisions, and maintain situational awareness. The moment the IC starts debugging, coordination breaks down and the incident drags on. If the IC is the only person who can debug the issue, hand off IC duties to someone else.</p>
+        </div>
+
+        <h2>Mitigation-First Philosophy</h2>
+        <p>The #1 reason our MTTR dropped from 47 to 19 minutes: we stopped trying to find root cause during the incident. Instead, we focus exclusively on mitigation — restoring service first, investigating later.</p>
+
+        <h3>Mitigation Playbook</h3>
+        <ol>
+          <li><strong>Can we rollback?</strong> If the incident started after a deploy, rollback immediately. Don't investigate whether the deploy caused it — just rollback. (This resolves ~40% of our incidents in under 5 minutes.)</li>
+          <li><strong>Can we scale?</strong> If it's a capacity issue, scale up/out first, investigate the traffic pattern later.</li>
+          <li><strong>Can we failover?</strong> If a component is unhealthy, failover to the secondary. Database replica promotion, region failover, etc.</li>
+          <li><strong>Can we shed load?</strong> If nothing else works, enable maintenance mode or feature flags to disable non-critical features and reduce load on the critical path.</li>
+        </ol>
+
+        <pre><code># Quick rollback script (used during incidents)
+#!/bin/bash
+# rollback.sh — reverts to the previous deployment
+NAMESPACE=${1:-production}
+DEPLOYMENT=${2:-api-server}
+
+# Get previous revision
+PREV_REVISION=$(kubectl rollout history deployment/$DEPLOYMENT \
+  -n $NAMESPACE -o json | jq '.metadata.generation - 1')
+
+echo "Rolling back $DEPLOYMENT in $NAMESPACE to revision $PREV_REVISION"
+kubectl rollout undo deployment/$DEPLOYMENT -n $NAMESPACE
+
+# Wait for rollout to complete
+kubectl rollout status deployment/$DEPLOYMENT -n $NAMESPACE --timeout=120s
+
+echo "Rollback complete. Verify service health."</code></pre>
+
+        <h2>Postmortem Template</h2>
+        <p>Every SEV1 and SEV2 incident gets a postmortem within 48 hours. Here's our template:</p>
+
+        <div class="architecture-box">
+          <h3>Postmortem Document Structure</h3>
+          <pre><code>## Incident Title: [Brief description]
+## Date: [YYYY-MM-DD]
+## Severity: [SEV1/SEV2]
+## Duration: [Start time — End time (total minutes)]
+## Incident Commander: [Name]
+## Author: [Name]
+
+### Summary
+[2-3 sentences: what happened, who was affected, how long]
+
+### Impact
+- Users affected: [number or percentage]
+- Revenue impact: [estimated $]
+- SLA impact: [which SLAs were breached]
+- Support tickets generated: [count]
+
+### Timeline
+| Time (UTC) | Event |
+|------------|-------|
+| 14:00 | Monitoring alert fires: API latency > 5s |
+| 14:03 | On-call engineer acknowledges PagerDuty |
+| 14:05 | War room opened, IC assigned |
+| 14:08 | Root cause identified: database connection pool exhausted |
+| 14:10 | Mitigation: increased connection pool limit |
+| 14:15 | Service restored, monitoring confirms recovery |
+
+### Root Cause
+[Detailed technical explanation]
+
+### Contributing Factors
+- [Factor 1: e.g., no connection pool monitoring]
+- [Factor 2: e.g., recent traffic increase not accounted for]
+- [Factor 3: e.g., connection pool default was too low]
+
+### What Went Well
+- [e.g., Alert fired within 2 minutes of impact]
+- [e.g., Rollback was fast and clean]
+
+### What Went Poorly
+- [e.g., Took 8 minutes to identify root cause]
+- [e.g., No runbook for connection pool issues]
+
+### Action Items
+| Action | Owner | Priority | Deadline | Ticket |
+|--------|-------|----------|----------|--------|
+| Add connection pool monitoring | @alice | P1 | 2024-02-15 | JIRA-1234 |
+| Create runbook for DB connection issues | @bob | P2 | 2024-02-20 | JIRA-1235 |
+| Load test with 2x current traffic | @carol | P2 | 2024-02-28 | JIRA-1236 |</code></pre>
+        </div>
+
+        <h2>Blameless Culture in Practice</h2>
+        <p>Blameless doesn't mean accountability-free. It means we focus on systems and processes, not individuals. Here's what that looks like in practice:</p>
+
+        <ul class="icon-list cross">
+          <li>"Who pushed the bad deploy?" → blame-oriented, shuts down honesty</li>
+          <li>"Why didn't the on-call catch this sooner?" → blame-oriented</li>
+          <li>"This wouldn't have happened if [person] had tested properly" → blame-oriented</li>
+        </ul>
+        <ul>
+          <li>✅ "What about our deploy process allowed this change to reach production?" → system-oriented</li>
+          <li>✅ "What signals were missing that would have enabled faster detection?" → system-oriented</li>
+          <li>✅ "How can we make the right thing easier to do?" → system-oriented</li>
+        </ul>
+
+        <h2>The 5 Whys: A Real Example</h2>
+        <p>Here's a real 5 Whys analysis from a production database outage:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Why did the service go down?</h3>
+            <p>The database ran out of connections. All 100 connections in the pool were exhausted, and new requests were queuing until they timed out.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Why did the database run out of connections?</h3>
+            <p>A new feature was deployed that opened a database connection per API request but didn't release it properly — connections were leaking.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Why wasn't the connection leak caught in testing?</h3>
+            <p>Our load tests run for 5 minutes with 100 concurrent users. The leak only manifests after ~20 minutes of sustained traffic because connections are released on garbage collection, which is non-deterministic.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Why don't we have monitoring on connection pool usage?</h3>
+            <p>We monitor database CPU, memory, and query latency, but connection pool utilization was never added to our monitoring stack. It was a blind spot.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Why was it a blind spot?</h3>
+            <p>Our monitoring checklist for new services doesn't include connection pool metrics. The checklist was created 2 years ago and hasn't been updated as our architecture evolved.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Action Items from This 5 Whys</div>
+          <p>1. Fix the connection leak (immediate). 2. Add connection pool monitoring to all services (1 week). 3. Extend load tests to 30 minutes minimum (2 weeks). 4. Update the monitoring checklist and review quarterly (ongoing). — Notice: no action item is "tell the developer to be more careful." That's not a systemic fix.</p>
+        </div>
+
+        <h2>Action Item Tracking: Making Postmortems Stick</h2>
+        <p>The biggest failure mode of postmortems isn't writing them — it's the action items that never get done. We solved this with a strict tracking process:</p>
+
+        <ol>
+          <li><strong>Every action item gets a Jira ticket</strong> — created during the postmortem meeting, not after</li>
+          <li><strong>Every ticket has an owner and a deadline</strong> — no "team" ownership, one person is accountable</li>
+          <li><strong>P1 action items go into the current sprint</strong> — they're not backlog items that get deprioritized</li>
+          <li><strong>Weekly review in team standup</strong> — "any open postmortem action items?" is a standing agenda item</li>
+          <li><strong>Monthly report to engineering leadership</strong> — action item closure rate is a team metric</li>
+        </ol>
+
+        <h3>Tracking Metrics</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Target</th>
+              <th>Current</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Postmortem completion rate (within 48hrs)</td>
+              <td>100%</td>
+              <td>94%</td>
+            </tr>
+            <tr>
+              <td>Action item closure rate (within 30 days)</td>
+              <td>90%</td>
+              <td>87%</td>
+            </tr>
+            <tr>
+              <td>Repeat incidents (same root cause)</td>
+              <td>&lt;5%</td>
+              <td>3.2%</td>
+            </tr>
+            <tr>
+              <td>MTTR (SEV1)</td>
+              <td>&lt;30 min</td>
+              <td>19 min</td>
+            </tr>
+            <tr>
+              <td>MTTD (Mean Time to Detect)</td>
+              <td>&lt;5 min</td>
+              <td>3.4 min</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box warning">
+          <p><strong>The 6% gap in postmortem completion</strong> is almost always SEV2 incidents that get deprioritized because "it wasn't that bad." We're addressing this by making postmortem completion a blocker for the next sprint planning — if your team has an open postmortem, it's the first thing discussed.</p>
+        </div>
+
+        <h2>Incident Response Automation</h2>
+        <p>We automate the repetitive parts of incident response so humans can focus on diagnosis and decision-making:</p>
+        <pre><code># Slack bot auto-creates incident channel and populates it
+# Triggered by PagerDuty webhook
+def handle_incident(event):
+    severity = event['severity']
+    service = event['service']
+
+    # Create incident channel
+    channel = slack.create_channel(f"inc-{date}-{service}")
+
+    # Post incident template
+    slack.post_message(channel, f"""
+🚨 **{severity} Incident — {service}**
+
+**Incident Commander:** {get_oncall(service)}
+**Status:** Investigating
+**Impact:** TBD
+
+**Quick Links:**
+• <{grafana_url}|Grafana Dashboard>
+• <{runbook_url}|Runbook: {service}>
+• <{deploy_history_url}|Recent Deploys>
+
+**Checklist:**
+☐ Assess customer impact
+☐ Update status page (if SEV1/SEV2)
+☐ Identify mitigation (rollback? scale? failover?)
+☐ Assign scribe
+    """)
+
+    # Auto-invite relevant people
+    slack.invite_users(channel, get_team_members(service))</code></pre>
+
+        <h2>Key Takeaways</h2>
+        <ul>
+          <li><strong>Mitigate first, investigate later</strong> — this single principle cut our MTTR by 60%</li>
+          <li><strong>The IC does not debug</strong> — coordination and debugging are incompatible tasks</li>
+          <li><strong>Define severity by customer impact</strong>, not technical complexity</li>
+          <li><strong>When in doubt, escalate up</strong> — over-escalation is always better than under-escalation</li>
+          <li><strong>Blameless means system-focused</strong>, not accountability-free</li>
+          <li><strong>Action items need owners, deadlines, and Jira tickets</strong> — created during the postmortem, not after</li>
+          <li><strong>Track postmortem metrics</strong> — completion rate, action item closure rate, and repeat incident rate</li>
+          <li><strong>Automate the boring parts</strong> — channel creation, stakeholder notification, runbook links</li>
+          <li><strong>Rollback is your best friend</strong> — 40% of our incidents resolve in under 5 minutes with a rollback</li>
+        </ul>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

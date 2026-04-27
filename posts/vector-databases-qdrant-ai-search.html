@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How Vector Databases (Qdrant) Power AI Search in Production – Suheb Ghare</title>
+  <meta name="description" content="Running Qdrant in production for e-commerce search and FAQ bots. Embeddings, indexing, scaling, cost trade-offs, and the mistakes that cost us 3 days of downtime.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI &amp; DevOps</span>
+      </div>
+      <h1 class="post-title">How Vector Databases (Qdrant) Power AI Search in Production</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 April 2026</span>
+        <span class="meta-item">⏱ <span class="reading-time">18 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="vector-databases-qdrant-ai-search" data-stat="reads">0</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="vector-databases-qdrant-ai-search" data-stat="reads">0</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="vector-databases-qdrant-ai-search" data-stat="likes">0</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="vector-databases-qdrant-ai-search" data-stat="dislikes">0</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="vector-databases-qdrant-ai-search">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="vector-databases-qdrant-ai-search">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Introduction: Why Our Elasticsearch Search Was Failing</h2>
+        <p>Our e-commerce platform had 2.3 million products and an Elasticsearch cluster that handled keyword search well enough — until customers started searching the way they actually think. "Comfortable shoes for standing all day" returned zero results because no product had that exact phrase. "Something like an AirPod but cheaper" returned AirPod cases. "Gift for a 10-year-old who likes science" returned nothing useful.</p>
+
+<figure style="margin:2.5rem 0;text-align:center;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 240"
+       style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);background:#0f172a;">
+    <defs>
+  <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+  </marker>
+  <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#06b6d4"/>
+  </marker>
+</defs><text x="480" y="28" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Semantic Search Pipeline with Qdrant</text><rect x="30" y="70" width="130" height="80" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="95" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Raw Data</text><text x="95" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(docs, logs,</text><text x="95" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">code, tickets)</text><line x1="160" y1="110" x2="190" y2="110" stroke="110" stroke-width="2" marker-end="url(#arr)"/><rect x="190" y="70" width="130" height="80" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="255" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Embedding</text><text x="255" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Model</text><text x="255" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(text-embedding-3)</text><line x1="320" y1="110" x2="350" y2="110" stroke="110" stroke-width="2" marker-end="url(#arr)"/><rect x="350" y="70" width="130" height="80" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="415" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Qdrant</text><text x="415" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Vector Store</text><text x="415" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(HNSW index)</text><line x1="480" y1="110" x2="510" y2="110" stroke="110" stroke-width="2" marker-end="url(#arr)"/><rect x="510" y="70" width="130" height="80" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="575" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Query</text><text x="575" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Embedding</text><text x="575" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(same model)</text><line x1="640" y1="110" x2="670" y2="110" stroke="110" stroke-width="2" marker-end="url(#arr)"/><rect x="670" y="70" width="130" height="80" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="735" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Top-K</text><text x="735" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Results</text><text x="735" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(cosine sim)</text><line x1="800" y1="110" x2="830" y2="110" stroke="110" stroke-width="2" marker-end="url(#arr)"/><rect x="830" y="70" width="130" height="80" rx="10" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="895" y="92" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">LLM</text><text x="895" y="110" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Context</text><text x="895" y="128" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(RAG)</text><rect x="30" y="170" width="290" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="175" y="182" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">⬆ Offline: Index at ingest time</text><rect x="510" y="170" width="450" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="735" y="182" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">⬆ Online: Query at search time</text><text x="480" y="220" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">1536-dim vectors (OpenAI) · HNSW ANN search · <10ms p99 at 1M vectors</text>
+  </svg>
+  <figcaption style='margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;'>Embeddings convert text to vectors; Qdrant's HNSW index finds nearest neighbours in under 10ms at 1M+ vectors</figcaption>
+</figure>
+
+        <p>The problem isn't Elasticsearch. It's that keyword search matches <strong>words</strong>, not <strong>meaning</strong>. A customer searching for "laptop for video editing" needs results that include "MacBook Pro M3" and "Dell XPS with RTX 4070" — even though those product titles share zero keywords with the query.</p>
+
+        <p>Vector search solves this by converting both queries and products into numerical representations (embeddings) that capture semantic meaning, then finding the closest matches in that mathematical space. We chose <strong>Qdrant</strong> as our vector database after evaluating Pinecone, Weaviate, and Milvus. This post covers the full production journey: architecture, indexing pipeline, query flow, scaling to 2.3M vectors, and the mistakes that cost us 3 days of degraded search.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">2.3M</div>
+            <div class="metric-label">Product vectors indexed</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">23ms</div>
+            <div class="metric-label">P95 query latency</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">+34%</div>
+            <div class="metric-label">Search conversion rate improvement</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$680</div>
+            <div class="metric-label">Monthly Qdrant infra cost</div>
+          </div>
+        </div>
+
+        <h2>How Embeddings Work (The 60-Second Version)</h2>
+        <p>Skip this if you already know embeddings. For everyone else: an embedding model converts text into a list of numbers (a vector) where <strong>similar meanings produce similar numbers</strong>.</p>
+
+        <pre><code>// "Running shoes for marathon training" → [0.23, -0.87, 0.45, ..., 0.12]  (1536 numbers)
+// "Marathon running footwear"           → [0.21, -0.85, 0.44, ..., 0.11]  (very similar!)
+// "Kitchen blender 600W"               → [-0.67, 0.34, -0.12, ..., 0.89] (very different)</code></pre>
+
+        <p>The distance between two vectors tells you how semantically similar they are. "Running shoes for marathon training" and "Marathon running footwear" will be close together in vector space. "Kitchen blender" will be far away. That's the entire concept. The embedding model (we use OpenAI's <code>text-embedding-3-small</code>) handles the conversion; the vector database handles storing and searching billions of these vectors efficiently.</p>
+
+        <h2>Why Qdrant Over Pinecone, Weaviate, and Milvus</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Criteria</th>
+              <th>Qdrant</th>
+              <th>Pinecone</th>
+              <th>Weaviate</th>
+              <th>Milvus</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Deployment</strong></td>
+              <td>Self-hosted (K8s) or Cloud</td>
+              <td>Managed only</td>
+              <td>Self-hosted or Cloud</td>
+              <td>Self-hosted or Zilliz Cloud</td>
+            </tr>
+            <tr>
+              <td><strong>Filtering</strong></td>
+              <td>Payload filtering during search (fast)</td>
+              <td>Metadata filtering (post-search)</td>
+              <td>Pre-filtering (can be slow)</td>
+              <td>Attribute filtering</td>
+            </tr>
+            <tr>
+              <td><strong>Cost at 2M vectors</strong></td>
+              <td>~$680/mo (self-hosted EKS)</td>
+              <td>~$1,400/mo (managed)</td>
+              <td>~$900/mo (self-hosted)</td>
+              <td>~$750/mo (self-hosted)</td>
+            </tr>
+            <tr>
+              <td><strong>Rust-based performance</strong></td>
+              <td>Yes</td>
+              <td>N/A (managed)</td>
+              <td>Go</td>
+              <td>Go + C++</td>
+            </tr>
+            <tr>
+              <td><strong>Payload storage</strong></td>
+              <td>Built-in (store metadata with vectors)</td>
+              <td>Limited metadata</td>
+              <td>Full object storage</td>
+              <td>Separate metadata</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>We chose Qdrant for three reasons: <strong>payload filtering during search</strong> (critical for filtering by category, price range, and availability without a separate query), <strong>self-hosted on EKS</strong> (we already run everything on Kubernetes), and <strong>Rust performance</strong> (P95 query latency of 23ms at 2.3M vectors with filtering).</p>
+
+<figure style="margin:2.5rem 0;text-align:center;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 320"
+       style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);background:#0f172a;">
+    <defs>
+  <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+  </marker>
+</defs><text x="400" y="22" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">HNSW Index: Why Vector Search is Fast</text><text x="10" y="60" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="start" dominant-baseline="middle">Layer 2 (sparse)</text><line x1="150" y1="80" x2="400" y2="80" stroke="#312e81" stroke-width="1" opacity="0.5"/><line x1="400" y1="80" x2="650" y2="80" stroke="#312e81" stroke-width="1" opacity="0.5"/><circle cx="150" cy="80" r="10" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/><circle cx="400" cy="80" r="10" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/><circle cx="650" cy="80" r="10" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/><text x="10" y="170" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="start" dominant-baseline="middle">Layer 1 (medium)</text><line x1="80" y1="170" x2="200" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><line x1="200" y1="170" x2="320" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><line x1="320" y1="170" x2="440" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><line x1="440" y1="170" x2="560" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><line x1="560" y1="170" x2="680" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><line x1="680" y1="170" x2="760" y2="170" stroke="#0c4a6e" stroke-width="1" opacity="0.5"/><circle cx="80" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="200" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="320" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="440" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="560" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="680" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><circle cx="760" cy="170" r="10" fill="#0c4a6e" stroke="#67e8f9" stroke-width="1.5"/><text x="10" y="280" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="start" dominant-baseline="middle">Layer 0 (dense)</text><line x1="50" y1="260" x2="130" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="130" y1="260" x2="210" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="210" y1="260" x2="290" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="290" y1="260" x2="370" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="370" y1="260" x2="450" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="450" y1="260" x2="530" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="530" y1="260" x2="610" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="610" y1="260" x2="690" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="690" y1="260" x2="750" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="750" y1="260" x2="810" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><line x1="810" y1="260" x2="860" y2="260" stroke="#1a3a2a" stroke-width="1" opacity="0.5"/><circle cx="50" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="130" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="210" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="290" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="370" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="450" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="530" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="610" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="690" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="750" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="810" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><circle cx="860" cy="260" r="10" fill="#1a3a2a" stroke="#86efac" stroke-width="1.5"/><line x1="400" y1="80" x2="440" y2="170" stroke="#f59e0b" stroke-width="3" opacity="0.9"/><line x1="440" y1="170" x2="450" y2="260" stroke="#f59e0b" stroke-width="3" opacity="0.9"/><line x1="450" y1="260" x2="530" y2="260" stroke="#f59e0b" stroke-width="3" opacity="0.9"/><circle cx="400" cy="80" r="13" fill="none" stroke="#f59e0b" stroke-width="2.5"/><circle cx="440" cy="170" r="13" fill="none" stroke="#f59e0b" stroke-width="2.5"/><circle cx="450" cy="260" r="13" fill="none" stroke="#f59e0b" stroke-width="2.5"/><circle cx="530" cy="260" r="13" fill="none" stroke="#f59e0b" stroke-width="2.5"/><text x="400" y="300" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Query path (yellow): enter at top layer, navigate down — O(log n) vs O(n) brute force</text>
+  </svg>
+  <figcaption style='margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;'>HNSW navigates from sparse upper layers to dense lower layers — finds approximate nearest neighbours in O(log n)</figcaption>
+</figure>
+
+        <h2>Production Architecture</h2>
+
+        <div class="diagram">
+          <div class="flow-step">Product Catalog (PostgreSQL) → Change Data Capture (Debezium)</div>
+          <div class="flow-step">Embedding Pipeline (SQS → Lambda → OpenAI Embeddings API)</div>
+          <div class="flow-step">Qdrant Cluster (3 nodes on EKS, 2.3M vectors)</div>
+          <div class="flow-step">Search API (Node.js) → Hybrid: Qdrant vectors + Elasticsearch keywords</div>
+          <div class="flow-step">Frontend (search bar, recommendations, FAQ bot)</div>
+        </div>
+
+        <h3>Component Breakdown</h3>
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>Indexing Path (Async)</h3>
+            <ul>
+              <li>Debezium captures product changes from PostgreSQL</li>
+              <li>Events published to SQS</li>
+              <li>Lambda generates embeddings via OpenAI API</li>
+              <li>Lambda upserts vectors + payload into Qdrant</li>
+              <li>Latency: 2-5 seconds from DB change to searchable</li>
+            </ul>
+          </div>
+          <div class="info-box success">
+            <h3>Query Path (Sync)</h3>
+            <ul>
+              <li>User query → Search API</li>
+              <li>API generates query embedding (OpenAI, ~80ms)</li>
+              <li>Parallel: Qdrant vector search + Elasticsearch keyword search</li>
+              <li>Results merged with reciprocal rank fusion</li>
+              <li>Total latency: ~120ms end-to-end</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>The Indexing Pipeline: Getting 2.3M Products Into Qdrant</h2>
+
+        <h3>Step 1: Create the Collection</h3>
+        <pre><code>import { QdrantClient } from "@qdrant/js-client-rest";
+
+const qdrant = new QdrantClient({ url: process.env.QDRANT_URL, apiKey: process.env.QDRANT_API_KEY });
+
+await qdrant.createCollection("products", {
+  vectors: {
+    size: 1536,           // text-embedding-3-small dimension
+    distance: "Cosine",   // Cosine similarity for normalized embeddings
+  },
+  optimizers_config: {
+    indexing_threshold: 20000,  // Build HNSW index after 20K vectors
+  },
+  on_disk_payload: true,  // Keep payloads on disk to save RAM for vectors
+});</code></pre>
+
+        <h3>Step 2: Generate Embeddings and Upsert</h3>
+        <pre><code>import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+async function indexProduct(product) {
+  // Build the text to embed — this is the most important decision
+  const textToEmbed = [
+    product.name,
+    product.category,
+    product.brand,
+    product.description?.slice(0, 500),  // Truncate long descriptions
+    product.tags?.join(", "),
+  ].filter(Boolean).join(". ");
+
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: textToEmbed,
+  });
+
+  await qdrant.upsert("products", {
+    points: [{
+      id: product.id,
+      vector: embedding.data[0].embedding,
+      payload: {
+        name: product.name,
+        category: product.category,
+        brand: product.brand,
+        price: product.price,
+        in_stock: product.inStock,
+        rating: product.avgRating,
+        image_url: product.imageUrl,
+        updated_at: new Date().toISOString(),
+      },
+    }],
+  });
+}</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">What Text to Embed Matters More Than Which Model</div>
+          <p>We spent 2 weeks A/B testing embedding models (text-embedding-3-small vs text-embedding-3-large vs Cohere embed-v3). The difference was marginal (~2% relevance improvement for 6x the cost). Then we spent 1 day improving the text we embed — adding category, brand, and tags to the product name — and relevance jumped 18%. <strong>Optimize your input text before upgrading your model.</strong></p>
+        </div>
+
+        <h3>Step 3: Bulk Indexing for Initial Load</h3>
+        <pre><code>// Bulk indexing 2.3M products — batched to avoid rate limits
+async function bulkIndex(products) {
+  const BATCH_SIZE = 100;       // OpenAI embedding batch limit
+  const CONCURRENCY = 5;        // Parallel batches
+  const QDRANT_BATCH = 500;     // Qdrant upsert batch size
+
+  let vectorBuffer = [];
+  let processed = 0;
+
+  for (let i = 0; i &lt; products.length; i += BATCH_SIZE * CONCURRENCY) {
+    const chunk = products.slice(i, i + BATCH_SIZE * CONCURRENCY);
+    const batches = [];
+
+    for (let j = 0; j &lt; chunk.length; j += BATCH_SIZE) {
+      batches.push(chunk.slice(j, j + BATCH_SIZE));
+    }
+
+    // Parallel embedding calls
+    const results = await Promise.all(
+      batches.map((batch) =>
+        openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: batch.map((p) => buildEmbeddingText(p)),
+        })
+      )
+    );
+
+    // Collect points
+    for (let b = 0; b &lt; results.length; b++) {
+      for (let k = 0; k &lt; results[b].data.length; k++) {
+        const product = batches[b][k];
+        vectorBuffer.push({
+          id: product.id,
+          vector: results[b].data[k].embedding,
+          payload: buildPayload(product),
+        });
+      }
+    }
+
+    // Flush to Qdrant in larger batches
+    while (vectorBuffer.length >= QDRANT_BATCH) {
+      const batch = vectorBuffer.splice(0, QDRANT_BATCH);
+      await qdrant.upsert("products", { points: batch });
+      processed += batch.length;
+      console.log(`Indexed ${processed}/${products.length}`);
+    }
+  }
+
+  // Flush remaining
+  if (vectorBuffer.length > 0) {
+    await qdrant.upsert("products", { points: vectorBuffer });
+  }
+}
+
+// Full index: ~45 minutes for 2.3M products at 5 concurrent batches</code></pre>
+
+        <h2>The Query Flow: From User Input to Results</h2>
+
+        <h3>Basic Semantic Search</h3>
+        <pre><code>async function semanticSearch(query, filters = {}, limit = 20) {
+  // Generate query embedding
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: query,
+  });
+
+  // Build Qdrant filter from user-facing filters
+  const must = [];
+  if (filters.category) {
+    must.push({ key: "category", match: { value: filters.category } });
+  }
+  if (filters.minPrice || filters.maxPrice) {
+    must.push({
+      key: "price",
+      range: {
+        gte: filters.minPrice || 0,
+        lte: filters.maxPrice || 999999,
+      },
+    });
+  }
+  if (filters.inStockOnly) {
+    must.push({ key: "in_stock", match: { value: true } });
+  }
+
+  const results = await qdrant.search("products", {
+    vector: embedding.data[0].embedding,
+    limit,
+    filter: must.length > 0 ? { must } : undefined,
+    with_payload: true,
+    score_threshold: 0.35,  // Minimum relevance — below this, results are noise
+  });
+
+  return results.map((r) => ({
+    id: r.id,
+    score: r.score,
+    ...r.payload,
+  }));
+}</code></pre>
+
+        <h3>Hybrid Search: Vectors + Keywords</h3>
+        <p>Pure vector search misses exact matches. If a customer searches for "SKU-12345" or "Nike Air Max 90", keyword search is better. We run both in parallel and merge results:</p>
+
+        <pre><code>async function hybridSearch(query, filters, limit = 20) {
+  // Run vector and keyword search in parallel
+  const [vectorResults, keywordResults] = await Promise.all([
+    semanticSearch(query, filters, limit),
+    elasticsearchSearch(query, filters, limit),
+  ]);
+
+  // Reciprocal Rank Fusion — merges two ranked lists
+  const scores = new Map();
+  const K = 60; // RRF constant
+
+  vectorResults.forEach((r, i) => {
+    const rrf = 1 / (K + i + 1);
+    scores.set(r.id, (scores.get(r.id) || 0) + rrf * 0.6); // 60% weight to vectors
+  });
+
+  keywordResults.forEach((r, i) => {
+    const rrf = 1 / (K + i + 1);
+    scores.set(r.id, (scores.get(r.id) || 0) + rrf * 0.4); // 40% weight to keywords
+  });
+
+  // Sort by combined score, return top N
+  const merged = [...scores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+
+  // Hydrate with full product data
+  return hydrateProducts(merged.map(([id]) => id));
+}</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Why 60/40 and Not 50/50?</div>
+          <p>We A/B tested ratios from 30/70 to 80/20. The 60% vector / 40% keyword split won because: (1) most searches are natural language where vectors excel, (2) exact-match searches like brand names and SKUs still need keyword coverage, and (3) going above 70% vector caused "Nike Air Max" to return competing brands that are semantically similar but not what the customer wanted.</p>
+        </div>
+
+        <h2>Real Use Cases in Production</h2>
+
+        <h3>Use Case 1: Product Search</h3>
+        <p>The primary use case. Customers type natural language queries and get semantically relevant results.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Query</th>
+              <th>Elasticsearch (Before)</th>
+              <th>Qdrant Hybrid (After)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>"comfortable shoes for standing all day"</td>
+              <td>0 results</td>
+              <td>Nursing clogs, memory foam sneakers, orthopedic insoles</td>
+            </tr>
+            <tr>
+              <td>"something like AirPods but cheaper"</td>
+              <td>AirPod cases, AirPod accessories</td>
+              <td>Wireless earbuds under $50 from Samsung, JBL, Anker</td>
+            </tr>
+            <tr>
+              <td>"gift for a 10-year-old who likes science"</td>
+              <td>0 results</td>
+              <td>Microscope kits, chemistry sets, telescope for kids</td>
+            </tr>
+            <tr>
+              <td>"Nike Air Max 90"</td>
+              <td>Exact match ✅</td>
+              <td>Exact match ✅ (keyword component handles this)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Use Case 2: FAQ / Support Bot</h3>
+        <p>We index 1,200 FAQ articles and support docs. When a customer asks a question, we find the most relevant articles and feed them to an LLM as context (RAG pattern).</p>
+
+        <pre><code>async function answerQuestion(question) {
+  // Find relevant FAQ articles
+  const articles = await semanticSearch(question, {}, 5);
+
+  if (articles.length === 0 || articles[0].score &lt; 0.4) {
+    return { answer: null, escalate: true }; // No good match — route to human
+  }
+
+  // Use top articles as context for LLM
+  const context = articles
+    .map((a) => `## ${a.title}\n${a.content}`)
+    .join("\n\n");
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 300,
+    messages: [{
+      role: "user",
+      content: `Answer this customer question using ONLY the provided context. If the context doesn't contain the answer, say "I don't have information about that."
+
+Context:
+${context}
+
+Question: ${question}`,
+    }],
+  });
+
+  return {
+    answer: response.content[0].text,
+    sources: articles.slice(0, 3).map((a) => ({ id: a.id, title: a.title, score: a.score })),
+    escalate: false,
+  };
+}</code></pre>
+
+        <h3>Use Case 3: "Similar Products" Recommendations</h3>
+        <p>The simplest and highest-ROI use case. Given a product the customer is viewing, find the most similar products. No ML pipeline needed — just query Qdrant with the product's existing vector.</p>
+
+        <pre><code>async function getSimilarProducts(productId, limit = 8) {
+  // Use the product's own vector to find neighbors
+  const results = await qdrant.search("products", {
+    vector_name: undefined, // default vector
+    // Search by existing point ID — no embedding call needed
+    ...(await getPointVector(productId)),
+    limit: limit + 1, // +1 because the product itself will be the top result
+    filter: {
+      must: [{ key: "in_stock", match: { value: true } }],
+      must_not: [{ has_id: [productId] }], // Exclude the product itself
+    },
+    with_payload: true,
+  });
+
+  return results;
+}
+
+// Alternative: use Qdrant's recommend API for better results
+async function getRecommendations(productId, limit = 8) {
+  return qdrant.recommend("products", {
+    positive: [productId],   // "More like this"
+    negative: [],            // Could add products the user dismissed
+    limit,
+    filter: { must: [{ key: "in_stock", match: { value: true } }] },
+    with_payload: true,
+  });
+}</code></pre>
+
+        <h2>Scaling Challenges: What Broke at 2M+ Vectors</h2>
+
+        <h3>Challenge 1: Memory — Vectors Eat RAM</h3>
+        <p>Each 1536-dimension float32 vector is 6KB. At 2.3 million vectors, that's <strong>~14GB just for vectors</strong>, plus the HNSW index (~20GB), plus payloads. Our initial single-node Qdrant with 16GB RAM OOMed at 800K vectors.</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The OOM That Took Down Search for 3 Hours</div>
+          <p>We hit 800K vectors on a 16GB node. Qdrant OOMed during HNSW index optimization, the pod restarted, tried to rebuild the index on startup, OOMed again — crash loop. We had to scale the node to 32GB, wait for recovery, then migrate to a 3-node cluster. Lesson: <strong>capacity plan for 2x your expected vector count</strong> from day one.</p>
+        </div>
+
+        <p>Our current setup:</p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Spec</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Qdrant nodes</td>
+              <td>3x r6g.xlarge (32GB RAM, 4 vCPU)</td>
+              <td>Vector storage + HNSW index</td>
+            </tr>
+            <tr>
+              <td>Storage</td>
+              <td>gp3 EBS, 100GB per node</td>
+              <td>On-disk payloads + WAL</td>
+            </tr>
+            <tr>
+              <td>Replication</td>
+              <td>Factor 2</td>
+              <td>Survive 1 node failure</td>
+            </tr>
+            <tr>
+              <td>Shards</td>
+              <td>3 (1 per node)</td>
+              <td>Distribute vectors across nodes</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Challenge 2: Embedding API Latency in the Query Path</h3>
+        <p>Every search query needs an embedding before Qdrant can search. The OpenAI embedding API adds 60-120ms to every query. At P99, it's 250ms. For a search bar with autocomplete, that's too slow.</p>
+
+        <p><strong>Fix: Query embedding cache.</strong> We cache query embeddings in Redis with a 1-hour TTL. Popular queries ("nike shoes", "iphone case", "laptop") get cache hits 70% of the time.</p>
+
+        <pre><code>import { createHash } from "crypto";
+
+async function getQueryEmbedding(query) {
+  const normalized = query.toLowerCase().trim();
+  const cacheKey = `emb:${createHash("sha256").update(normalized).digest("hex").slice(0, 16)}`;
+
+  const cached = await redis.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  const result = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: normalized,
+  });
+
+  const vector = result.data[0].embedding;
+  await redis.setex(cacheKey, 3600, JSON.stringify(vector)); // 1 hour TTL
+  return vector;
+}</code></pre>
+
+        <h3>Challenge 3: Keeping Vectors in Sync with the Catalog</h3>
+        <p>Products change constantly — prices update, items go out of stock, descriptions get edited. The vector in Qdrant must reflect the current state. We use Debezium CDC to capture every change:</p>
+
+        <pre><code>// SQS consumer for Debezium CDC events
+async function handleProductChange(event) {
+  const { op, after, before } = event;
+
+  if (op === "d") {
+    // Product deleted — remove from Qdrant
+    await qdrant.delete("products", { points: [before.id] });
+    return;
+  }
+
+  if (op === "c" || op === "u") {
+    const product = after;
+
+    // Only re-embed if text fields changed (not just price/stock)
+    const textChanged =
+      op === "c" ||
+      before.name !== after.name ||
+      before.description !== after.description ||
+      before.category !== after.category;
+
+    if (textChanged) {
+      // Full re-index: new embedding + new payload
+      await indexProduct(product);
+    } else {
+      // Payload-only update: just update price/stock/rating (no embedding call)
+      await qdrant.setPayload("products", {
+        points: [product.id],
+        payload: {
+          price: product.price,
+          in_stock: product.inStock,
+          rating: product.avgRating,
+          updated_at: new Date().toISOString(),
+        },
+      });
+    }
+  }
+}</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Payload-Only Updates Save 90% of Embedding Costs</div>
+          <p>Most product changes are price and stock updates, not description changes. By separating payload updates (free, instant) from vector updates (requires embedding API call), we reduced our daily embedding API calls from ~150K to ~15K. That's ~$40/month saved on embeddings alone.</p>
+        </div>
+
+        <h2>Cost vs Performance Trade-Offs</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Monthly Cost</th>
+              <th>What It Buys</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Qdrant cluster (3x r6g.xlarge)</td>
+              <td>$680</td>
+              <td>2.3M vectors, 23ms P95 queries, replication</td>
+            </tr>
+            <tr>
+              <td>OpenAI Embeddings (queries)</td>
+              <td>$120</td>
+              <td>~3M query embeddings/month (after caching)</td>
+            </tr>
+            <tr>
+              <td>OpenAI Embeddings (indexing)</td>
+              <td>$45</td>
+              <td>~450K product re-embeddings/month</td>
+            </tr>
+            <tr>
+              <td>Redis (embedding cache)</td>
+              <td>$15</td>
+              <td>ElastiCache t4g.micro for query embedding cache</td>
+            </tr>
+            <tr>
+              <td>EBS storage (3x 100GB gp3)</td>
+              <td>$24</td>
+              <td>On-disk payloads and WAL</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>$884</strong></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>For comparison, our Elasticsearch cluster (which we still run for keyword search) costs $1,200/month. The combined hybrid search costs $2,084/month — but the 34% improvement in search conversion rate generates an estimated $45K/month in additional revenue. The ROI is absurd.</p>
+
+        <h3>Cost Optimization Levers</h3>
+        <div class="grid-2">
+          <div class="info-box success">
+            <h3>What Saved Us Money</h3>
+            <ul>
+              <li><strong>text-embedding-3-small over 3-large:</strong> 6x cheaper, 2% relevance difference</li>
+              <li><strong>Query embedding cache:</strong> 70% hit rate = 70% fewer API calls</li>
+              <li><strong>Payload-only updates:</strong> 90% of product changes don't need re-embedding</li>
+              <li><strong>on_disk_payload: true:</strong> Keeps payloads on SSD, saves ~8GB RAM per node</li>
+              <li><strong>Quantization:</strong> Scalar quantization reduces memory 4x with ~2% recall loss</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <h3>Where We Didn't Cut Corners</h3>
+            <ul>
+              <li><strong>3-node cluster:</strong> Replication factor 2 for availability</li>
+              <li><strong>r6g.xlarge (32GB):</strong> Enough RAM for vectors + HNSW in memory</li>
+              <li><strong>gp3 storage:</strong> WAL writes need consistent IOPS</li>
+              <li><strong>No quantization on FAQ collection:</strong> 1,200 vectors — memory savings negligible, recall matters</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Quantization: The Biggest Cost Lever</h3>
+        <p>If you're hitting memory limits, scalar quantization is the first thing to try. It converts float32 vectors to uint8, reducing memory by 4x with minimal recall loss:</p>
+
+        <pre><code>// Enable scalar quantization on existing collection
+await qdrant.updateCollection("products", {
+  quantization_config: {
+    scalar: {
+      type: "int8",
+      quantile: 0.99,      // Clip outliers
+      always_ram: true,     // Keep quantized vectors in RAM, full vectors on disk
+    },
+  },
+});
+
+// Search with oversampling to compensate for quantization
+const results = await qdrant.search("products", {
+  vector: queryVector,
+  limit: 20,
+  params: {
+    quantization: {
+      rescore: true,       // Re-score top results with full vectors
+      oversampling: 2.0,   // Fetch 2x candidates, then re-rank
+    },
+  },
+});</code></pre>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Configuration</th>
+              <th>RAM per 1M vectors</th>
+              <th>Recall@10</th>
+              <th>Query Latency P95</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Float32 (default)</td>
+              <td>~6.1 GB</td>
+              <td>99.2%</td>
+              <td>18ms</td>
+            </tr>
+            <tr>
+              <td>Scalar int8 + rescore</td>
+              <td>~1.8 GB</td>
+              <td>98.5%</td>
+              <td>22ms</td>
+            </tr>
+            <tr>
+              <td>Binary + rescore</td>
+              <td>~0.3 GB</td>
+              <td>95.1%</td>
+              <td>12ms</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Common Mistakes (We Made All of Them)</h2>
+
+        <div class="info-box danger">
+          <h3>❌ Mistake 1: Embedding Only the Product Name</h3>
+          <p>Our first version embedded just the product title: "Nike Air Max 90 Men's Running Shoe." The vector captured "Nike shoe" but missed that it's cushioned, good for daily training, and available in 12 colors. Adding category, brand, key features, and a truncated description to the embedding text improved relevance by 18%.</p>
+          <p><strong>Fix:</strong> Embed a rich text representation: <code>name + category + brand + features + description[:500]</code></p>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ Mistake 2: No Score Threshold</h3>
+          <p>Without a minimum score threshold, Qdrant always returns results — even if they're irrelevant. A search for "quantum physics textbook" on our e-commerce site returned kitchen appliances (the least-bad match in a catalog with no textbooks). Users saw garbage results and lost trust in search.</p>
+          <p><strong>Fix:</strong> Set <code>score_threshold: 0.35</code> for cosine similarity. Below that, show "No results found" with suggestions instead of irrelevant products.</p>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ Mistake 3: Not Monitoring Embedding Drift</h3>
+          <p>OpenAI updated their embedding model in January 2026. Our indexed vectors were from the old model. New query embeddings from the updated model were in a slightly different vector space. Search relevance degraded by ~12% over 2 weeks before we noticed.</p>
+          <p><strong>Fix:</strong> Pin the model version (<code>text-embedding-3-small</code> is versioned). Monitor search relevance with a weekly eval set of 200 query-result pairs. If relevance drops below threshold, trigger a full re-index.</p>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ Mistake 4: Filtering After Search Instead of During</h3>
+          <p>Our first implementation searched Qdrant for 100 results, then filtered by category and price in the application layer. This meant if only 3 of the top 100 results matched the filter, the user saw 3 results. Qdrant supports filtering <strong>during</strong> search — it only considers vectors that match the filter, so you always get the requested number of results.</p>
+          <p><strong>Fix:</strong> Always use Qdrant's built-in <code>filter</code> parameter. It uses payload indexes for fast filtering without scanning all vectors.</p>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ Mistake 5: Single-Node Qdrant in Production</h3>
+          <p>We ran a single Qdrant pod for 4 months. When it OOMed during HNSW optimization, search was down for 3 hours. There was no replica to fail over to. The pod restarted, tried to rebuild the index, and OOMed again in a crash loop.</p>
+          <p><strong>Fix:</strong> Minimum 3 nodes with replication factor 2 for any production workload. Use a PodDisruptionBudget to prevent Kubernetes from evicting more than 1 node at a time.</p>
+        </div>
+
+        <h2>Qdrant on Kubernetes: Production Deployment</h2>
+        <pre><code># Qdrant StatefulSet on EKS (simplified)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: search
+spec:
+  serviceName: qdrant-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+    spec:
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:v1.12.1
+          ports:
+            - containerPort: 6333  # REST API
+            - containerPort: 6334  # gRPC
+          resources:
+            requests:
+              memory: "28Gi"
+              cpu: "3"
+            limits:
+              memory: "30Gi"
+              cpu: "4"
+          env:
+            - name: QDRANT__CLUSTER__ENABLED
+              value: "true"
+          volumeMounts:
+            - name: qdrant-storage
+              mountPath: /qdrant/storage
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 6333
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 6333
+            initialDelaySeconds: 30
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: qdrant-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 100Gi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: qdrant-pdb
+  namespace: search
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: qdrant</code></pre>
+
+        <h2>Observability: What to Monitor</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Source</th>
+              <th>Alert Threshold</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Query latency P95</td>
+              <td>Qdrant /metrics + app-side histogram</td>
+              <td>&gt; 50ms (Qdrant alone), &gt; 200ms (end-to-end)</td>
+            </tr>
+            <tr>
+              <td>Memory utilization per node</td>
+              <td>container_memory_working_set_bytes</td>
+              <td>&gt; 85% of limit</td>
+            </tr>
+            <tr>
+              <td>Collection vector count</td>
+              <td>Qdrant API /collections</td>
+              <td>Drift &gt; 1% from PostgreSQL product count</td>
+            </tr>
+            <tr>
+              <td>Embedding API latency</td>
+              <td>App-side histogram</td>
+              <td>P99 &gt; 500ms</td>
+            </tr>
+            <tr>
+              <td>Search relevance (weekly eval)</td>
+              <td>Custom eval pipeline</td>
+              <td>NDCG@10 drops &gt; 5% from baseline</td>
+            </tr>
+            <tr>
+              <td>Embedding cache hit rate</td>
+              <td>Redis metrics</td>
+              <td>&lt; 50%</td>
+            </tr>
+            <tr>
+              <td>CDC lag (Debezium)</td>
+              <td>Kafka/SQS metrics</td>
+              <td>&gt; 30 seconds</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Best Practices</h2>
+        <ol>
+          <li><strong>Invest in what you embed, not which model you use.</strong> The text you convert to vectors matters 10x more than the embedding model. Add category, brand, features, and tags to your embedding text.</li>
+          <li><strong>Use hybrid search (vectors + keywords).</strong> Pure vector search misses exact matches. Pure keyword search misses semantic matches. Combine them with reciprocal rank fusion.</li>
+          <li><strong>Set a score threshold.</strong> Irrelevant results are worse than no results. 0.35 cosine similarity is a good starting point — tune it with your eval set.</li>
+          <li><strong>Filter during search, not after.</strong> Use Qdrant's payload filtering. Create payload indexes on fields you filter frequently (category, price, in_stock).</li>
+          <li><strong>Cache query embeddings.</strong> Popular queries repeat constantly. A Redis cache with 1-hour TTL eliminates 70% of embedding API calls.</li>
+          <li><strong>Separate payload updates from vector updates.</strong> Price and stock changes don't need re-embedding. Use <code>setPayload</code> for metadata-only updates.</li>
+          <li><strong>Plan for 2x your expected vector count.</strong> HNSW index optimization needs headroom. OOMing during optimization is a crash loop you don't want.</li>
+          <li><strong>Monitor embedding drift.</strong> Pin your model version. Run a weekly relevance eval. If the model changes, re-index everything.</li>
+          <li><strong>Start with scalar quantization if memory is tight.</strong> 4x memory reduction with &lt;1% recall loss. Enable rescore for accuracy.</li>
+          <li><strong>Run at least 3 nodes with replication factor 2.</strong> Single-node Qdrant in production is a ticking time bomb.</li>
+        </ol>
+
+        <h2>Conclusion</h2>
+        <p>Vector search isn't a replacement for keyword search — it's the missing layer that makes search understand <strong>intent</strong>. Our customers don't search in keywords. They search in thoughts: "something warm for winter hiking" or "gift for a teenager who likes cooking." Vector databases make that work.</p>
+
+        <p>After 8 months in production, Qdrant handles 2.3 million product vectors with 23ms P95 query latency at $680/month. The hybrid search (Qdrant + Elasticsearch) improved search conversion by 34%. The FAQ bot deflects 40% of support tickets. The "similar products" recommendations increased average order value by 12%.</p>
+
+        <p>The technology is mature enough for production. The hard parts aren't the vector database itself — they're the surrounding infrastructure: keeping vectors in sync with your source of truth, managing embedding API costs, monitoring relevance drift, and capacity planning for memory. Get those right, and vector search is one of the highest-ROI infrastructure investments you can make.</p>
+
+        <blockquote>
+          <p>The best search doesn't match words — it understands what the customer actually wants. Vector databases are how you build that understanding into your product, at scale, without a PhD in machine learning.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

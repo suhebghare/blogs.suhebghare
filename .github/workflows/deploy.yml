@@ -7,25 +7,53 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.REGION }}
-      
+
+      - name: Download existing stats from S3
+        run: |
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/blog-stats.json ./blog-stats.json \
+            || echo "No existing stats found, using defaults"
+
       - name: Sync to S3
         run: |
           aws s3 sync . s3://${{ secrets.S3_BUCKET }} \
             --exclude ".git/*" \
             --exclude ".github/*" \
+            --exclude ".idea/*" \
             --exclude "README.md" \
+            --exclude "STATS_README.md" \
+            --exclude "blog-stats.json" \
+            --exclude "*.py" \
+            --exclude "*.sh" \
+            --exclude "migrate.sh" \
+            --exclude "upgrade-posts.py" \
+            --cache-control "max-age=86400" \
             --delete
-      
+
+      - name: Set cache headers for HTML (no-cache for freshness)
+        run: |
+          aws s3 cp s3://${{ secrets.S3_BUCKET }} s3://${{ secrets.S3_BUCKET }} \
+            --recursive \
+            --exclude "*" \
+            --include "*.html" \
+            --metadata-directive REPLACE \
+            --cache-control "no-cache, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Upload stats file
+        run: |
+          aws s3 cp ./blog-stats.json s3://${{ secrets.S3_BUCKET }}/blog-stats.json \
+            --cache-control "no-cache"
+
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Designing WAF Rules That Actually Stop Bots – Suheb Ghare</title>
+  <meta name="description" content="Designing WAF Rules That Actually Stop Bots – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Security</span>
+      </div>
+      <h1 class="post-title">Designing WAF Rules That Actually Stop Bots</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="waf-rules-bot-protection" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="waf-rules-bot-protection" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="waf-rules-bot-protection" data-stat="likes">240</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="waf-rules-bot-protection" data-stat="dislikes">38</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="waf-rules-bot-protection">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="waf-rules-bot-protection">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>We Block 2 Million Bot Requests Per Day</h2>
+        <p>Last year, our e-commerce platform was hemorrhaging money. Scrapers were stealing product data, credential stuffers were hammering login endpoints, and vulnerability scanners were probing every path imaginable. Our origin servers were spending more time serving bots than real customers.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/waf1.png" alt="AWS WAF bot protection rules" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">WAF rule groups blocking 2M bot requests per day</figcaption>
+</figure>
+        <p>After six months of iterating on AWS WAF rules, we now block over 2 million malicious requests daily. Here's the exact rule design process, real configurations, and the hard lessons we learned — including a sophisticated attack that bypassed our initial defenses.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">2M+</div>
+            <div class="metric-label">Bot requests blocked daily</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$200/mo</div>
+            <div class="metric-label">WAF cost</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$15K/mo</div>
+            <div class="metric-label">Estimated savings from abuse prevention</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">0.02%</div>
+            <div class="metric-label">False positive rate</div>
+          </div>
+        </div>
+
+        <h2>WAF Rule Group Architecture</h2>
+        <p>We organize our WAF rules into four distinct rule groups, evaluated in priority order. This layered approach ensures that the cheapest checks run first, and expensive regex evaluations only happen on traffic that passes initial filters.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 225" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">WAF Rule Evaluation Order</text><rect x="20" y="55" width="115" height="60" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="77" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Incoming</text><text x="77" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Request</text><line x1="135" y1="85" x2="150" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="150" y="55" width="115" height="60" rx="8" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="207" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">IP Reputation</text><text x="207" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Priority 1</text><line x1="265" y1="85" x2="280" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="280" y="55" width="115" height="60" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="337" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Rate Limit</text><text x="337" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Priority 2</text><line x1="395" y1="85" x2="410" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="410" y="55" width="115" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="467" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Bot Control</text><text x="467" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Priority 3</text><line x1="525" y1="85" x2="540" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="540" y="55" width="115" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="597" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Custom Rules</text><text x="597" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Priority 4</text><line x1="655" y1="85" x2="670" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="670" y="55" width="115" height="60" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="727" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Allow</text><text x="727" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">✓</text><text x="207" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Block</text><text x="207" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Known bad IPs</text><text x="337" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">Count/Block</text><text x="337" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">100 req/5min</text><text x="467" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Block</text><text x="467" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Automated bots</text><text x="597" y="130" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">Block/Count</text><text x="597" y="144" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">SQLi, XSS, LFI</text><rect x="20" y="165" width="760" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="180" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">2M bot requests/day blocked · $0 in WAF-only cost (included with CloudFront)</text><text x="400" y="196" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Rules evaluated in priority order — first match wins</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">WAF rules evaluate in priority order — put IP reputation first for fastest blocking of known threats</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">1. IP Reputation Lists → Known bad IPs blocked immediately</div>
+          <div class="flow-step">2. Rate Limiting → Per-IP throttling (100 req/5min)</div>
+          <div class="flow-step">3. AWS Managed Rules → Bot Control + Common Rule Set</div>
+          <div class="flow-step">4. Custom Rules → Bad user agents, scanner paths, geo-blocking</div>
+        </div>
+
+        <h3>Rule Group 1: IP Reputation Blocking</h3>
+        <p>The first line of defense is the cheapest — blocking known malicious IPs before any further evaluation. We use the AWS-managed <code>AWSManagedRulesAmazonIpReputationList</code> plus a custom IP set updated daily from threat intelligence feeds.</p>
+        <pre><code>{
+  "Name": "IPReputationRule",
+  "Priority": 1,
+  "Statement": {
+    "ManagedRuleGroupStatement": {
+      "VendorName": "AWS",
+      "Name": "AWSManagedRulesAmazonIpReputationList"
+    }
+  },
+  "OverrideAction": { "None": {} },
+  "VisibilityConfig": {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "IPReputationRule"
+  }
+}</code></pre>
+
+        <h3>Rule Group 2: Rate Limiting</h3>
+        <p>Rate limiting is the single most effective rule we run. It catches distributed attacks, slow scrapers, and brute-force attempts that IP reputation lists miss.</p>
+        <pre><code>{
+  "Name": "RateLimitPerIP",
+  "Priority": 2,
+  "Statement": {
+    "RateBasedStatement": {
+      "Limit": 100,
+      "AggregateKeyType": "IP",
+      "ScopeDownStatement": {
+        "NotStatement": {
+          "Statement": {
+            "IPSetReferenceStatement": {
+              "ARN": "arn:aws:wafv2:us-east-1:123456789:regional/ipset/AllowlistedIPs/abc123"
+            }
+          }
+        }
+      }
+    }
+  },
+  "Action": { "Block": {} },
+  "VisibilityConfig": {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "RateLimitPerIP"
+  }
+}</code></pre>
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Pro Tip</div>
+          <p>Always add a scope-down statement to exclude your allowlisted IPs (monitoring systems, partner integrations, load balancers). We learned this the hard way when our own health checks got rate-limited during a deploy.</p>
+        </div>
+
+        <h3>Rule Group 3: AWS Managed Bot Control</h3>
+        <p>The <code>AWSManagedRulesBotControlRuleSet</code> is expensive ($10/month + $1 per million requests) but catches sophisticated bots that simple rules miss. It analyzes TLS fingerprints, browser capabilities, and behavioral signals.</p>
+
+        <h3>Rule Group 4: Custom Rules</h3>
+        <p>This is where the real tuning happens. We have custom rules for three categories:</p>
+
+        <h2>Blocking Bad User Agents</h2>
+        <pre><code>{
+  "Name": "BlockBadUserAgents",
+  "Priority": 10,
+  "Statement": {
+    "OrStatement": {
+      "Statements": [
+        {
+          "ByteMatchStatement": {
+            "SearchString": "python-requests",
+            "FieldToMatch": { "SingleHeader": { "Name": "user-agent" } },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "CONTAINS"
+          }
+        },
+        {
+          "ByteMatchStatement": {
+            "SearchString": "scrapy",
+            "FieldToMatch": { "SingleHeader": { "Name": "user-agent" } },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "CONTAINS"
+          }
+        },
+        {
+          "ByteMatchStatement": {
+            "SearchString": "curl/",
+            "FieldToMatch": { "SingleHeader": { "Name": "user-agent" } },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "STARTS_WITH"
+          }
+        }
+      ]
+    }
+  },
+  "Action": { "Block": {} },
+  "VisibilityConfig": {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "BlockBadUserAgents"
+  }
+}</code></pre>
+
+        <h2>Blocking Common Scanner Paths</h2>
+        <p>Vulnerability scanners hit predictable paths. Blocking these reduces noise in your logs and prevents information leakage.</p>
+        <pre><code>{
+  "Name": "BlockScannerPaths",
+  "Priority": 11,
+  "Statement": {
+    "OrStatement": {
+      "Statements": [
+        {
+          "ByteMatchStatement": {
+            "SearchString": "/wp-admin",
+            "FieldToMatch": { "UriPath": {} },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "STARTS_WITH"
+          }
+        },
+        {
+          "ByteMatchStatement": {
+            "SearchString": "/.env",
+            "FieldToMatch": { "UriPath": {} },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "STARTS_WITH"
+          }
+        },
+        {
+          "ByteMatchStatement": {
+            "SearchString": "/phpinfo",
+            "FieldToMatch": { "UriPath": {} },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "STARTS_WITH"
+          }
+        },
+        {
+          "ByteMatchStatement": {
+            "SearchString": "/wp-login",
+            "FieldToMatch": { "UriPath": {} },
+            "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+            "PositionalConstraint": "STARTS_WITH"
+          }
+        }
+      ]
+    }
+  },
+  "Action": { "Block": {} },
+  "VisibilityConfig": {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "BlockScannerPaths"
+  }
+}</code></pre>
+
+        <h2>Geo-Blocking High-Risk Countries</h2>
+        <p>We geo-block countries where we have zero customers but receive significant attack traffic. This is applied only to sensitive endpoints (login, checkout, API).</p>
+        <pre><code>{
+  "Name": "GeoBlockHighRisk",
+  "Priority": 12,
+  "Statement": {
+    "AndStatement": {
+      "Statements": [
+        {
+          "GeoMatchStatement": {
+            "CountryCodes": ["RU", "CN", "KP", "IR"]
+          }
+        },
+        {
+          "OrStatement": {
+            "Statements": [
+              {
+                "ByteMatchStatement": {
+                  "SearchString": "/api/auth",
+                  "FieldToMatch": { "UriPath": {} },
+                  "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+                  "PositionalConstraint": "STARTS_WITH"
+                }
+              },
+              {
+                "ByteMatchStatement": {
+                  "SearchString": "/api/checkout",
+                  "FieldToMatch": { "UriPath": {} },
+                  "TextTransformations": [{ "Priority": 0, "Type": "LOWERCASE" }],
+                  "PositionalConstraint": "STARTS_WITH"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "Action": { "Block": {} },
+  "VisibilityConfig": {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "GeoBlockHighRisk"
+  }
+}</code></pre>
+
+        <h2>Challenge vs Block vs Count Mode</h2>
+        <p>AWS WAF offers three action types, and choosing the wrong one is the most common mistake I see teams make.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>What It Does</th>
+              <th>When to Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Count</strong></td>
+              <td>Logs the match but allows the request through</td>
+              <td>Testing new rules, measuring impact before blocking</td>
+            </tr>
+            <tr>
+              <td><strong>Block</strong></td>
+              <td>Returns 403 Forbidden immediately</td>
+              <td>High-confidence rules (scanner paths, known bad IPs)</td>
+            </tr>
+            <tr>
+              <td><strong>Challenge</strong></td>
+              <td>Presents a CAPTCHA or silent challenge</td>
+              <td>Suspected bots where false positives are possible</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ Never Deploy Rules Directly in Block Mode</div>
+          <p>Always start in Count mode for at least 72 hours. Analyze the matched requests in WAF logs. Only switch to Block after confirming zero (or acceptable) false positives. We once blocked Googlebot for 6 hours because a regex was too aggressive.</p>
+        </div>
+
+        <h2>Testing Methodology: Count → Analyze → Block</h2>
+        <p>Our rule deployment process follows a strict three-phase approach:</p>
+        <ol>
+          <li><strong>Deploy in Count mode</strong> — Rule matches requests but doesn't block. Run for 72 hours minimum.</li>
+          <li><strong>Analyze with Athena</strong> — Query WAF logs to identify false positives. Check if any legitimate user agents, IPs, or paths are being matched.</li>
+          <li><strong>Switch to Block mode</strong> — After validation, update the rule action. Monitor CloudWatch metrics for the first 24 hours.</li>
+        </ol>
+
+        <h2>WAF Logging to S3 + Athena Analysis</h2>
+        <p>WAF logs go to S3 via Kinesis Firehose. We use Athena to query them for analysis. Here's the Athena table creation and our most-used queries:</p>
+        <pre><code>-- Create Athena table for WAF logs
+CREATE EXTERNAL TABLE waf_logs (
+  timestamp bigint,
+  formatVersion int,
+  webaclId string,
+  terminatingRuleId string,
+  terminatingRuleType string,
+  action string,
+  httpSourceName string,
+  httpSourceId string,
+  ruleGroupList array&lt;struct&lt;
+    ruleGroupId:string,
+    terminatingRule:struct&lt;ruleId:string,action:string&gt;,
+    nonTerminatingMatchingRules:array&lt;struct&lt;ruleId:string,action:string&gt;&gt;
+  &gt;&gt;,
+  httpRequest struct&lt;
+    clientIp:string,
+    country:string,
+    headers:array&lt;struct&lt;name:string,value:string&gt;&gt;,
+    uri:string,
+    args:string,
+    httpVersion:string,
+    httpMethod:string,
+    requestId:string
+  &gt;
+)
+ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+LOCATION 's3://my-waf-logs-bucket/AWSLogs/';</code></pre>
+
+        <pre><code>-- Top blocked IPs in the last 24 hours
+SELECT httpRequest.clientIp, COUNT(*) as block_count
+FROM waf_logs
+WHERE action = 'BLOCK'
+  AND from_unixtime(timestamp/1000) > current_timestamp - interval '24' hour
+GROUP BY httpRequest.clientIp
+ORDER BY block_count DESC
+LIMIT 20;
+
+-- False positive check: blocked requests with common browser user agents
+SELECT httpRequest.clientIp, httpRequest.uri,
+  filter(httpRequest.headers, h -> h.name = 'user-agent')[1].value as ua
+FROM waf_logs
+WHERE action = 'BLOCK'
+  AND terminatingRuleId = 'BlockBadUserAgents'
+  AND from_unixtime(timestamp/1000) > current_timestamp - interval '72' hour
+ORDER BY timestamp DESC
+LIMIT 100;</code></pre>
+
+        <h2>False Positive Management</h2>
+        <p>False positives are inevitable. The key is having a fast feedback loop to detect and fix them.</p>
+        <ul>
+          <li><strong>CloudWatch alarm</strong> on the Count metric for new rules — if it spikes, investigate immediately</li>
+          <li><strong>Weekly Athena audit</strong> — review all blocked requests with browser-like user agents</li>
+          <li><strong>Customer support integration</strong> — support tickets mentioning "access denied" or "403" trigger an automatic WAF log lookup</li>
+          <li><strong>IP allowlist</strong> — maintained in a separate IP set for partners, monitoring tools, and known-good crawlers</li>
+        </ul>
+
+        <h2>Cost Analysis</h2>
+        <div class="info-box success">
+          <p><strong>WAF costs us ~$200/month</strong> — $5 per web ACL, $1 per rule, $0.60 per million requests, plus $10/month for Bot Control. Against an estimated $15K/month in abuse handling costs (origin server overload, stolen product data, credential stuffing cleanup), the ROI is 75x.</p>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Monthly Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Web ACL</td>
+              <td>$5.00</td>
+            </tr>
+            <tr>
+              <td>Rules (18 rules)</td>
+              <td>$18.00</td>
+            </tr>
+            <tr>
+              <td>Request evaluation (~60M req/month)</td>
+              <td>$36.00</td>
+            </tr>
+            <tr>
+              <td>Bot Control managed rule</td>
+              <td>$10.00 + ~$40 request fees</td>
+            </tr>
+            <tr>
+              <td>WAF logging (Kinesis Firehose + S3)</td>
+              <td>~$85.00</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>~$194.00</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Real Incident: Residential Proxy Bot Attack</h2>
+        <p>In March 2024, we faced an attack that bypassed every IP-based defense we had. Here's what happened:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Day 1, 02:00 AM — Attack Begins</h3>
+            <p>Login endpoint starts receiving 50K requests/hour. Each request comes from a unique residential IP address. Rate limiting doesn't trigger because no single IP exceeds 100 requests/5 minutes. IP reputation lists don't match because these are clean residential IPs.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, 06:00 AM — Detection</h3>
+            <p>CloudWatch alarm fires on 401 response rate exceeding 40% on the login endpoint. On-call engineer investigates and sees thousands of unique IPs all hitting <code>/api/auth/login</code> with different email/password combinations.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, 06:30 AM — Pattern Identified</h3>
+            <p>Athena query reveals the pattern: all requests have identical TLS fingerprints (JA3 hash), identical Accept-Language headers, and arrive in perfectly uniform intervals — 2 requests per second per IP. This is a residential proxy botnet.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, 07:00 AM — Emergency Rule Deployed</h3>
+            <p>We deploy a rate-based rule scoped to the login endpoint with a much lower threshold (20 requests/5 minutes per IP), combined with a CAPTCHA challenge for all login requests from IPs not seen in the last 30 days (using a custom header set by our CDN).</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Day 1, 08:00 AM — Attack Stopped</h3>
+            <p>Bot traffic drops to near zero. The CAPTCHA challenge was the kill shot — residential proxy bots can't solve CAPTCHAs. We later enabled AWS Bot Control's targeted bot protection, which detects residential proxy patterns using TLS fingerprinting.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Lesson Learned</div>
+          <p>IP-based rate limiting alone is not enough. Sophisticated attackers use residential proxy networks with millions of clean IPs. You need behavioral analysis (TLS fingerprinting, request patterns, challenge-response) to catch them. AWS Bot Control's targeted protection ($10/month) would have caught this on Day 1.</p>
+        </div>
+
+        <h2>Key Takeaways</h2>
+        <ul>
+          <li>Layer your WAF rules: IP reputation → rate limiting → managed rules → custom rules</li>
+          <li>Always deploy new rules in Count mode first — 72 hours minimum</li>
+          <li>Log everything to S3 and query with Athena for analysis</li>
+          <li>IP-based blocking alone won't stop residential proxy botnets</li>
+          <li>CAPTCHA challenges are the most effective defense against sophisticated bots</li>
+          <li>At $200/month, WAF is the highest-ROI security investment you can make</li>
+          <li>Automate false positive detection — don't wait for customer complaints</li>
+        </ul>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

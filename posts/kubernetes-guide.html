@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kubernetes: The Operating System of the Cloud – Suheb Ghare</title>
+  <meta name="description" content="Kubernetes: The Operating System of the Cloud – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Kubernetes</span>
+      </div>
+      <h1 class="post-title">Kubernetes: The Operating System of the Cloud</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="kubernetes-guide" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="kubernetes-guide" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="kubernetes-guide" data-stat="likes">250</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="kubernetes-guide" data-stat="dislikes">21</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="kubernetes-guide">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="kubernetes-guide">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+
+        <h2 id="architecture">Kubernetes Architecture: What Actually Runs</h2>
+        <p>After running Kubernetes in production across 15+ clusters for 6 years, I've found that most incidents trace back to misunderstanding how the components interact. Let's break down what's actually running.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/k8s-cluster.svg" alt="Kubernetes cluster architecture" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Kubernetes control plane and worker node components</figcaption>
+</figure>
+
+        <h3 id="control-plane">Control Plane Components</h3>
+
+        <div class="architecture-box">
+          <h3>Control Plane</h3>
+          <div class="grid-2">
+            <div>
+              <p><strong>kube-apiserver</strong> — The front door. Every kubectl command, every controller, every kubelet talks to the API server. It validates requests, authenticates them, and writes to etcd. If the API server is down, nothing works — but existing pods keep running.</p>
+              <p><strong>etcd</strong> — The brain. A distributed key-value store holding all cluster state. Lose etcd, lose your cluster. Back it up every hour. I've seen teams lose entire clusters because they didn't back up etcd.</p>
+            </div>
+            <div>
+              <p><strong>kube-scheduler</strong> — Decides which node runs a new pod. Considers resource requests, affinity rules, taints/tolerations, and topology spread constraints. If the scheduler is down, new pods stay Pending but existing pods are unaffected.</p>
+              <p><strong>kube-controller-manager</strong> — Runs ~30 control loops: Deployment controller, ReplicaSet controller, Node controller, etc. Each loop watches the desired state in etcd and makes reality match. This is the "self-healing" part of Kubernetes.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3 id="node-components">Node Components</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Component</th><th>Role</th><th>What Happens If It Dies</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>kubelet</strong></td><td>Agent on each node. Pulls pod specs from API server, tells container runtime to start/stop containers, reports node status.</td><td>Node goes NotReady after 40s. Pods get evicted after 5 minutes (default).</td></tr>
+            <tr><td><strong>kube-proxy</strong></td><td>Manages iptables/IPVS rules for Service networking. Routes ClusterIP traffic to pod endpoints.</td><td>Service discovery breaks. Pods still run but can't reach other services by name.</td></tr>
+            <tr><td><strong>Container Runtime</strong></td><td>containerd (or CRI-O). Actually runs containers. Docker was removed in k8s 1.24.</td><td>No new containers can start. Existing containers keep running until they exit.</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="core-objects">Core Objects You Must Understand</h2>
+
+        <h3 id="pods-deployments">Pods and Deployments</h3>
+        <p>A Pod is the smallest deployable unit — one or more containers sharing network and storage. You almost never create Pods directly. Use a Deployment, which manages ReplicaSets, which manage Pods.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 340" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="390" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Kubernetes Architecture</text><rect x="20" y="50" width="340" height="200" rx="12" fill="#1e293b" stroke="#6366f1" stroke-width="2"/><text x="190" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Control Plane</text><rect x="80" y="100" width="120" height="44" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="122" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">API Server</text><rect x="220" y="100" width="120" height="44" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="280" y="122" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">etcd</text><rect x="80" y="170" width="120" height="44" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="140" y="192" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Scheduler</text><rect x="220" y="170" width="120" height="44" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="280" y="192" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Controller Mgr</text><rect x="420" y="50" width="340" height="200" rx="12" fill="#1e293b" stroke="#06b6d4" stroke-width="2"/><text x="590" y="70" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Worker Node</text><rect x="440" y="100" width="120" height="44" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="500" y="122" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">kubelet</text><rect x="580" y="100" width="120" height="44" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="640" y="122" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">kube-proxy</text><rect x="440" y="170" width="120" height="44" rx="6" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="500" y="192" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Container RT</text><rect x="580" y="170" width="120" height="44" rx="6" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="640" y="192" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Pods</text><line x1="360" y1="150" x2="420" y2="150" stroke="150" stroke-width="2" marker-end="url(##6366f1)"/><text x="390" y="140" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">kubectl</text><rect x="20" y="280" width="110" height="36" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="75" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Pod</text><rect x="145" y="280" width="110" height="36" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="200" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Deployment</text><rect x="270" y="280" width="110" height="36" rx="6" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="325" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Service</text><rect x="395" y="280" width="110" height="36" rx="6" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="450" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">ConfigMap</text><rect x="520" y="280" width="110" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="575" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">Secret</text><rect x="645" y="280" width="110" height="36" rx="6" fill="#1e3a5f" stroke="#334155" stroke-width="1.5"/><text x="700" y="298" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">PVC</text><text x="390" y="270" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Core API Objects</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Control plane manages desired state; worker nodes run workloads; kubectl talks to the API server</figcaption></figure>
+
+
+        <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: production
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0    # Zero-downtime deploys
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: v2.1.0
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: order-service
+          image: 123456789.dkr.ecr.us-east-1.amazonaws.com/order-service:v2.1.0
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 2    # Gives app 60s to start
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: host</code></pre>
+
+        <h3 id="services-networking">Services and Networking</h3>
+        <p>How pod-to-pod communication works: every pod gets its own IP from the pod CIDR. Pods can reach each other directly by IP. Services provide stable DNS names and load balancing across pod IPs.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Service Type</th><th>Accessible From</th><th>Use Case</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>ClusterIP</strong></td><td>Inside cluster only</td><td>Internal microservice communication</td><td>order-service.production.svc.cluster.local</td></tr>
+            <tr><td><strong>NodePort</strong></td><td>External via node IP:port</td><td>Development, testing</td><td>NodeIP:30080</td></tr>
+            <tr><td><strong>LoadBalancer</strong></td><td>External via cloud LB</td><td>Single service exposure</td><td>Creates an AWS NLB/ALB</td></tr>
+            <tr><td><strong>Ingress</strong></td><td>External via L7 routing</td><td>Multiple services, path/host routing</td><td>api.example.com/orders → order-service</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="resource-management">Resource Management: The #1 Source of Production Issues</h2>
+        <p>Getting resource requests and limits right is the single most impactful thing you can do for cluster stability. Get it wrong and you'll see OOMKills, CPU throttling, and scheduling failures.</p>
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/k8s-hpa-vs-vpa.gif" alt="Kubernetes HPA vs VPA autoscaling comparison" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">HPA scales pods horizontally; VPA adjusts resource requests vertically — both serve different workload patterns</figcaption>
+</figure>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>Requests</h3>
+            <p><strong>What the scheduler uses.</strong> "I need at least this much." The scheduler won't place a pod on a node unless the node has enough unrequested resources. Set this to your app's baseline usage.</p>
+          </div>
+          <div class="info-box warning">
+            <h3>Limits</h3>
+            <p><strong>What the kernel enforces.</strong> "Never exceed this." CPU limits cause throttling (your app slows down). Memory limits cause OOMKill (your app dies). I recommend setting memory limits but being cautious with CPU limits.</p>
+          </div>
+        </div>
+
+        <h3 id="qos-classes">QoS Classes</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>QoS Class</th><th>Condition</th><th>Eviction Priority</th><th>When to Use</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Guaranteed</strong></td><td>requests == limits (both CPU and memory)</td><td>Last to be evicted</td><td>Critical production workloads</td></tr>
+            <tr><td><strong>Burstable</strong></td><td>requests &lt; limits</td><td>Evicted after BestEffort</td><td>Most workloads — allows bursting</td></tr>
+            <tr><td><strong>BestEffort</strong></td><td>No requests or limits set</td><td>First to be evicted</td><td>Batch jobs, dev environments only</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">CPU Limits: The Controversial Take</div>
+          <p>I've stopped setting CPU limits on most workloads. CPU limits cause CFS throttling — your app gets artificially slowed even when the node has spare CPU. Set CPU requests (for scheduling) but leave limits off. Memory limits are still essential — without them, a memory leak takes down the entire node.</p>
+        </div>
+
+        <h2 id="health-checks">Health Checks: Liveness vs Readiness vs Startup</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Startup Probe (check first)</h3>
+            <p>Disables liveness/readiness checks until the app is started. Use for slow-starting apps (Java, .NET). Without this, the liveness probe kills your app before it finishes starting. Set <code>failureThreshold * periodSeconds</code> to your max startup time.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Readiness Probe (traffic gating)</h3>
+            <p>Controls whether the pod receives traffic. Failed readiness = removed from Service endpoints. Use for: dependency checks (can I reach the database?), warmup periods, graceful shutdown. <strong>This is the most important probe.</strong></p>
+          </div>
+          <div class="timeline-item">
+            <h3>Liveness Probe (restart trigger)</h3>
+            <p>If this fails, kubelet kills and restarts the container. Use sparingly — only for detecting deadlocks or unrecoverable states. <strong>Common mistake:</strong> pointing liveness at a dependency (database). If the DB goes down, Kubernetes restarts all your pods — making things worse.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Liveness Probe Anti-Pattern</div>
+          <p>Never check external dependencies in your liveness probe. I've seen a team's liveness probe check the database connection. When the DB had a 30-second blip, Kubernetes restarted all 50 pods simultaneously, causing a thundering herd that took down the DB for 10 minutes. Liveness should only check "is my process stuck?"</p>
+        </div>
+
+        <h2 id="rbac">RBAC: Least Privilege in Practice</h2>
+        <pre><code># ServiceAccount for a CI/CD deployer — can only manage deployments in 'staging'
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-deployer
+  namespace: staging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-manager
+  namespace: staging
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-deployer-binding
+  namespace: staging
+subjects:
+  - kind: ServiceAccount
+    name: ci-deployer
+    namespace: staging
+roleRef:
+  kind: Role
+  name: deployment-manager
+  apiGroup: rbac.authorization.k8s.io</code></pre>
+
+        <p><strong>Key distinction:</strong> <code>Role</code> + <code>RoleBinding</code> = namespace-scoped. <code>ClusterRole</code> + <code>ClusterRoleBinding</code> = cluster-wide. Always prefer namespace-scoped unless you genuinely need cluster access (like a monitoring tool that scrapes all namespaces).</p>
+
+        <h2 id="top-5-incidents">The 5 Things That Cause Most Production Incidents</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>1. No Resource Requests/Limits</h3>
+            <p>Pods get scheduled on overcommitted nodes. One pod's memory leak OOMKills other pods. Fix: enforce LimitRange and ResourceQuota per namespace. Make requests mandatory via admission controller.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>2. Bad Liveness Probes</h3>
+            <p>Checking external dependencies, too-aggressive timeouts (1s timeout on a probe that hits the DB), or identical liveness and readiness probes. Fix: liveness checks only internal state. Set <code>failureThreshold: 3</code> minimum.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>3. No PodDisruptionBudgets</h3>
+            <p>Node drain during upgrade evicts all pods at once. Service goes down. Fix: PDB with <code>minAvailable: 2</code> or <code>maxUnavailable: 1</code> on every production Deployment.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>4. Missing Topology Spread Constraints</h3>
+            <p>All 3 replicas land on the same node. Node dies, service is down. Fix: <code>topologySpreadConstraints</code> with <code>maxSkew: 1</code> across <code>topology.kubernetes.io/zone</code>.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>5. Image Pull Failures</h3>
+            <p>Using <code>:latest</code> tag, ECR token expired, or registry rate-limited. Fix: always use immutable tags (git SHA), set <code>imagePullPolicy: IfNotPresent</code>, and pre-pull images on nodes for critical workloads.</p>
+          </div>
+        </div>
+
+        <h2 id="production-checklist">Production Readiness Checklist</h2>
+        <div class="info-box success">
+          <h3>Before Going to Production</h3>
+          <ul class="icon-list">
+            <li>Resource requests and limits set on every container</li>
+            <li>Readiness probe configured (liveness probe only if needed)</li>
+            <li>PodDisruptionBudget defined</li>
+            <li>Topology spread constraints across AZs</li>
+            <li>Immutable image tags (no :latest)</li>
+            <li>Namespace-scoped RBAC with least privilege</li>
+            <li>NetworkPolicy restricting ingress/egress</li>
+            <li>HPA configured with appropriate metrics</li>
+            <li>Graceful shutdown handling (SIGTERM + preStop hook)</li>
+            <li>Secrets in external store (AWS Secrets Manager, Vault)</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

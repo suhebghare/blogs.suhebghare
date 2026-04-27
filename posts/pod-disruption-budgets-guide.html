@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PodDisruptionBudgets: Why Most Teams Misconfigure Them – Suheb Ghare</title>
+  <meta name="description" content="PodDisruptionBudgets: Why Most Teams Misconfigure Them – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Kubernetes</span>
+      </div>
+      <h1 class="post-title">PodDisruptionBudgets: Why Most Teams Misconfigure Them</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="pod-disruption-budgets-guide" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="pod-disruption-budgets-guide" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="pod-disruption-budgets-guide" data-stat="likes">237</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="pod-disruption-budgets-guide" data-stat="dislikes">36</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="pod-disruption-budgets-guide">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="pod-disruption-budgets-guide">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>What PodDisruptionBudgets Actually Do</h2>
+        <p>A PodDisruptionBudget (PDB) tells Kubernetes: "during voluntary disruptions, keep at least X pods running." Voluntary disruptions include node drains, cluster upgrades, Karpenter consolidation, and spot instance termination. PDBs do <em>not</em> protect against involuntary disruptions like OOMKills or node failures.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/k8s-cluster.svg" alt="Kubernetes PodDisruptionBudget" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">PDBs protect availability during voluntary disruptions like node drains</figcaption>
+</figure>
+        <p>Simple concept. Massively misconfigured in practice. I've audited PDBs across 6 organizations and found critical misconfigurations in every single one.</p>
+
+        <h2>The 7 Most Common Misconfigurations</h2>
+
+        <h3>Mistake 1: minAvailable=100% — Blocking Node Drains Forever</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 The Classic Deadlock</div>
+          <p>Setting <code>minAvailable: 100%</code> means Kubernetes cannot evict a single pod. Node drains hang indefinitely. Cluster upgrades stall. Karpenter can't consolidate. We've seen this block EKS upgrades for 4+ hours.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="380" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">PodDisruptionBudget: How It Protects Availability</text><rect x="60" y="60" width="140" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="130" y="85" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Pod 1</text><rect x="240" y="60" width="140" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="310" y="85" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Pod 2</text><rect x="420" y="60" width="140" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="490" y="85" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Pod 3</text><text x="380" y="130" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">minAvailable: 2  →  max 1 pod evicted at a time</text><rect x="20" y="160" width="720" height="2" rx="8" fill="#334155" stroke="#334155" stroke-width="1.5"/><text x="380" y="175" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Node Drain / Cluster Upgrade</text><rect x="60" y="190" width="140" height="50" rx="8" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="130" y="215" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Pod 1</text><text x="130" y="230" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Evicted ✓</text><rect x="240" y="190" width="140" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="310" y="215" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Pod 2</text><text x="310" y="230" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Protected</text><rect x="420" y="190" width="140" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="490" y="215" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Pod 3</text><text x="490" y="230" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Protected</text><rect x="600" y="190" width="140" height="50" rx="8" fill="#7f1d1d" stroke="#ef4444" stroke-width="2"/><text x="670" y="215" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Pod 2</text><text x="670" y="230" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">BLOCKED ✗</text><text x="670" y="260" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Can't evict — would
+violate minAvailable</text><rect x="20" y="290" width="720" height="50" rx="8" fill="#3b1a1a" stroke="#ef4444" stroke-width="1.5"/><text x="380" y="308" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">⚠ Common Mistake: minAvailable=100% on single-replica → node drain blocks forever</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">PDB ensures at least minAvailable pods stay running during voluntary disruptions like node drains</figcaption></figure>
+
+        </div>
+<pre><code># ❌ WRONG — blocks all voluntary disruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+spec:
+  minAvailable: "100%"
+  selector:
+    matchLabels:
+      app: api-gateway</code></pre>
+<pre><code># ✅ CORRECT — allows 1 pod to be disrupted at a time
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+spec:
+  minAvailable: "80%"
+  selector:
+    matchLabels:
+      app: api-gateway</code></pre>
+        <p>For a 5-replica deployment, <code>minAvailable: 80%</code> means 4 pods must stay running — 1 can be evicted at a time. This allows rolling node drains while maintaining availability.</p>
+
+        <h3>Mistake 2: PDB on a Single-Replica Deployment</h3>
+<pre><code># ❌ WRONG — single replica + PDB = can never be evicted
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: worker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1  # only 1 replica!</code></pre>
+        <p>If you have 1 replica and <code>minAvailable: 1</code>, the pod can never be evicted. The node it's on can never be drained. This is the same as <code>minAvailable: 100%</code> but less obvious.</p>
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Fix</div>
+          <p>Either increase replicas to 2+ or use <code>maxUnavailable: 1</code> instead. With <code>maxUnavailable: 1</code>, Kubernetes will evict the pod and wait for the replacement to be ready before proceeding.</p>
+        </div>
+
+        <h3>Mistake 3: Label Selector Mismatch — PDB Applies to Nothing</h3>
+<pre><code># PDB targets app: payment-svc
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: payment-svc  # ← typo!
+---
+# Deployment uses app: payment-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  selector:
+    matchLabels:
+      app: payment-service  # ← doesn't match PDB</code></pre>
+        <p>The PDB matches zero pods. It provides zero protection. Kubernetes won't warn you — <code>kubectl get pdb</code> will show <code>ALLOWED DISRUPTIONS: 0</code> and <code>CURRENT: 0</code>, which looks correct but means the PDB is orphaned.</p>
+        <p><strong>Detection:</strong></p>
+<pre><code># Check if PDB is actually protecting pods
+kubectl get pdb payment-pdb -o jsonpath='{.status.currentHealthy}'
+# If this returns 0 and you have running pods, the selector is wrong</code></pre>
+
+        <h3>Mistake 4: Too-Tight PDB Blocking Cluster Upgrades</h3>
+        <div class="callout callout-danger">
+          <div class="callout-title">🚨 Real Incident: 4-Hour Upgrade Stall</div>
+          <p>During an EKS 1.28 → 1.29 upgrade, node drain got stuck on 3 services with <code>minAvailable: 90%</code> and 10 replicas each. That means only 1 pod per service could be evicted at a time. With 45-second startup times, draining a single node took 12 minutes. We had 28 nodes to drain. The upgrade took 4 hours instead of the expected 45 minutes.</p>
+        </div>
+        <p><strong>Fix:</strong> For cluster upgrades, temporarily relax PDBs or use <code>maxUnavailable: 25%</code> which allows faster parallel eviction:</p>
+<pre><code>apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+spec:
+  maxUnavailable: "25%"  # allows 2-3 pods to be evicted simultaneously
+  selector:
+    matchLabels:
+      app: api-service</code></pre>
+
+        <h3>Mistake 5: No PDB on Critical Services</h3>
+        <p>Without a PDB, Kubernetes can evict all pods of a service simultaneously during a node drain. If 3 pods of your payment service are on the same node and that node gets drained, all 3 are evicted at once.</p>
+        <table class="data-table">
+          <thead>
+            <tr><th>Service Type</th><th>Recommended PDB</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Stateless API (3+ replicas)</td><td><code>maxUnavailable: 1</code> or <code>minAvailable: 80%</code></td></tr>
+            <tr><td>Stateful (database, cache)</td><td><code>minAvailable: 50%</code> (quorum-aware)</td></tr>
+            <tr><td>Single-replica worker</td><td><code>maxUnavailable: 1</code></td></tr>
+            <tr><td>Batch jobs</td><td>No PDB needed (jobs are retried)</td></tr>
+            <tr><td>DaemonSets</td><td>No PDB needed (one per node)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Mistake 6: PDB Without Matching HPA</h3>
+        <p>If your HPA scales down to 2 replicas and your PDB says <code>minAvailable: 2</code>, no pods can ever be evicted. The HPA and PDB are fighting each other.</p>
+<pre><code># HPA can scale to min 2
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+spec:
+  minReplicas: 2
+  maxReplicas: 20
+
+# PDB requires 2 always available
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+spec:
+  minAvailable: 2  # ← deadlock when HPA is at minReplicas</code></pre>
+        <p><strong>Rule:</strong> <code>PDB.minAvailable</code> must be less than <code>HPA.minReplicas</code>. If HPA min is 2, set PDB <code>minAvailable: 1</code> or use <code>maxUnavailable: 1</code>.</p>
+
+        <h3>Mistake 7: Forgetting PDB During StatefulSet Rolling Updates</h3>
+        <p>StatefulSets update pods in reverse ordinal order (pod-2, pod-1, pod-0). If your PDB is too restrictive, the rolling update stalls because Kubernetes won't terminate the next pod until the previous one is fully ready.</p>
+        <p>For a 3-replica StatefulSet with <code>minAvailable: 2</code>: pod-2 is terminated and recreated. If pod-2 takes 3 minutes to become ready, the entire update takes 9+ minutes. With <code>minAvailable: 3</code>, the update never completes.</p>
+
+        <h2>How to Debug PDB Issues</h2>
+<pre><code># List all PDBs and their status
+kubectl get pdb -A
+
+# Example output:
+# NAMESPACE   NAME          MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+# prod        api-pdb       3               N/A               2                     30d
+# prod        payment-pdb   N/A             1                 1                     30d
+# prod        orphan-pdb    2               N/A               0                     90d  ← suspicious
+
+# Check if a specific PDB is protecting any pods
+kubectl get pdb api-pdb -o yaml | grep -A5 status
+
+# Test eviction API directly
+kubectl drain node-xyz --dry-run=client --ignore-daemonsets --delete-emptydir-data</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">💡 Quick Audit Script</div>
+          <p>Run this to find PDBs that match zero pods (orphaned PDBs):</p>
+        </div>
+<pre><code>#!/bin/bash
+for pdb in $(kubectl get pdb -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}'); do
+  ns=$(echo $pdb | cut -d/ -f1)
+  name=$(echo $pdb | cut -d/ -f2)
+  current=$(kubectl get pdb $name -n $ns -o jsonpath='{.status.currentHealthy}')
+  if [ "$current" = "0" ]; then
+    echo "⚠️  ORPHANED: $pdb (currentHealthy=0)"
+  fi
+done</code></pre>
+
+        <h2>Right-Sizing PDBs by Workload Type</h2>
+        <div class="architecture-box">
+          <h3>Decision Framework</h3>
+          <p><strong>High-availability APIs (payment, auth):</strong> <code>minAvailable: 80%</code> — always keep most pods running. Pair with pod anti-affinity to spread across nodes.</p>
+          <p><strong>General microservices:</strong> <code>maxUnavailable: 1</code> — simple, works for any replica count. Allows one pod to be disrupted at a time.</p>
+          <p><strong>Stateful workloads (Redis, Kafka):</strong> <code>minAvailable: 50%</code> — maintain quorum. Never go below majority for consensus-based systems.</p>
+          <p><strong>Batch/cron jobs:</strong> No PDB. Jobs are designed to be retried. A PDB on a Job will block node drains unnecessarily.</p>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Key Takeaway</div>
+          <p>Every service with 2+ replicas should have a PDB. Use <code>maxUnavailable: 1</code> as your default — it works for 90% of cases. Audit PDBs quarterly: check for orphaned selectors, deadlocks with HPAs, and overly restrictive values that block cluster operations. A 5-minute audit can prevent a 4-hour upgrade nightmare.</p>
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

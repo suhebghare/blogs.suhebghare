@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLOs, SLIs, and Error Budgets That Actually Work in Production – Suheb Ghare</title>
+  <meta name="description" content="A practical guide to implementing SLOs, SLIs, and error budgets in production — with real Prometheus rules, burn rate alerting, error budget policies, and the real cost difference between 99.9% and 99.95%.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">SRE</span></div>
+      <h1 class="post-title">SLOs, SLIs, and Error Budgets That Actually Work in Production</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 January 10, 2025</span>
+        <span class="meta-item">⏱ 14 min read</span>
+        <span class="meta-item">👁 <span data-blog="sre-error-budgets-slos" data-stat="reads">980</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="sre-error-budgets-slos" data-stat="reads">980</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="sre-error-budgets-slos" data-stat="likes">412</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="sre-error-budgets-slos" data-stat="dislikes">22</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="sre-error-budgets-slos">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="sre-error-budgets-slos">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>Most teams I've worked with either don't have SLOs, or have SLOs that nobody looks at. They're set once during a planning meeting, written in a Confluence page, and never connected to actual alerting or decision-making. That's not SRE — that's documentation theater.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/grafana1.svg" alt="SLO error budget dashboard" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Error budget burn rate dashboard — the single most important SRE metric</figcaption>
+</figure>
+
+        <p>This post covers how to implement SLOs that actually drive engineering decisions, with real Prometheus recording rules, burn rate alerts, and an error budget policy that your team will actually follow.</p>
+
+        <h2>SLI, SLO, SLA — Cut Through the Confusion</h2>
+
+        <p>These three terms get mixed up constantly. Here's the simplest way to think about them:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>What It Is</th>
+              <th>Who Owns It</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SLI</strong> (Service Level Indicator)</td>
+              <td>A measurement — a ratio of good events to total events</td>
+              <td>Engineering</td>
+              <td>99.2% of requests returned 2xx in the last 30 days</td>
+            </tr>
+            <tr>
+              <td><strong>SLO</strong> (Service Level Objective)</td>
+              <td>A target — the threshold your SLI should meet</td>
+              <td>Engineering + Product</td>
+              <td>99.9% of requests should return 2xx over 30 days</td>
+            </tr>
+            <tr>
+              <td><strong>SLA</strong> (Service Level Agreement)</td>
+              <td>A contract — the SLO with financial consequences</td>
+              <td>Business + Legal</td>
+              <td>If availability drops below 99.5%, customer gets 10% credit</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The Golden Rule</div>
+          <p>Your SLO should always be stricter than your SLA. If your SLA promises 99.5%, your internal SLO should be 99.9%. The gap between them is your safety margin. If you alert on SLA breach, you're already in contract violation by the time you respond.</p>
+        </div>
+
+        <h2>Choosing the Right SLIs</h2>
+
+        <p>Not everything needs an SLO. Focus on what users actually experience. For most services, you need exactly two SLIs:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">SLO Error Budget Consumption</text><rect x="40" y="55" width="720" height="40" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><rect x="40" y="55" width="180" height="40" rx="6" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="130" y="75" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">0–25%</text><rect x="220" y="55" width="180" height="40" rx="0" fill="#3b3a1a" stroke="#334155" stroke-width="1.5"/><text x="310" y="75" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">25–75%</text><rect x="400" y="55" width="180" height="40" rx="0" fill="#5c3a1a" stroke="#334155" stroke-width="1.5"/><text x="490" y="75" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">75–100%</text><rect x="580" y="55" width="180" height="40" rx="0" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="670" y="75" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">>100%</text><text x="130" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Ship Features</text><text x="310" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">Caution</text><text x="490" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fb923c" text-anchor="middle" dominant-baseline="middle">Feature Freeze</text><text x="670" y="112" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Incident Mode</text><polygon points="340,50 350,40 330,40" fill="#f59e0b"/><text x="340" y="35" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fbbf24" text-anchor="middle" dominant-baseline="middle">Current: 42%</text><rect x="40" y="135" width="720" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/><text x="400" y="155" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Burn Rate = Error Budget Consumed / Time Elapsed</text><text x="400" y="175" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">SLO 99.9% → 43.2 min/month budget · Current burn: 1.8x → budget exhausted in 16 days</text><text x="400" y="192" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Action: burn rate >2x for 1h → page · >1x for 6h → ticket</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Error budget = how much unreliability your SLO allows. Burn rate tells you if you're spending too fast</figcaption></figure>
+
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">Availability</div>
+            <div class="metric-label">Ratio of successful requests to total requests. "Did the user get a response?" This catches outages, 5xx errors, and timeouts.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Latency</div>
+            <div class="metric-label">Ratio of requests faster than a threshold to total requests. "Was the response fast enough?" Use P99 for critical paths, P95 for others.</div>
+          </div>
+        </div>
+
+        <p>For specific service types, add a third:</p>
+
+        <ul>
+          <li><strong>Data pipelines:</strong> Freshness — "Is the data less than X minutes old?"</li>
+          <li><strong>Batch jobs:</strong> Throughput — "Did we process X records per hour?"</li>
+          <li><strong>Storage systems:</strong> Durability — "What percentage of writes were persisted?"</li>
+        </ul>
+
+        <h2>Setting the Right SLO Target</h2>
+
+        <p>This is where most teams go wrong. They pick 99.99% because it sounds good. Then they spend all their engineering time chasing reliability instead of building features. Or they pick 99% because it's easy, and users complain constantly.</p>
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/grafana1.svg" alt="Grafana monitoring dashboard" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">Grafana RED method dashboard: Rate, Errors, Duration — the three signals that matter for every service</figcaption>
+</figure>
+
+        <h3>The Real Cost of Each Nine</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SLO</th>
+              <th>Allowed Downtime/month</th>
+              <th>Error Budget (30 days)</th>
+              <th>What It Means in Practice</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>99%</td>
+              <td>7h 18m</td>
+              <td>432,000 bad requests per 43.2M</td>
+              <td>Can deploy aggressively, tolerate some failures</td>
+            </tr>
+            <tr>
+              <td>99.9%</td>
+              <td>43m 50s</td>
+              <td>43,200 bad requests per 43.2M</td>
+              <td>Need good deploys, basic alerting, reasonable on-call</td>
+            </tr>
+            <tr>
+              <td>99.95%</td>
+              <td>21m 55s</td>
+              <td>21,600 bad requests per 43.2M</td>
+              <td>Need canary deploys, fast rollback, solid monitoring</td>
+            </tr>
+            <tr>
+              <td>99.99%</td>
+              <td>4m 23s</td>
+              <td>4,320 bad requests per 43.2M</td>
+              <td>Need redundancy, auto-failover, minimal human intervention</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Real Example: 99.9% vs 99.95% — The Cost</div>
+          <p>We ran our checkout API at 99.95% for 6 months. The engineering cost to maintain it was roughly 1.5 FTE — dedicated to reliability work, on-call improvements, and incident response. When we relaxed to 99.9%, we freed up that engineer to build features. The extra 21 minutes of allowed downtime per month translated to ~$40K/year in recovered engineering capacity. The business impact of the extra downtime? Negligible — our actual availability was 99.93% either way.</p>
+        </div>
+
+        <h3>How to Pick Your Target</h3>
+
+        <ol>
+          <li><strong>Measure your current SLI</strong> for 30 days before setting an SLO. If you're currently at 99.7%, don't set an SLO of 99.99%.</li>
+          <li><strong>Ask product:</strong> "What's the user impact of X minutes of downtime per month?" Not "what availability do you want?" (they'll always say 100%).</li>
+          <li><strong>Start loose, tighten later.</strong> It's much easier to tighten an SLO than to relax one. Start at 99.9% and see if users complain.</li>
+          <li><strong>Different SLOs for different endpoints.</strong> Your checkout API needs 99.95%. Your admin dashboard can live with 99.5%.</li>
+        </ol>
+
+        <h2>Error Budget: The Math</h2>
+
+        <p>The error budget is simply: <code>1 - SLO</code>. If your SLO is 99.9%, your error budget is 0.1% of total requests over the SLO window.</p>
+
+        <p>For a service handling 1,000 requests per minute over a 30-day window:</p>
+
+        <div class="architecture-box">
+          <p><strong>Total requests in 30 days:</strong> 1,000 × 60 × 24 × 30 = 43,200,000</p>
+          <p><strong>Error budget (99.9% SLO):</strong> 43,200,000 × 0.001 = 43,200 failed requests</p>
+          <p><strong>That's ~1 failed request per minute</strong> sustained over the entire month, or a 100% outage for ~43 minutes.</p>
+        </div>
+
+        <h2>Prometheus Recording Rules for SLIs</h2>
+
+        <p>Recording rules pre-compute your SLIs so dashboards and alerts are fast. Here's what I use for every service:</p>
+
+<pre><code>groups:
+- name: sli-recording-rules
+  interval: 30s
+  rules:
+  # Availability SLI — ratio of non-5xx requests
+  - record: sli:availability:ratio_rate5m
+    expr: |
+      sum(rate(http_requests_total{status!~"5.."}[5m])) by (service)
+      /
+      sum(rate(http_requests_total[5m])) by (service)
+
+  # Availability SLI — 30-day rolling window
+  - record: sli:availability:ratio_rate30d
+    expr: |
+      sum(increase(http_requests_total{status!~"5.."}[30d])) by (service)
+      /
+      sum(increase(http_requests_total[30d])) by (service)
+
+  # Latency SLI — ratio of requests under 300ms
+  - record: sli:latency:ratio_rate5m
+    expr: |
+      sum(rate(http_request_duration_seconds_bucket{le="0.3"}[5m])) by (service)
+      /
+      sum(rate(http_request_duration_seconds_count[5m])) by (service)
+
+  # Error budget remaining (availability)
+  - record: sli:error_budget:remaining
+    expr: |
+      1 - (
+        (1 - sli:availability:ratio_rate30d)
+        /
+        (1 - 0.999)
+      )</code></pre>
+
+        <p>The <code>sli:error_budget:remaining</code> metric gives you a value between 0 and 1. At 1.0, you haven't used any budget. At 0, you've exhausted it. Below 0, you're in violation.</p>
+
+        <h2>Burn Rate Alerting: Stop Alerting on Thresholds</h2>
+
+        <p>Traditional alerting fires when availability drops below 99.9% over 5 minutes. This is noisy and misses slow burns. Burn rate alerting asks a better question: "At the current rate of errors, when will we exhaust our error budget?"</p>
+
+        <p>A burn rate of 1x means you'll exactly exhaust your budget by the end of the window. A burn rate of 14.4x means you'll exhaust it in 1/14.4th of the window — about 2 days for a 30-day window.</p>
+
+        <div class="diagram">
+          <div class="flow-step">Burn Rate 1x → Budget exhausted in 30 days → No alert</div>
+          <div class="flow-step">Burn Rate 6x → Budget exhausted in 5 days → Ticket (slow burn)</div>
+          <div class="flow-step">Burn Rate 14.4x → Budget exhausted in 2 days → Page (fast burn)</div>
+          <div class="flow-step">Burn Rate 36x → Budget exhausted in 20 hours → Critical page</div>
+        </div>
+
+        <h3>Multi-Window Burn Rate Alerts</h3>
+
+        <p>Google's SRE book recommends multi-window alerts to reduce false positives. You check both a long window (has enough budget been burned?) and a short window (is it still burning?):</p>
+
+<pre><code>groups:
+- name: slo-burn-rate-alerts
+  rules:
+  # Critical: 2% of 30-day budget burned in 1 hour
+  # (still burning in last 5 minutes)
+  - alert: SLOBurnRateCritical
+    expr: |
+      (
+        (1 - sli:availability:ratio_rate1h) / (1 - 0.999)
+      ) > 14.4
+      and
+      (
+        (1 - sli:availability:ratio_rate5m) / (1 - 0.999)
+      ) > 14.4
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High error burn rate on {{ $labels.service }}"
+      description: "Service {{ $labels.service }} is burning error budget 14.4x faster than normal. Budget will be exhausted in ~2 days at this rate."
+
+  # Warning: 5% of 30-day budget burned in 6 hours
+  - alert: SLOBurnRateWarning
+    expr: |
+      (
+        (1 - sli:availability:ratio_rate6h) / (1 - 0.999)
+      ) > 6
+      and
+      (
+        (1 - sli:availability:ratio_rate30m) / (1 - 0.999)
+      ) > 6
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Elevated error burn rate on {{ $labels.service }}"
+      description: "Service {{ $labels.service }} is burning error budget 6x faster than normal."</code></pre>
+
+        <div class="callout callout-success">
+          <div class="callout-title">Impact of Switching to Burn Rate Alerts</div>
+          <p>After migrating from threshold-based to burn rate alerts across 23 services: alert volume dropped by 68%. Pages dropped by 41%. But we caught 100% of the incidents that actually impacted users — we just stopped waking people up for blips that self-resolved in 30 seconds.</p>
+        </div>
+
+        <h2>The Error Budget Policy</h2>
+
+        <p>An error budget is useless without a policy that defines what happens when it's consumed. This is the document that gives SRE teeth. Without it, product will always push for more features regardless of reliability.</p>
+
+        <h3>Our Error Budget Policy</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Budget Remaining</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>&gt;50%</td>
+              <td><span class="cost-badge low">Healthy</span></td>
+              <td>Normal development velocity. Deploy freely. Take on tech debt if needed.</td>
+            </tr>
+            <tr>
+              <td>25-50%</td>
+              <td><span class="cost-badge medium">Caution</span></td>
+              <td>Review recent incidents. Prioritize one reliability task per sprint. Canary all deploys.</td>
+            </tr>
+            <tr>
+              <td>10-25%</td>
+              <td><span class="cost-badge high">At Risk</span></td>
+              <td>Freeze non-critical deploys. Dedicate 50% of sprint to reliability. Mandatory rollback plan for every deploy.</td>
+            </tr>
+            <tr>
+              <td>&lt;10%</td>
+              <td><span class="cost-badge high">Exhausted</span></td>
+              <td>Feature freeze. All engineering effort on reliability. Only emergency fixes deployed. Post-mortem required for any further budget consumption.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Getting Buy-In for the Policy</div>
+          <p>The error budget policy only works if engineering leadership and product management both sign off. Present it as a trade-off framework, not a punishment. "When we're reliable, we ship fast. When we're not, we fix reliability first." Frame it in terms of user trust and revenue, not uptime percentages.</p>
+        </div>
+
+        <h2>Building the SLO Dashboard</h2>
+
+        <p>Every service gets a Grafana dashboard with these panels:</p>
+
+        <ul>
+          <li><strong>Current SLI</strong> (30-day rolling) — big number, green/yellow/red</li>
+          <li><strong>Error budget remaining</strong> — percentage gauge</li>
+          <li><strong>Error budget burn-down</strong> — time series showing budget consumption over the month</li>
+          <li><strong>Burn rate</strong> (1h, 6h windows) — shows current burn velocity</li>
+          <li><strong>SLI over time</strong> — 5-minute resolution, 30-day view</li>
+          <li><strong>Top error contributors</strong> — which endpoints are consuming the most budget</li>
+        </ul>
+
+        <p>The most important panel is the burn-down chart. It makes error budget tangible. When the team sees the line dropping, they understand the urgency viscerally in a way that "99.87% availability" doesn't convey.</p>
+
+        <h2>Common Mistakes</h2>
+
+        <ul class="icon-list cross">
+          <li>Setting SLOs without measuring current SLIs first — you'll set unrealistic targets</li>
+          <li>Using the same SLO for all endpoints — your health check doesn't need 99.99%</li>
+          <li>Alerting on SLO breach instead of burn rate — you'll get paged for 30-second blips</li>
+          <li>Not having an error budget policy — SLOs without consequences are just dashboards</li>
+          <li>Counting only 5xx as errors — timeouts, client-visible retries, and slow responses are errors too</li>
+          <li>Using too short a window — 5-minute SLIs are noisy; 30-day rolling windows smooth out blips</li>
+          <li>Not excluding health checks and synthetic monitoring from SLI calculations</li>
+        </ul>
+
+        <h2>Implementing SLOs: A 4-Week Plan</h2>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Week 1: Instrument</h3>
+            <p>Add HTTP request counters and latency histograms to all services. Use standard labels: <code>service</code>, <code>method</code>, <code>status</code>, <code>endpoint</code>. Deploy Prometheus recording rules for SLIs.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 2: Measure</h3>
+            <p>Let the metrics collect for a week. Build the Grafana dashboard. Identify your current baseline SLIs. Share with the team — "here's where we actually are."</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 3: Set Targets</h3>
+            <p>Meet with product and engineering leads. Set initial SLOs based on measured baselines (slightly above current performance). Define the error budget policy. Get sign-off.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Week 4: Alert</h3>
+            <p>Deploy burn rate alerts. Run them in parallel with existing alerts for one week. Compare signal quality. Decommission old threshold alerts. Celebrate fewer pages.</p>
+          </div>
+        </div>
+
+        <h2>Key Takeaways</h2>
+
+        <p>SLOs are not about achieving perfect reliability. They're about making reliability a conscious, measurable trade-off against feature velocity. The error budget gives you permission to take risks when you're reliable, and forces you to slow down when you're not. That's the entire point. Start measuring today, set conservative targets, and iterate. The hardest part isn't the Prometheus rules — it's getting your organization to actually use the error budget as a decision-making tool.</p>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

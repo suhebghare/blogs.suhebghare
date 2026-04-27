@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Using LLMs to Analyze Production Incidents and Reduce MTTR – Suheb Ghare</title>
+  <meta name="description" content="How to feed logs, metrics, and traces into LLMs to build an AI incident assistant for SRE teams on Kubernetes and AWS. Real architecture, real trade-offs.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI & DevOps</span>
+        <span class="tag" style="margin-left:8px;">SRE</span>
+      </div>
+      <h1 class="post-title">Using LLMs to Analyze Production Incidents and Reduce MTTR</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 April 27, 2025</span>
+        <span class="meta-item">⏱ <span class="reading-time">22 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="llm-production-incident-mttr" data-stat="reads">1</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="llm-production-incident-mttr" data-stat="reads">1</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="llm-production-incident-mttr" data-stat="likes">0</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="llm-production-incident-mttr" data-stat="dislikes">0</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="llm-production-incident-mttr">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="llm-production-incident-mttr">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>The Real Problem: Signal-to-Noise, Not Tooling</h2>
+
+        <p>MTTR isn't a tooling problem. You already have Prometheus, Grafana, CloudWatch, Loki, Jaeger, kubectl, and a dozen Slack channels. The problem is that during an incident, you have <strong>too much data and not enough context</strong>. You're staring at 14 Grafana panels, tailing logs from 3 services, and trying to remember if that deployment 20 minutes ago touched the payment path — all while someone in Slack is asking "is this related to the thing from last week?"</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/otel1.png" alt="LLM incident analysis architecture" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Four-layer architecture: signal collection → context assembly → LLM → delivery</figcaption>
+</figure>
+
+        <p>LLMs don't replace SREs. They compress the time between <em>"alert fired"</em> and <em>"I know what's wrong."</em></p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">41 min</div>
+            <div class="metric-label">Average MTTR before (baseline)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">11 min</div>
+            <div class="metric-label">Average MTTR after 3 months</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">73%</div>
+            <div class="metric-label">Reduction in time-to-diagnosis</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">71%</div>
+            <div class="metric-label">Correct root cause identification</div>
+          </div>
+        </div>
+
+        <p>That 30-minute reduction isn't magic. It's eliminating the context-switching tax that kills you at 3am. Here's how we built the system.</p>
+
+        <h2>Why This Matters in Real Production</h2>
+
+        <p>Three failure modes kill MTTR in every team I've worked with:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 230" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">LLM-Powered MTTR Reduction: 4-Layer Architecture</text><rect x="20" y="55" width="180" height="90" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="110" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Signal Collection</text><text x="110" y="92" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Prometheus + CloudWatch</text><text x="110" y="108" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Loki + K8s Events + ArgoCD</text><line x1="200" y1="100" x2="215" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="215" y="55" width="180" height="90" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="305" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Context Assembly</text><text x="305" y="92" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Python asyncio</text><text x="305" y="108" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Token budget mgmt</text><line x1="395" y1="100" x2="410" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="410" y="55" width="180" height="90" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="500" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">LLM Layer</text><text x="500" y="92" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">GPT-4o</text><text x="500" y="108" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Structured JSON output</text><line x1="590" y1="100" x2="605" y2="100" stroke="100" stroke-width="2" marker-end="url(#a)"/><rect x="605" y="55" width="180" height="90" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="695" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Delivery</text><text x="695" y="92" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Slack thread</text><text x="695" y="108" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">PagerDuty note</text><rect x="20" y="165" width="370" height="50" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="183" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Before: MTTR 41 min</text><text x="205" y="200" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Manual context gathering</text><rect x="410" y="165" width="370" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="183" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">After: MTTR 11 min</text><text x="595" y="200" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Auto-assembled context + LLM RCA</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Async signal collection + LLM analysis = 73% MTTR reduction — context is assembled before the engineer looks</figcaption></figure>
+
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Failure Mode 1: Wrong Signal</div>
+          <p>The alert fires on CPU. The engineer opens the CPU dashboard. Spends 12 minutes investigating CPU. The actual issue is a downstream database connection timeout that's causing goroutines to pile up — which <em>looks</em> like CPU pressure but isn't the cause.</p>
+        </div>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Failure Mode 2: Context Switching</div>
+          <p>Grafana → CloudWatch → kubectl → Slack → Jira → back to Grafana. Each tool switch costs 30-90 seconds of cognitive reload. Over a 40-minute incident, you lose 8-10 minutes just navigating between tools.</p>
+        </div>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Failure Mode 3: Cognitive Load at 3am</div>
+          <p>A well-rested engineer at 2pm can hold 5-6 signals in working memory simultaneously. The same engineer at 3am, jolted awake by PagerDuty, can hold maybe 2-3. The diagnosis that takes 5 minutes during business hours takes 25 minutes at night.</p>
+        </div>
+
+        <p>LLMs are good at exactly one thing here: <strong>correlating signals across sources and surfacing the most likely explanation</strong>. They read every log line, every metric data point, every K8s event — and produce a 5-sentence briefing before you've finished opening your laptop.</p>
+
+        <div class="info-box success">
+          <strong>Real scenario:</strong> Payment service latency spike. Alert fired on p99 latency exceeding 2s. The on-call engineer's instinct was to check CPU (it was at 78%, looked suspicious). The LLM analyzed app logs alongside the metrics and correctly identified <strong>Redis connection pool exhaustion</strong> — visible in application WARN logs showing <code>redis.clients.jedis.exceptions.JedisExhaustedPoolException</code> 340 times in 5 minutes. The CPU spike was a symptom (threads spinning on connection retries), not the cause. Time to correct diagnosis: 14 seconds after the LLM received the data.
+        </div>
+
+        <h2>Architecture Deep Dive</h2>
+
+        <p>The system has four layers. Each one is independently replaceable — you can swap Loki for CloudWatch, GPT-4o for Claude, Slack for Teams — without touching the others.</p>
+
+<figure style="margin:2rem 0;text-align:center;">
+  <img src="../assets/images/otel1.png" alt="OpenTelemetry collector pipeline" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);font-style:italic;">OpenTelemetry Collector: receive, process, and export metrics, logs, and traces to any backend</figcaption>
+</figure>
+
+        <div class="architecture-box">
+          <h3>LLM Incident Assistant — Architecture</h3>
+          <p><strong>Layer 1 — Signal Collection:</strong> Prometheus (metrics via HTTP API), Loki/CloudWatch (logs), Jaeger/X-Ray (traces), kubectl (K8s events), ArgoCD/git (recent deployments)</p>
+          <p><strong>Layer 2 — Context Assembly:</strong> Python asyncio fetches all signals in parallel → truncate/summarize to fit token budget → structure into JSON context → serialize to prompt</p>
+          <p><strong>Layer 3 — LLM Analysis:</strong> System prompt (SRE role + JSON output schema) + user prompt (structured context) → GPT-4o / Claude 3.5 Sonnet / Llama 3 (self-hosted)</p>
+          <p><strong>Layer 4 — Delivery:</strong> Slack thread on incident channel, PagerDuty incident note, runbook link if pattern matches known issue</p>
+        </div>
+
+        <div class="diagram">
+          <div class="flow-step">PagerDuty Webhook</div>
+          <div class="flow-step">Lambda Trigger</div>
+          <div class="flow-step">Signal Collection (parallel)</div>
+          <div class="flow-step">Context Assembly + Token Budget</div>
+          <div class="flow-step">LLM Analysis (GPT-4o)</div>
+          <div class="flow-step">Slack Thread + PD Note</div>
+        </div>
+
+        <h3>Signal Collection Layer</h3>
+
+        <p>Each signal source gets a dedicated fetcher. All fetchers take the same inputs: <code>service name</code> and <code>incident_time</code>. All return structured data. The incident window is <strong>±15 minutes</strong> from the alert timestamp — wide enough to catch the cause, narrow enough to keep token count manageable.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Signal</th><th>Source</th><th>Query Method</th><th>What We Extract</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Metrics</td><td>Prometheus</td><td>HTTP API <code>range_query</code></td><td>Error rate, p99 latency, pod restarts, peak/trend</td></tr>
+            <tr><td>Logs</td><td>Loki or CloudWatch</td><td>LogQL or Logs Insights</td><td>ERROR/WARN lines, deduplicated, last 500</td></tr>
+            <tr><td>Traces</td><td>Jaeger / X-Ray</td><td>API query by service + duration</td><td>High-latency or error traces with span details</td></tr>
+            <tr><td>K8s Events</td><td>kubectl / K8s API</td><td><code>field-selector involvedObject.name</code></td><td>OOMKill, CrashLoopBackOff, FailedScheduling</td></tr>
+            <tr><td>Deployments</td><td>ArgoCD API / git log</td><td>REST API or <code>git log --since</code></td><td>Last 3 deployments with commit messages</td></tr>
+          </tbody>
+        </table>
+
+        <h3>LLM Output Schema</h3>
+
+        <p>The model returns structured JSON. This is non-negotiable — you need machine-parseable output to route decisions downstream.</p>
+
+<pre><code>{
+  "likely_cause": "Redis connection pool exhaustion due to slow eviction under load",
+  "confidence": "high",
+  "evidence": [
+    "JedisExhaustedPoolException appeared 340 times between 02:14-02:19 UTC",
+    "redis_connected_clients metric peaked at 498 (pool max: 500)",
+    "p99 latency correlated with redis connection wait time, not CPU"
+  ],
+  "recommended_actions": [
+    "kubectl rollout restart deployment/payments-worker -n prod",
+    "Increase Redis maxclients from 500 to 1000 in redis.conf",
+    "Add connection pool metrics to payments-worker Grafana dashboard"
+  ],
+  "needs_human_escalation": false,
+  "escalation_reason": null
+}</code></pre>
+
+        <h3>Model Choice</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Model</th><th>Best For</th><th>Latency</th><th>Cost (per incident)</th><th>Privacy</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>GPT-4o</td><td>Best quality, complex multi-service incidents</td><td>3-8s</td><td><span class="cost-badge medium">~$0.15-0.30</span></td><td>Data leaves your infra</td></tr>
+            <tr><td>Claude 3.5 Sonnet (Bedrock)</td><td>AWS-native, data stays in your account</td><td>4-10s</td><td><span class="cost-badge medium">~$0.12-0.25</span></td><td>AWS boundary</td></tr>
+            <tr><td>Llama 3 70B (self-hosted)</td><td>Sensitive environments, full data control</td><td>8-20s</td><td><span class="cost-badge high">~$2.10/hr GPU</span></td><td>Full control</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Real-World Implementation</h2>
+
+        <p>Below is the actual code we run in production. Each fetcher is a standalone function — easy to test, easy to swap.</p>
+
+        <h3>Prometheus Metrics Fetcher</h3>
+
+        <p>Fetches error rate, p99 latency, and pod restarts for the incident window. Returns peak, current, and trend for each metric.</p>
+
+<pre><code>import requests
+from datetime import datetime, timedelta
+
+def fetch_prometheus_context(service: str, incident_time: datetime) -> dict:
+    base = "http://prometheus:9090"
+    start = (incident_time - timedelta(minutes=30)).timestamp()
+    end = (incident_time + timedelta(minutes=5)).timestamp()
+
+    queries = {
+        "error_rate": f'rate(http_requests_total{{service="{service}",status=~"5.."}}[5m])',
+        "latency_p99": f'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{{service="{service}"}}[5m]))',
+        "pod_restarts": f'increase(kube_pod_container_status_restarts_total{{namespace="prod",pod=~"{service}.*"}}[30m])',
+    }
+
+    results = {}
+    for name, query in queries.items():
+        r = requests.get(f"{base}/api/v1/query_range", params={
+            "query": query, "start": start, "end": end, "step": "60"
+        })
+        data = r.json()["data"]["result"]
+        if data:
+            values = data[0]["values"]
+            results[name] = {
+                "peak": max(float(v[1]) for v in values),
+                "current": float(values[-1][1]),
+                "trend": "rising" if float(values[-1][1]) > float(values[0][1]) else "falling"
+            }
+    return results</code></pre>
+
+        <h3>CloudWatch Logs Insights Fetcher</h3>
+
+        <p>Queries the last 500 ERROR/WARN lines from the service's EKS log group. Uses Logs Insights for server-side filtering — never pull raw logs client-side.</p>
+
+<pre><code>import boto3, time
+from datetime import datetime, timedelta
+
+def fetch_cloudwatch_logs(service: str, incident_time: datetime, max_lines=500) -> str:
+    client = boto3.client("logs", region_name="us-east-1")
+    start_ms = int((incident_time - timedelta(minutes=30)).timestamp() * 1000)
+    end_ms = int((incident_time + timedelta(minutes=5)).timestamp() * 1000)
+
+    response = client.start_query(
+        logGroupName=f"/aws/eks/prod/{service}",
+        startTime=start_ms,
+        endTime=end_ms,
+        queryString=f"""
+            fields @timestamp, level, message, traceId
+            | filter level in ["ERROR", "WARN"]
+            | sort @timestamp desc
+            | limit {max_lines}
+        """
+    )
+    query_id = response["queryId"]
+
+    while True:
+        result = client.get_query_results(queryId=query_id)
+        if result["status"] == "Complete":
+            lines = []
+            for row in result["results"]:
+                fields = {f["field"]: f["value"] for f in row}
+                lines.append(
+                    f"[{fields.get('@timestamp','')}] "
+                    f"{fields.get('level','')} {fields.get('message','')}"
+                )
+            return "\n".join(lines)
+        time.sleep(1)</code></pre>
+
+        <h3>Loki Alternative (LogQL via HTTP)</h3>
+
+        <p>If you're running Loki instead of CloudWatch, the fetcher is simpler — no async query polling needed.</p>
+
+<pre><code>import requests
+from datetime import datetime, timedelta
+
+def fetch_loki_logs(service: str, incident_time: datetime, max_lines=500) -> str:
+    start_ns = int((incident_time - timedelta(minutes=30)).timestamp() * 1e9)
+    end_ns = int((incident_time + timedelta(minutes=5)).timestamp() * 1e9)
+
+    r = requests.get("http://loki:3100/loki/api/v1/query_range", params={
+        "query": f'{{namespace="prod", app="{service}"}} |= "ERROR" | logfmt',
+        "start": start_ns,
+        "end": end_ns,
+        "limit": max_lines,
+        "direction": "backward"
+    })
+    streams = r.json()["data"]["result"]
+    lines = []
+    for stream in streams:
+        for ts, line in stream["values"]:
+            lines.append(line)
+    return "\n".join(lines[:max_lines])</code></pre>
+
+        <h3>Grafana Panel Data Fetcher</h3>
+
+        <p>Pulls metric data from Grafana's datasource proxy API for the incident window. Useful when your dashboards have custom queries you don't want to duplicate.</p>
+
+<pre><code>import requests
+from datetime import datetime, timedelta
+
+def fetch_grafana_panel(dashboard_uid: str, panel_id: int,
+                        incident_time: datetime, grafana_url: str, api_key: str) -> dict:
+    from_ts = int((incident_time - timedelta(minutes=30)).timestamp() * 1000)
+    to_ts = int((incident_time + timedelta(minutes=5)).timestamp() * 1000)
+
+    # Use the data API, not the render API (which returns PNG)
+    r = requests.get(
+        f"{grafana_url}/api/datasources/proxy/1/api/v1/query_range",
+        headers={"Authorization": f"Bearer {api_key}"},
+        params={
+            "query": "...",  # Replace with your panel's actual query
+            "start": from_ts // 1000,
+            "end": to_ts // 1000,
+            "step": 60
+        }
+    )
+    return r.json()</code></pre>
+
+        <h3>Context Assembly + LLM Call</h3>
+
+        <p>This is the core. Fetch all signals in parallel, manage the token budget, build the prompt, call the model.</p>
+
+<pre><code>import asyncio, json
+from datetime import datetime
+from openai import AsyncOpenAI
+
+client = AsyncOpenAI()
+
+SYSTEM_PROMPT = """You are an SRE incident assistant. You will be given telemetry data
+(metrics, logs, k8s events) from a production incident. Analyze the data and respond
+with a JSON object containing:
+- likely_cause: string (1-2 sentences, specific)
+- confidence: "high" | "medium" | "low"
+- evidence: list of strings (specific log lines or metric values that support your conclusion)
+- recommended_actions: list of strings (ordered by priority, specific commands where possible)
+- needs_human_escalation: boolean
+- escalation_reason: string (if needs_human_escalation is true)
+
+Be specific. Reference actual values from the data. Do not speculate beyond the evidence."""
+
+async def analyze_incident(
+    service: str, incident_time: datetime, alert_description: str
+) -> dict:
+    # Fetch all signals in parallel
+    metrics, logs, k8s_events = await asyncio.gather(
+        asyncio.to_thread(fetch_prometheus_context, service, incident_time),
+        asyncio.to_thread(fetch_cloudwatch_logs, service, incident_time),
+        asyncio.to_thread(fetch_k8s_events, service, incident_time),
+    )
+
+    # Token budget management: truncate logs to ~3000 tokens
+    log_lines = logs.split("\n")
+    if len(log_lines) > 100:
+        # Keep first 20 (earliest errors) + last 80 (most recent)
+        logs = "\n".join(
+            log_lines[:20] + ["...[truncated]..."] + log_lines[-80:]
+        )
+
+    user_prompt = f"""Incident: {alert_description}
+Service: {service}
+Time: {incident_time.isoformat()}
+
+## Metrics (last 30 min)
+{json.dumps(metrics, indent=2)}
+
+## Application Logs (ERROR/WARN only)
+{logs}
+
+## Kubernetes Events
+{k8s_events}
+
+What is the most likely root cause?"""
+
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.1,  # Low temp for factual analysis
+        max_tokens=1000
+    )
+
+    return json.loads(response.choices[0].message.content)</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Token Budget Strategy</div>
+          <p>GPT-4o's 128k context window is deceptively large. The real constraint is cost: a 50k-token prompt costs ~$0.25. We target <strong>8-12k input tokens</strong> per incident — enough for meaningful context, cheap enough to run on every alert. The truncation logic (first 20 + last 80 log lines) preserves both the initial trigger and the most recent state.</p>
+        </div>
+
+        <h3>PagerDuty Webhook → Lambda Handler</h3>
+
+        <p>The entry point. PagerDuty fires a webhook on new incidents. Lambda receives it, runs the analysis, posts results to Slack and back to PagerDuty.</p>
+
+<pre><code>import json, asyncio
+from datetime import datetime
+
+def lambda_handler(event, context):
+    body = json.loads(event["body"])
+
+    # Only trigger on new incidents
+    if body["event"]["event_type"] != "incident.trigger":
+        return {"statusCode": 200}
+
+    incident = body["event"]["data"]
+    service = incident["service"]["name"]
+    alert_desc = incident["title"]
+    incident_time = datetime.fromisoformat(
+        incident["created_at"].replace("Z", "+00:00")
+    )
+
+    # Run analysis
+    result = asyncio.run(
+        analyze_incident(service, incident_time, alert_desc)
+    )
+
+    # Post to Slack incident thread
+    post_to_slack_thread(
+        incident_id=incident["id"],
+        analysis=result,
+        service=service
+    )
+
+    # Add note to PagerDuty incident
+    add_pagerduty_note(incident["id"], result)
+
+    return {"statusCode": 200}</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Lambda Timeout Gotcha</div>
+          <p>API Gateway has a 29-second hard timeout. GPT-4o can take 3-8 seconds, plus signal fetching takes 2-5 seconds. Return <code>200</code> immediately from the webhook and process asynchronously — either use Lambda with async invocation, or have the webhook handler push to SQS and process from a separate Lambda.</p>
+        </div>
+
+        <h2>Challenges &amp; Pitfalls</h2>
+
+        <p>We hit every one of these. Sharing so you don't have to.</p>
+
+        <h3>1. Token Budget Is Your Biggest Constraint — Not Model Quality</h3>
+
+        <p>GPT-4o's 128k context window sounds generous. Then you do the math:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Scenario</th><th>Input Tokens</th><th>Cost per Incident</th><th>At 100 incidents/day</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Minimal (metrics + 50 log lines)</td><td>~3k</td><td><span class="cost-badge low">$0.015</span></td><td>$1.50/day</td></tr>
+            <tr><td>Standard (metrics + 200 log lines + events)</td><td>~12k</td><td><span class="cost-badge medium">$0.06</span></td><td>$6/day</td></tr>
+            <tr><td>Full context (everything, no truncation)</td><td>~50k</td><td><span class="cost-badge high">$0.25</span></td><td>$25/day = $750/mo</td></tr>
+          </tbody>
+        </table>
+
+        <p>Strategy: aggressive pre-filtering. Only ERROR/WARN logs. Only anomalous metric windows. Deduplicate repeated error messages (send count + one example instead of 340 identical lines). Summarize before sending.</p>
+
+        <h3>2. LLMs Hallucinate Root Causes Confidently</h3>
+
+        <p>The model will produce a plausible-sounding but completely wrong explanation. It sounds authoritative. It references real metric names. And it's wrong.</p>
+
+        <div class="info-box danger">
+          <strong>Mitigation:</strong> Require the <code>evidence</code> field in JSON output. After receiving the response, validate that every evidence string actually appears in the input data (simple substring match). If evidence doesn't match input, downgrade confidence to "low" automatically. Only auto-post "high" confidence analyses to Slack — flag "medium" and "low" for human review.
+        </div>
+
+        <h3>3. Log Verbosity Explosion During Incidents</h3>
+
+        <p>When a service is failing, it logs 10x more than normal. A 30-minute incident window might produce 500k log lines. You cannot send all of them.</p>
+
+        <ul>
+          <li><strong>Deduplicate:</strong> Group identical error messages, send count + one example</li>
+          <li><strong>Pre-aggregate:</strong> Use CloudWatch Logs Insights <code>stats count(*) by message</code> before pulling raw lines</li>
+          <li><strong>Prioritize unique errors:</strong> Send the 20 most unique error messages, not the 20 most frequent</li>
+        </ul>
+
+        <h3>4. Trace Correlation Is the Hardest Part</h3>
+
+        <p>Distributed traces span multiple services. X-Ray trace IDs appear in logs, but correlating them requires joining data from multiple sources. The LLM cannot do this join — you have to do it in code before building the prompt. We built a <code>trace_enricher</code> that takes error trace IDs from logs, fetches the full trace from X-Ray, and includes the span tree in the context. This alone took 3 weeks to get right.</p>
+
+        <h3>5. The Model Doesn't Know Your System</h3>
+
+        <p>It doesn't know that your <code>payments-worker</code> service normally runs at 70% memory, or that <code>FailedScheduling</code> events on the batch namespace are expected during off-peak hours.</p>
+
+        <div class="info-box success">
+          <strong>Solution:</strong> Maintain a YAML context file per service. Inject it into the system prompt.
+        </div>
+
+<pre><code># service-context/payments-worker.yaml
+service: payments-worker
+description: "Processes async payment events from SQS. High memory usage is normal (in-memory transaction cache)."
+normal_behavior:
+  memory_usage: "60-75% is normal, alert only above 85%"
+  error_rate: "Baseline 0.1% — Stripe webhook retries cause transient 4xx"
+  restart_frequency: "1-2 restarts/day from JVM GC pressure is expected"
+known_issues:
+  - "CONN_TIMEOUT to payments-db during daily backup window (02:00-02:15 UTC)"
+  - "SQS visibility timeout errors are retried automatically, not actionable"
+runbook: "https://wiki.internal/runbooks/payments-worker"
+on_call_escalation: "#payments-team"</code></pre>
+
+        <h3>6. Latency: The API Gateway Timeout Trap</h3>
+
+        <p>GPT-4o takes 3-8 seconds for a 1000-token response. Signal fetching adds 2-5 seconds. If you're calling this synchronously in a Lambda behind API Gateway, you'll hit the 29-second timeout on complex incidents. The fix is simple: <strong>async processing</strong>. Webhook returns 200 immediately. Lambda (or SQS consumer) processes in the background. Posts to Slack when done.</p>
+
+        <h3>7. PII and Sensitive Data in Logs</h3>
+
+        <p>Application logs contain user IDs, emails, IPs, request payloads. Sending these to OpenAI's API violates most privacy policies and potentially GDPR.</p>
+
+        <div class="icon-list">
+          <div class="icon-list-item">
+            <span>✅</span>
+            <div><strong>Regex scrubbing</strong> — Strip emails, IPs, credit card patterns before sending</div>
+          </div>
+          <div class="icon-list-item">
+            <span>✅</span>
+            <div><strong>AWS Bedrock (Claude)</strong> — Data stays in your AWS account</div>
+          </div>
+          <div class="icon-list-item">
+            <span>✅</span>
+            <div><strong>Self-hosted Llama 3 70B</strong> — Full control on your GPU instances</div>
+          </div>
+          <div class="icon-list-item">
+            <span>✅</span>
+            <div><strong>Structured logging with PII fields</strong> — Mask at the application level, not at analysis time</div>
+          </div>
+        </div>
+
+        <h2>Best Practices</h2>
+
+        <p>Concrete, actionable lessons from 3 months of running this in production.</p>
+
+        <h3>Service Context Files</h3>
+        <p>Maintain a YAML file per service (shown above). Include: description, normal behavior baselines, known non-issues, runbook links, escalation channels. Inject the relevant file into the system prompt for every analysis. This single change improved our correct root cause rate from 58% to 71%.</p>
+
+        <h3>Feedback Loop</h3>
+        <p>After every incident, the on-call engineer rates the LLM analysis: <strong>correct</strong>, <strong>partially correct</strong>, or <strong>wrong</strong>. We store this alongside the prompt and response. Use it to improve prompts and track model accuracy over time.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">71%</div>
+            <div class="metric-label">Correct root cause</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">18%</div>
+            <div class="metric-label">Partially correct</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">11%</div>
+            <div class="metric-label">Wrong</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">89%</div>
+            <div class="metric-label">Useful (correct + partial)</div>
+          </div>
+        </div>
+
+        <h3>Don't Auto-Remediate (With One Exception)</h3>
+
+        <p>Use the LLM for <strong>diagnosis, not action</strong>. The one exception: if <code>confidence=high</code> AND the recommended action matches a pre-approved safe action (pod restart, cache flush, feature flag toggle), you can auto-execute with a <strong>60-second confirmation window</strong> in Slack. If no one cancels within 60 seconds, it runs. This handles the 3am case where the engineer is still waking up.</p>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Pre-Approved Safe Actions Only</div>
+          <p>We maintain an explicit allowlist: <code>kubectl rollout restart</code>, <code>redis-cli FLUSHDB</code> (non-prod caches only), feature flag disable via LaunchDarkly API. Anything not on the list requires human confirmation regardless of confidence score.</p>
+        </div>
+
+        <h3>Cost Control: Circuit Breaker</h3>
+        <p>Implement a circuit breaker on LLM API calls. If the API is slow (>15s), expensive (daily spend exceeds threshold), or returning errors — fall back to a simpler keyword-based analysis that pattern-matches known error signatures. Don't let LLM costs scale linearly with incident volume during an outage storm.</p>
+
+        <h3>Pin Your Model Version</h3>
+
+        <div class="info-box warning">
+          <strong>Use <code>gpt-4o-2024-08-06</code>, not <code>gpt-4o</code>.</strong> Model updates can change behavior and break your JSON output format. We learned this the hard way when an unannounced model update started returning markdown-wrapped JSON instead of raw JSON, breaking our parser during a SEV1.
+        </div>
+
+        <h3>Test With Historical Incidents</h3>
+        <p>Before going live, run your system against <strong>50+ past incidents</strong> where you know the root cause. Measure accuracy. Tune prompts. We iterated through 4 prompt versions before finding one that consistently produced actionable output. This backtesting phase took 2 weeks and was the highest-ROI time we spent on the project.</p>
+
+        <h2>Conclusion</h2>
+
+        <p>The goal isn't to replace the on-call engineer. It's to hand them a <strong>briefing document the moment they pick up the page</strong> — so they spend their cognitive energy on fixing, not finding.</p>
+
+        <p>The 30-minute reduction in MTTR we achieved isn't magic. It's eliminating the time spent context-switching between 5 tools at 3am. The LLM reads every log line, every metric data point, every K8s event, and produces a structured analysis before you've finished opening your laptop.</p>
+
+        <blockquote>Think of it as a very fast, very well-read junior engineer who has already read every log line and every metric before you even opened your laptop. It doesn't have your experience or judgment — but it has perfect recall and zero cognitive fatigue. Use it that way.</blockquote>
+
+        <p>Start small. Pick one high-frequency alert. Build the fetchers. Wire up the prompt. Test against 10 past incidents. Measure accuracy. Then expand. The architecture is modular — every component is independently replaceable. You don't need to build the whole system on day one.</p>
+
+        <div class="info-box success">
+          <strong>TL;DR:</strong> Feed your logs, metrics, and K8s events into an LLM with a well-structured prompt. Get a root cause analysis in 15 seconds instead of 30 minutes of manual investigation. Pin your model version, scrub PII, implement a feedback loop, and never auto-remediate without a human-approved allowlist.
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">AI & DevOps</a><a href="../index.html">SRE</a><a href="../index.html">Kubernetes</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2025 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

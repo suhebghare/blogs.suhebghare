@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How AI Can Help SREs Reduce Alert Fatigue – Suheb Ghare</title>
+  <meta name="description" content="How AI Can Help SREs Reduce Alert Fatigue – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI & DevOps</span>
+      </div>
+      <h1 class="post-title">How AI Can Help SREs Reduce Alert Fatigue</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="ai-reduce-alert-fatigue" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="ai-reduce-alert-fatigue" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="ai-reduce-alert-fatigue" data-stat="likes">347</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="ai-reduce-alert-fatigue" data-stat="dislikes">25</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="ai-reduce-alert-fatigue">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="ai-reduce-alert-fatigue">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>The Alert Fatigue Problem</h2>
+        <p>Our SRE team was drowning. Every week, we were processing <strong>200+ alerts</strong> across three EKS clusters, and the on-call engineer spent most of their shift triaging noise instead of fixing real problems. We ran the numbers over a quarter and the results were brutal:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/otel1.png" alt="ML-based alert correlation" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">DBSCAN clustering reduces 200 weekly alerts to 27 actionable ones</figcaption>
+</figure>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">73%</div>
+            <div class="metric-label">Alerts were noise (non-actionable)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">47 min</div>
+            <div class="metric-label">Average MTTR per incident</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">68%</div>
+            <div class="metric-label">False positive rate</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">3.2</div>
+            <div class="metric-label">Pages per on-call shift (avg)</div>
+          </div>
+        </div>
+
+        <p>The classic response is "just tune your thresholds." We tried that. We spent two sprints adjusting Prometheus alert rules, adding inhibition rules in AlertManager, and grouping by namespace. It helped — we got from 280 alerts/week down to 200. But the fundamental problem remained: alerts were firing independently with no understanding of whether they were related or actionable.</p>
+
+        <h2>Architecture: ML-Powered Alert Correlation</h2>
+        <p>We built a lightweight Python service that sits between AlertManager and PagerDuty. Instead of suppressing alerts (dangerous — you'll miss real ones), we <strong>correlate</strong> them into incident clusters and enrich them with LLM-generated summaries.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ML Alert Correlation Pipeline</text><rect x="20" y="55" width="140" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="90" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Prometheus</text><text x="90" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Alerts</text><line x1="160" y1="85" x2="175" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="175" y="55" width="140" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="245" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Alert</text><text x="245" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Manager</text><line x1="315" y1="85" x2="330" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="330" y="55" width="140" height="60" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Python ML</text><text x="400" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">DBSCAN</text><line x1="470" y1="85" x2="485" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="485" y="55" width="140" height="60" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="555" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Correlated</text><text x="555" y="88" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Groups</text><line x1="625" y1="85" x2="640" y2="85" stroke="85" stroke-width="2" marker-end="url(#a)"/><rect x="640" y="55" width="140" height="60" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="710" y="72" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">PagerDuty</text><rect x="20" y="135" width="370" height="70" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="152" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Before: 200 alerts/week</text><text x="205" y="168" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">68% noise</text><text x="205" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">MTTR: 47 min</text><rect x="410" y="135" width="370" height="70" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="152" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">After: 27 alerts/week</text><text x="595" y="168" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#86efac" text-anchor="middle" dominant-baseline="middle">12% noise</text><text x="595" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">MTTR: 18 min</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">DBSCAN clusters correlated alerts into single incidents — 86% reduction in alert volume</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">Prometheus</div>
+          <div class="flow-step">AlertManager</div>
+          <div class="flow-step">Python ML Service (DBSCAN + GPT-4)</div>
+          <div class="flow-step">PagerDuty</div>
+        </div>
+
+        <p>The ML service receives alerts via AlertManager's webhook receiver, clusters them using DBSCAN, and forwards a single enriched incident to PagerDuty instead of 15 individual alerts.</p>
+
+        <h2>Step 1: Alert Ingestion via Webhook</h2>
+        <p>AlertManager sends grouped alerts to our service. Here's the webhook receiver:</p>
+
+        <pre><code>from flask import Flask, request, jsonify
+from datetime import datetime
+import json
+
+app = Flask(__name__)
+alert_buffer = []
+
+@app.route('/webhook', methods=['POST'])
+def receive_alerts():
+    payload = request.json
+    for alert in payload.get('alerts', []):
+        alert_buffer.append({
+            'fingerprint': alert['fingerprint'],
+            'labels': alert['labels'],
+            'annotations': alert['annotations'],
+            'starts_at': alert['startsAt'],
+            'status': alert['status'],
+            'received_at': datetime.utcnow().isoformat()
+        })
+    # Process buffer every 60 seconds via background thread
+    return jsonify({'status': 'received'}), 200</code></pre>
+
+        <p>We buffer alerts for 60 seconds before clustering. This window catches cascading failures that fire alerts within seconds of each other — a pod OOMKill triggers a deployment unavailable alert, which triggers an SLO burn rate alert. Same root cause, three pages.</p>
+
+        <h2>Step 2: DBSCAN Clustering</h2>
+        <p>We use DBSCAN (Density-Based Spatial Clustering) because it doesn't require specifying the number of clusters upfront, and it handles noise points well. The feature vector for each alert includes:</p>
+
+        <ul>
+          <li><strong>Namespace</strong> — one-hot encoded</li>
+          <li><strong>Service name</strong> — one-hot encoded</li>
+          <li><strong>Alert type</strong> — categorical (CPU, memory, pod, latency, error rate)</li>
+          <li><strong>Timestamp</strong> — normalized to 0-1 within the buffer window</li>
+          <li><strong>Severity</strong> — ordinal (info=0, warning=1, critical=2)</li>
+        </ul>
+
+        <pre><code>from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
+
+def cluster_alerts(alerts):
+    features = extract_features(alerts)
+    clustering = DBSCAN(eps=0.3, min_samples=2).fit(features)
+
+    clusters = {}
+    for idx, label in enumerate(clustering.labels_):
+        if label == -1:
+            # Noise point — forward as individual alert
+            clusters[f'single_{idx}'] = [alerts[idx]]
+        else:
+            clusters.setdefault(label, []).append(alerts[idx])
+
+    return clusters</code></pre>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Tuning eps</div>
+          <p>We started with <code>eps=0.5</code> and found it was too aggressive — it clustered unrelated alerts from the same namespace. After testing against 4 weeks of historical data, <code>eps=0.3</code> gave us the best precision. Run your own backtests before deploying.</p>
+        </div>
+
+        <h2>Step 3: Historical Pattern Learning</h2>
+        <p>The real power came from learning which alerts engineers consistently acknowledged without action. We exported 6 months of PagerDuty acknowledgment data and built a suppression confidence score:</p>
+
+        <pre><code>import pandas as pd
+
+def calculate_suppression_score(alert, history_df):
+    matching = history_df[
+        (history_df['alert_name'] == alert['labels']['alertname']) &
+        (history_df['namespace'] == alert['labels'].get('namespace', ''))
+    ]
+    if len(matching) < 10:
+        return 0.0  # Not enough data
+
+    ack_without_action = matching[
+        (matching['acknowledged'] == True) &
+        (matching['resolved_by'] == 'auto')
+    ]
+    score = len(ack_without_action) / len(matching)
+    return round(score, 2)</code></pre>
+
+        <p>Alerts with a suppression score above 0.85 get downgraded from PagerDuty page to Slack notification. We <strong>never fully suppress</strong> — they still go to a <code>#alerts-low-priority</code> channel. This is critical: suppression is how you miss the one time that flapping alert is actually a real outage.</p>
+
+        <h2>Step 4: LLM-Generated Alert Summaries</h2>
+        <p>When a cluster of alerts fires, the on-call engineer used to get 8 separate PagerDuty notifications. Now they get one, with a GPT-4 generated summary that includes probable root cause and suggested actions:</p>
+
+        <pre><code>import openai
+
+def generate_alert_summary(cluster_alerts):
+    alert_text = "\n".join([
+        f"- {a['labels']['alertname']}: {a['annotations'].get('description', 'N/A')} "
+        f"(namespace: {a['labels'].get('namespace', 'unknown')}, "
+        f"severity: {a['labels'].get('severity', 'unknown')})"
+        for a in cluster_alerts
+    ])
+
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[{
+            "role": "system",
+            "content": "You are an SRE assistant. Analyze correlated alerts and provide: "
+                       "1) Probable root cause 2) Affected services 3) Suggested first response. "
+                       "Be concise. Use bullet points."
+        }, {
+            "role": "user",
+            "content": f"These alerts fired within 60 seconds of each other:\n{alert_text}"
+        }],
+        max_tokens=300,
+        temperature=0.2
+    )
+    return response.choices[0].message.content</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Cost Control</div>
+          <p>GPT-4 API calls cost ~$0.03-0.06 per summary. At 4-5 clusters per day, that's roughly <strong>$5-9/month</strong>. We set a hard limit of 50 API calls/day and fall back to a template-based summary if exceeded.</p>
+        </div>
+
+        <h2>Step 5: PagerDuty Integration</h2>
+        <p>The enriched incident goes to PagerDuty with the cluster summary, individual alert details, and links to relevant Grafana dashboards:</p>
+
+        <pre><code>import requests
+
+def create_pagerduty_incident(cluster, summary):
+    payload = {
+        "routing_key": PAGERDUTY_ROUTING_KEY,
+        "event_action": "trigger",
+        "payload": {
+            "summary": f"[Correlated] {len(cluster)} alerts - {summary[:200]}",
+            "severity": max(a['labels'].get('severity', 'warning') for a in cluster),
+            "source": "alert-correlator",
+            "custom_details": {
+                "ai_summary": summary,
+                "alert_count": len(cluster),
+                "alerts": [a['labels']['alertname'] for a in cluster],
+                "namespaces": list(set(a['labels'].get('namespace', '') for a in cluster))
+            }
+        }
+    }
+    requests.post("https://events.pagerduty.com/v2/enqueue", json=payload)</code></pre>
+
+        <h2>The Human Feedback Loop</h2>
+        <p>This is the part most teams skip, and it's the most important. After every incident, the on-call engineer rates the AI summary:</p>
+
+        <ul>
+          <li><strong>Accurate</strong> — root cause was correct</li>
+          <li><strong>Partially accurate</strong> — right direction, wrong specifics</li>
+          <li><strong>Wrong</strong> — completely off base</li>
+          <li><strong>Missed correlation</strong> — alerts should have been grouped but weren't</li>
+        </ul>
+
+        <p>This feedback goes back into tuning the DBSCAN parameters and the LLM prompt. After 3 months, our prompt evolved significantly from the original version — we added specific context about our infrastructure patterns that the LLM couldn't know otherwise.</p>
+
+        <h2>Results: Before vs After</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Before</th>
+              <th>After</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Alerts per week</td>
+              <td>200+</td>
+              <td>27 actionable incidents</td>
+              <td>-86%</td>
+            </tr>
+            <tr>
+              <td>MTTR</td>
+              <td>47 minutes</td>
+              <td>18 minutes</td>
+              <td>-62%</td>
+            </tr>
+            <tr>
+              <td>False positive rate</td>
+              <td>68%</td>
+              <td>12%</td>
+              <td>-56pp</td>
+            </tr>
+            <tr>
+              <td>On-call satisfaction (1-5)</td>
+              <td>2.1</td>
+              <td>4.3</td>
+              <td>+105%</td>
+            </tr>
+            <tr>
+              <td>Pages per shift</td>
+              <td>3.2</td>
+              <td>0.8</td>
+              <td>-75%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Lessons Learned</h2>
+
+        <div class="info-box success">
+          <h3>✅ What Worked</h3>
+          <ul>
+            <li><strong>Correlate, don't suppress.</strong> Suppression hides problems. Correlation groups them so you see the full picture.</li>
+            <li><strong>60-second buffer window</strong> catches 90% of cascading alert storms without adding meaningful delay.</li>
+            <li><strong>LLM summaries save 10-15 minutes per incident</strong> because the on-call engineer starts with context instead of reading 8 alert descriptions.</li>
+            <li><strong>Human feedback loop</strong> improved clustering accuracy from 71% to 94% over 3 months.</li>
+          </ul>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ What Didn't Work</h3>
+          <ul>
+            <li><strong>Auto-resolving alerts based on ML confidence.</strong> We tried it for 2 weeks. Missed a real database connection pool exhaustion because the pattern looked like a previous false positive.</li>
+            <li><strong>Using GPT-3.5 instead of GPT-4.</strong> The summaries were too generic — "check the logs" isn't helpful at 3am.</li>
+            <li><strong>Clustering across namespaces by default.</strong> A CPU spike in <code>payments</code> and <code>notifications</code> at the same time is usually two different problems, not one.</li>
+          </ul>
+        </div>
+
+        <h2>Should You Build This?</h2>
+        <p>If your team gets fewer than 50 alerts/week, tune your AlertManager rules first — that's free and gets you 80% of the way. This ML pipeline is worth it when you've already done the basics and still have noise. The total build took us 3 weeks with one engineer, and the ongoing cost is ~$15/month (EC2 t3.small + GPT-4 API).</p>
+
+        <blockquote>
+          <p>The goal isn't zero alerts. It's zero <em>useless</em> alerts. Every page should require a human decision.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

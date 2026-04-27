@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Writing On-Call Runbooks That Actually Work at 3am – Suheb Ghare</title>
+  <meta name="description" content="How to write on-call runbooks that engineers can actually follow at 3am — decision trees, real templates, common alert playbooks, and how to keep runbooks fresh.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger">☰</button>
+    </nav>
+  </header>
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags"><span class="tag">SRE</span></div>
+      <h1 class="post-title">Writing On-Call Runbooks That Actually Work at 3am</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 December 28, 2024</span>
+        <span class="meta-item">⏱ 12 min read</span>
+        <span class="meta-item">👁 <span data-blog="on-call-runbook-design" data-stat="reads">890</span> reads</span>
+      </div>
+    </div>
+  </div>
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="on-call-runbook-design" data-stat="reads">890</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="on-call-runbook-design" data-stat="likes">398</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="on-call-runbook-design" data-stat="dislikes">18</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="on-call-runbook-design">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="on-call-runbook-design">👎 Dislike</button>
+        </div>
+      </div>
+      <div class="post-content">
+
+        <p>It's 3:17am. Your phone is screaming. You're half-asleep, your laptop screen is blinding, and you have 30 seconds to figure out what's on fire. You open the runbook and it says: "Investigate the issue and take appropriate action." Thanks. Very helpful.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/olly1.jpg" alt="On-call runbook decision tree" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Decision-tree runbooks cut MTTR by 74% compared to prose-style runbooks</figcaption>
+</figure>
+
+        <p>I've been on-call for 6 years across 4 organizations. The difference between a 5-minute resolution and a 2-hour firefight almost always comes down to the runbook. Not the engineer's skill — the runbook. A junior engineer with a great runbook will outperform a senior engineer with no runbook every single time at 3am.</p>
+
+        <h2>What Most Runbooks Get Wrong</h2>
+
+        <ul class="icon-list cross">
+          <li><strong>Too long:</strong> 15-page documents that read like architecture docs. Nobody reads 15 pages at 3am.</li>
+          <li><strong>Too vague:</strong> "Check the logs for errors." Which logs? Where? What errors?</li>
+          <li><strong>Outdated:</strong> References services that were decommissioned 6 months ago, or commands that no longer work.</li>
+          <li><strong>No decision tree:</strong> Walls of text instead of "if X, do Y; if Z, do W."</li>
+          <li><strong>Missing escalation paths:</strong> No guidance on when to wake someone else up.</li>
+          <li><strong>Written by the person who built the system:</strong> They skip steps that are "obvious" to them but not to anyone else.</li>
+        </ul>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The Litmus Test</div>
+          <p>Give your runbook to someone who has never touched the service. If they can't follow it to resolution (or at least to a clear escalation point) within 10 minutes, the runbook is broken.</p>
+        </div>
+
+        <h2>Anatomy of a Good Runbook</h2>
+
+        <p>Every runbook should have exactly these sections, in this order. No more, no less.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 310" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">CrashLoopBackOff Decision Tree</text><rect x="280" y="50" width="240" height="44" rx="10" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">CrashLoopBackOff Alert</text><line x1="400" y1="94" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="130" y2="130" stroke="#6366f1" stroke-width="1.5"/><rect x="60" y="125" width="140" height="44" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="130" y="137" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">OOMKilled?</text><line x1="130" y1="169" x2="130" y2="190" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="60" y="190" width="140" height="44" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="130" y="202" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Increase memory</text><text x="130" y="216" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">limits</text><line x1="400" y1="94" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="330" y2="130" stroke="#6366f1" stroke-width="1.5"/><rect x="260" y="125" width="140" height="44" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="330" y="137" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Exit code 1?</text><line x1="330" y1="169" x2="330" y2="190" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="260" y="190" width="140" height="44" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="330" y="202" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Check app logs</text><text x="330" y="216" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">for stack trace</text><line x1="400" y1="94" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="530" y2="130" stroke="#6366f1" stroke-width="1.5"/><rect x="460" y="125" width="140" height="44" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="530" y="137" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Exit code 137?</text><line x1="530" y1="169" x2="530" y2="190" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="460" y="190" width="140" height="44" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="530" y="202" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">OOM — check</text><text x="530" y="216" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">resource limits</text><line x1="400" y1="94" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="730" y2="130" stroke="#6366f1" stroke-width="1.5"/><rect x="660" y="125" width="140" height="44" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="730" y="137" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">ImagePull</text><text x="730" y="151" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">BackOff?</text><line x1="730" y1="169" x2="730" y2="190" stroke="#22c55e" stroke-width="2" marker-end="url(#a3)"/><rect x="660" y="190" width="140" height="44" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="730" y="202" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Check image tag</text><text x="730" y="216" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">& registry auth</text><rect x="20" y="250" width="370" height="44" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="205" y="272" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Before: MTTR 47 min (guessing)</text><rect x="410" y="250" width="370" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="272" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">After: MTTR 12 min (decision tree)</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Decision trees turn tribal knowledge into repeatable steps — every on-call engineer follows the same path</figcaption></figure>
+
+
+        <div class="info-box">
+          <h3>Runbook Template</h3>
+          <p><strong>1. Alert Name & Severity</strong> — What fired and how urgent is it?</p>
+          <p><strong>2. Impact (1-2 sentences)</strong> — What's broken from the user's perspective?</p>
+          <p><strong>3. Quick Check (30 seconds)</strong> — Is this a real problem or a false alarm?</p>
+          <p><strong>4. Decision Tree</strong> — If/then steps based on what you observe.</p>
+          <p><strong>5. Remediation Steps</strong> — Exact commands, copy-pasteable.</p>
+          <p><strong>6. Verification</strong> — How to confirm the fix worked.</p>
+          <p><strong>7. Escalation</strong> — When and who to escalate to.</p>
+          <p><strong>8. Post-Incident</strong> — What to document after resolution.</p>
+        </div>
+
+        <h2>Decision Tree Format</h2>
+
+        <p>Decision trees are the single most important improvement you can make to your runbooks. They replace paragraphs of text with a clear flow that a sleep-deprived brain can follow.</p>
+
+        <h3>High CPU Alert Decision Tree</h3>
+
+        <div class="diagram">
+          <div class="flow-step">Alert: CPU > 90% for 5 minutes</div>
+          <div class="flow-step">Check: Is it a single pod or all pods?<br><code>kubectl top pods -n production -l app=api-server</code></div>
+          <div class="flow-step">Single pod → Likely a code issue (infinite loop, memory leak causing GC thrash)<br>→ Restart the pod: <code>kubectl delete pod POD_NAME -n production</code><br>→ If it recurs within 10 min, escalate to app team</div>
+          <div class="flow-step">All pods → Likely a traffic spike or upstream issue<br>→ Check request rate: <code>sum(rate(http_requests_total{service="api-server"}[5m]))</code><br>→ If traffic spike: scale up HPA or add replicas manually<br>→ If normal traffic: check for slow downstream (DB, cache)</div>
+        </div>
+
+        <h3>OOMKilled Decision Tree</h3>
+
+        <div class="diagram">
+          <div class="flow-step">Alert: Pod OOMKilled</div>
+          <div class="flow-step">Check: How many times has it restarted?<br><code>kubectl describe pod POD_NAME -n production | grep -A5 "Last State"</code></div>
+          <div class="flow-step">First occurrence → Likely a traffic spike or large request<br>→ Pod will auto-restart. Monitor for 10 minutes.<br>→ If it doesn't recur, no action needed.</div>
+          <div class="flow-step">Repeated (3+ times) → Memory limit too low or memory leak<br>→ Check current limits: <code>kubectl get pod POD_NAME -o jsonpath='{.spec.containers[0].resources}'</code><br>→ Temporary fix: increase memory limit in deployment<br>→ File ticket for app team to investigate leak</div>
+        </div>
+
+        <h3>Pod CrashLoopBackOff Decision Tree</h3>
+
+        <div class="diagram">
+          <div class="flow-step">Alert: Pod in CrashLoopBackOff</div>
+          <div class="flow-step">Check recent events:<br><code>kubectl describe pod POD_NAME -n production</code></div>
+          <div class="flow-step">Exit Code 1 (application error) → Check logs:<br><code>kubectl logs POD_NAME -n production --previous</code></div>
+          <div class="flow-step">Exit Code 137 (OOMKilled) → Follow OOMKilled tree above</div>
+          <div class="flow-step">Exit Code 0 (clean exit) → App thinks it's done. Check entrypoint/CMD config.</div>
+          <div class="flow-step">ImagePullBackOff → Wrong image tag or registry auth issue<br>→ Check: <code>kubectl get events -n production --field-selector reason=Failed</code><br>→ Verify image exists: <code>aws ecr describe-images --repository-name api-server --image-ids imageTag=LATEST_TAG</code></div>
+        </div>
+
+        <h3>DB Connection Exhausted Decision Tree</h3>
+
+        <div class="diagram">
+          <div class="flow-step">Alert: DB connection pool exhausted (active connections > 90% of max)</div>
+          <div class="flow-step">Check current connections:<br><code>SELECT count(*) FROM pg_stat_activity WHERE state = 'active';</code><br><code>SELECT count(*) FROM pg_stat_activity WHERE state = 'idle';</code></div>
+          <div class="flow-step">Many idle connections → Connection leak in application<br>→ Identify the culprit: <code>SELECT client_addr, count(*) FROM pg_stat_activity GROUP BY client_addr ORDER BY count DESC;</code><br>→ Temporary fix: kill idle connections older than 10 min<br>→ <code>SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND state_change < now() - interval '10 minutes';</code></div>
+          <div class="flow-step">Many active connections → Traffic spike or slow queries<br>→ Check for slow queries: <code>SELECT pid, now() - pg_stat_activity.query_start AS duration, query FROM pg_stat_activity WHERE state = 'active' ORDER BY duration DESC LIMIT 10;</code><br>→ If one query is blocking: consider <code>pg_terminate_backend(pid)</code><br>→ If general overload: scale read replicas or enable connection pooling (PgBouncer)</div>
+        </div>
+
+        <h2>Real Example: CrashLoopBackOff Runbook</h2>
+
+        <p>Here's a complete runbook for one of the most common Kubernetes alerts. This is the actual format we use.</p>
+
+        <div class="architecture-box">
+          <h3>🚨 Alert: KubePodCrashLooping</h3>
+          <p><strong>Severity:</strong> Warning (auto-escalates to Critical after 15 min)</p>
+          <p><strong>Impact:</strong> Service capacity is reduced. If enough pods crash, users will see errors or timeouts.</p>
+
+          <h3>Quick Check (30 seconds)</h3>
+<pre><code># Is it one pod or many?
+kubectl get pods -n NAMESPACE -l app=SERVICE_NAME
+
+# Was there a recent deployment?
+kubectl rollout history deployment/SERVICE_NAME -n NAMESPACE</code></pre>
+
+          <p><strong>If a deployment happened in the last 30 minutes</strong> → likely a bad deploy. Roll back:</p>
+<pre><code>kubectl rollout undo deployment/SERVICE_NAME -n NAMESPACE</code></pre>
+          <p>→ Verify pods are stable, then escalate to the deploying team.</p>
+
+          <p><strong>If no recent deployment</strong> → continue to diagnosis.</p>
+
+          <h3>Diagnosis</h3>
+<pre><code># Check why the pod is crashing
+kubectl describe pod POD_NAME -n NAMESPACE | tail -30
+
+# Check application logs from the crashed container
+kubectl logs POD_NAME -n NAMESPACE --previous | tail -50</code></pre>
+
+          <table class="data-table">
+            <thead>
+              <tr><th>Symptom</th><th>Likely Cause</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Exit code 137</td><td>OOMKilled</td><td>Increase memory limit by 50%, file ticket</td></tr>
+              <tr><td>Exit code 1 + "connection refused" in logs</td><td>Downstream dependency down</td><td>Check dependency status, not an app issue</td></tr>
+              <tr><td>Exit code 1 + "config error" in logs</td><td>Bad ConfigMap/Secret</td><td>Check recent ConfigMap changes, revert if needed</td></tr>
+              <tr><td>ImagePullBackOff in events</td><td>Bad image tag or ECR auth</td><td>Verify image tag, check ECR token expiry</td></tr>
+              <tr><td>Liveness probe failed</td><td>App too slow to start</td><td>Increase <code>initialDelaySeconds</code> on liveness probe</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Verification</h3>
+<pre><code># Confirm pods are running and ready
+kubectl get pods -n NAMESPACE -l app=SERVICE_NAME
+
+# Confirm no more restarts (wait 5 minutes)
+kubectl get pods -n NAMESPACE -l app=SERVICE_NAME -w
+
+# Check error rate is back to normal
+# Grafana: dashboard/service-overview → select SERVICE_NAME</code></pre>
+
+          <h3>Escalation</h3>
+          <p><strong>Escalate immediately if:</strong></p>
+          <ul>
+            <li>More than 50% of pods are crashing</li>
+            <li>The service is customer-facing and errors are visible</li>
+            <li>You can't identify the cause within 15 minutes</li>
+          </ul>
+          <p><strong>Escalation path:</strong> #incident-response Slack → @oncall-secondary → Engineering Manager (if P1)</p>
+        </div>
+
+        <h2>Keeping Runbooks Fresh</h2>
+
+        <p>The hardest part of runbooks isn't writing them — it's keeping them updated. Here's what actually works:</p>
+
+        <h3>Link Alerts Directly to Runbooks</h3>
+
+        <p>Every alert should have a <code>runbook_url</code> annotation that links directly to the relevant runbook. When the on-call engineer gets paged, the runbook is one click away.</p>
+
+<pre><code>- alert: KubePodCrashLooping
+  expr: |
+    increase(kube_pod_container_status_restarts_total[1h]) > 5
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Pod {{ $labels.pod }} is crash looping"
+    runbook_url: "https://wiki.internal/runbooks/crashloopbackoff"
+    dashboard_url: "https://grafana.internal/d/pod-overview?var-pod={{ $labels.pod }}"</code></pre>
+
+        <h3>Review Cadence</h3>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>After Every Incident</h3>
+            <p>The post-incident review must include: "Was there a runbook? Did it help? What was missing?" Update the runbook as part of the incident action items — not as a separate task that gets deprioritized.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Monthly: On-Call Retro</h3>
+            <p>Review all pages from the past month. For each: was the runbook used? Was it accurate? Were there alerts without runbooks? Assign owners for missing or outdated runbooks.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Quarterly: Runbook Audit</h3>
+            <p>Go through every runbook. Delete ones for decommissioned services. Test commands in staging. Have a new team member read through them and flag anything confusing.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The "New Hire Test"</div>
+          <p>Every quarter, have your newest team member attempt to follow each critical runbook in staging. If they get stuck, the runbook is broken. This is the single most effective way to find gaps. Bonus: it's great onboarding.</p>
+        </div>
+
+        <h2>Measuring Runbook Effectiveness</h2>
+
+        <p>You can't improve what you don't measure. Track these metrics before and after implementing structured runbooks:</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">MTTR</div>
+            <div class="metric-label">Mean Time to Resolve. The primary metric. Our MTTR dropped from 47 minutes to 12 minutes after implementing decision-tree runbooks.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Escalation Rate</div>
+            <div class="metric-label">% of incidents escalated beyond the primary on-call. Dropped from 62% to 23%. Engineers could resolve more issues independently.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Runbook Coverage</div>
+            <div class="metric-label">% of alerts that have a linked runbook. Target: 100% for P1/P2 alerts. We went from 34% to 91% in 3 months.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Runbook Accuracy</div>
+            <div class="metric-label">% of incidents where the runbook led to resolution without deviation. Track this in post-incident reviews. Target: >80%.</div>
+          </div>
+        </div>
+
+        <h2>Runbook Anti-Patterns</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Anti-Pattern</th><th>Why It's Bad</th><th>Fix</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>"Check Grafana for anomalies"</td>
+              <td>Which dashboard? Which panel? What's an anomaly?</td>
+              <td>Link to specific dashboard with specific query. Define what "normal" looks like.</td>
+            </tr>
+            <tr>
+              <td>"Contact the team lead"</td>
+              <td>Who? What's their number? What if they're on vacation?</td>
+              <td>Use role-based escalation: @oncall-secondary, not person names.</td>
+            </tr>
+            <tr>
+              <td>20-step remediation</td>
+              <td>Too many steps = too many places to make mistakes at 3am</td>
+              <td>Automate multi-step remediations into a script. Runbook says: "Run <code>./scripts/fix-connection-pool.sh</code>"</td>
+            </tr>
+            <tr>
+              <td>"Restart the service"</td>
+              <td>How? Which pods? All at once? Rolling?</td>
+              <td>Exact command: <code>kubectl rollout restart deployment/api-server -n production</code></td>
+            </tr>
+            <tr>
+              <td>Runbook in a Google Doc</td>
+              <td>No version control, no review process, no link from alerts</td>
+              <td>Store runbooks in git (markdown), deploy to internal wiki, link from alert annotations.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Automating Runbook Steps</h2>
+
+        <p>The ultimate goal is to automate yourself out of the runbook. If a runbook step is "restart the pod," that should be automated. If it's "scale up replicas when CPU > 80%," that's an HPA. The runbook should only contain steps that require human judgment.</p>
+
+        <div class="info-box success">
+          <h3>Automation Progression</h3>
+          <p><strong>Level 0:</strong> No runbook. Engineer figures it out from scratch every time.</p>
+          <p><strong>Level 1:</strong> Written runbook with copy-paste commands.</p>
+          <p><strong>Level 2:</strong> Runbook with linked scripts that automate multi-step procedures.</p>
+          <p><strong>Level 3:</strong> Auto-remediation for known issues. Runbook only covers edge cases.</p>
+          <p><strong>Level 4:</strong> Alert is eliminated entirely through architectural improvement.</p>
+        </div>
+
+        <p>Most teams are at Level 0-1. Getting to Level 2 is achievable in a quarter and has the highest ROI. Level 3-4 requires investment but eliminates entire categories of pages.</p>
+
+        <h2>Key Takeaways</h2>
+
+        <p>A runbook is not documentation — it's a tool for a sleep-deprived engineer to resolve an incident quickly. Write them as decision trees, not essays. Include exact commands, not vague instructions. Link them from alerts so they're one click away. Test them with new team members. Update them after every incident. And measure MTTR to prove they're working. The 2 hours you spend writing a good runbook will save 20 hours of 3am firefighting.</p>
+
+      </div>
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+    <aside>
+      <div class="toc"><div class="toc-title">Table of Contents</div><ul class="toc-list" id="toc-list"></ul></div>
+    </aside>
+  </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand"><div class="logo" style="margin-bottom:12px;">Suheb Ghare</div><p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p></div>
+      <div class="footer-links"><h4>Quick Links</h4><a href="../index.html">Home</a><a href="../index.html#blog-index">All Articles</a><a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a></div>
+      <div class="footer-links"><h4>Categories</h4><a href="../index.html">CI/CD & Platform</a><a href="../index.html">Kubernetes</a><a href="../index.html">Security</a><a href="../index.html">Cloud & AWS</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2024 Suheb Ghare. All rights reserved.</p></div>
+  </footer>
+  <button id="back-to-top" class="back-to-top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building an AI Agent for Your Infrastructure – Suheb Ghare</title>
+  <meta name="description" content="Building an AI Agent for Your Infrastructure – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI & DevOps</span>
+      </div>
+      <h1 class="post-title">Building an AI Agent for Your Infrastructure</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="building-ai-agent-infrastructure" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="building-ai-agent-infrastructure" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="building-ai-agent-infrastructure" data-stat="likes">314</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="building-ai-agent-infrastructure" data-stat="dislikes">20</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="building-ai-agent-infrastructure">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="building-ai-agent-infrastructure">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Why Build an Infrastructure Agent?</h2>
+        <p>Imagine typing "Why is the checkout service slow?" and getting back: pod logs showing OOM kills, a Prometheus query showing memory at 98%, the last deploy that changed memory limits, and a suggested fix — all in 15 seconds. That's what an infrastructure AI agent does.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=900&q=85" alt="AI infrastructure agent" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">ReAct pattern: Reason → Act → Observe loop for autonomous incident response</figcaption>
+</figure>
+
+        <p>We built one using LangChain, GPT-4, and a set of tools that wrap kubectl, AWS CLI, and Prometheus. It took 2 weeks to build the v1, and it now handles ~40 diagnostic queries per day from our engineering team. Cost: about <strong>$0.12 per interaction</strong>.</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">$0.12</div>
+            <div class="metric-label">Cost per agent interaction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">15 sec</div>
+            <div class="metric-label">Average diagnosis time</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">5</div>
+            <div class="metric-label">Tools in production</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">40/day</div>
+            <div class="metric-label">Queries handled</div>
+          </div>
+        </div>
+
+        <h2>Agent Architecture: ReAct Pattern</h2>
+        <p>The agent uses the ReAct (Reason + Act) pattern: it thinks about what information it needs, calls a tool to get it, reasons about the result, and decides whether to call another tool or respond. This loop continues until it has enough information to answer.</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">LangChain ReAct Agent for Infrastructure</text><rect x="280" y="55" width="240" height="50" rx="10" fill="#312e81" stroke="#6366f1" stroke-width="2"/><text x="400" y="72" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ReAct Agent</text><text x="400" y="90" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">LLM: GPT-4o</text><rect x="20" y="130" width="140" height="36" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="90" y="148" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">get_pod_logs</text><line x1="400" y1="105" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="90" y2="130" stroke="#334155" stroke-width="1.5"/><rect x="175" y="130" width="140" height="36" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="245" y="148" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">get_metrics</text><line x1="400" y1="105" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="245" y2="130" stroke="#334155" stroke-width="1.5"/><rect x="330" y="130" width="140" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="400" y="148" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">scale_deployment</text><line x1="400" y1="105" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="400" y2="130" stroke="#334155" stroke-width="1.5"/><rect x="485" y="130" width="140" height="36" rx="6" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="555" y="148" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">get_alerts</text><line x1="400" y1="105" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="555" y2="130" stroke="#334155" stroke-width="1.5"/><rect x="640" y="130" width="140" height="36" rx="6" fill="#7f1d1d" stroke="#334155" stroke-width="1.5"/><text x="710" y="148" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">run_kubectl</text><line x1="400" y1="105" x2="400" y2="130" stroke="#6366f1" stroke-width="2" marker-end="url(#a)"/><line x1="400" y1="130" x2="710" y2="130" stroke="#334155" stroke-width="1.5"/><rect x="20" y="185" width="370" height="50" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="205" y="203" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Read-only by default ✓</text><text x="205" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">get_pod_logs, get_metrics, get_alerts</text><rect x="410" y="185" width="370" height="50" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="595" y="203" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">Destructive → confirmation ⚠</text><text x="595" y="218" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">scale_deployment, run_kubectl</text><rect x="20" y="250" width="760" height="36" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="400" y="268" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Cost: $0.12/interaction · Avg 3 tool calls per query · Response time: 8 seconds</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">ReAct agent reasons step-by-step: observe → think → act — read-only tools are safe, destructive ones need approval</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">User Query</div>
+          <div class="flow-step">LLM Reasons (what do I need?)</div>
+          <div class="flow-step">Calls Tool (kubectl, Prometheus, etc.)</div>
+          <div class="flow-step">LLM Analyzes Result</div>
+          <div class="flow-step">More info needed? → Loop back</div>
+          <div class="flow-step">Final Answer</div>
+        </div>
+
+        <h2>Tool Definitions</h2>
+        <p>Each tool is a Python function with a JSON schema that tells the LLM what it does, what parameters it accepts, and when to use it. Here are the 5 tools we run in production:</p>
+
+        <pre><code>from langchain.tools import tool
+from typing import Optional
+import subprocess
+import json
+import requests
+
+@tool
+def get_pod_logs(namespace: str, pod_name: str, lines: int = 50) -> str:
+    """Get recent logs from a Kubernetes pod.
+    Use when investigating errors, crashes, or unexpected behavior.
+    Args:
+        namespace: Kubernetes namespace
+        pod_name: Name of the pod (supports partial match)
+        lines: Number of recent log lines (default 50)
+    """
+    # Find pod by partial name match
+    result = subprocess.run(
+        ['kubectl', 'get', 'pods', '-n', namespace,
+         '-o', 'jsonpath={.items[*].metadata.name}'],
+        capture_output=True, text=True
+    )
+    pods = result.stdout.split()
+    matching = [p for p in pods if pod_name in p]
+    if not matching:
+        return f"No pods matching '{pod_name}' in namespace '{namespace}'"
+
+    logs = subprocess.run(
+        ['kubectl', 'logs', matching[0], '-n', namespace,
+         '--tail', str(lines), '--timestamps'],
+        capture_output=True, text=True
+    )
+    return logs.stdout or logs.stderr
+
+@tool
+def get_metrics(query: str, duration: str = "15m") -> str:
+    """Query Prometheus for metrics.
+    Use for checking CPU, memory, error rates, latency, request counts.
+    Args:
+        query: PromQL query string
+        duration: Time range (e.g., '15m', '1h', '6h')
+    """
+    response = requests.get(
+        f"{PROMETHEUS_URL}/api/v1/query",
+        params={'query': query, 'time': '', 'timeout': '10s'}
+    )
+    data = response.json()
+    if data['status'] != 'success':
+        return f"Query failed: {data.get('error', 'unknown error')}"
+
+    results = data['data']['result']
+    if not results:
+        return "No data returned for this query"
+
+    formatted = []
+    for r in results[:10]:  # Limit to 10 results
+        labels = r['metric']
+        value = r['value'][1]
+        formatted.append(f"{labels}: {value}")
+    return "\n".join(formatted)
+
+@tool
+def scale_deployment(namespace: str, deployment: str, replicas: int) -> str:
+    """Scale a Kubernetes deployment. REQUIRES CONFIRMATION.
+    Only use when explicitly asked to scale.
+    Args:
+        namespace: Kubernetes namespace
+        deployment: Deployment name
+        replicas: Target replica count (max 20)
+    """
+    if replicas > 20:
+        return "ERROR: Cannot scale above 20 replicas via agent. Use kubectl directly."
+    if replicas < 1:
+        return "ERROR: Cannot scale to 0 via agent."
+
+    result = subprocess.run(
+        ['kubectl', 'scale', 'deployment', deployment,
+         '-n', namespace, f'--replicas={replicas}'],
+        capture_output=True, text=True
+    )
+    return result.stdout or result.stderr
+
+@tool
+def get_recent_alerts(namespace: Optional[str] = None, hours: int = 6) -> str:
+    """Get recent firing alerts from AlertManager.
+    Use to understand what's currently broken or degraded.
+    Args:
+        namespace: Filter by namespace (optional)
+        hours: Look back period in hours (default 6)
+    """
+    response = requests.get(f"{ALERTMANAGER_URL}/api/v2/alerts")
+    alerts = response.json()
+
+    if namespace:
+        alerts = [a for a in alerts if a['labels'].get('namespace') == namespace]
+
+    formatted = []
+    for a in alerts[:15]:
+        formatted.append(
+            f"[{a['labels'].get('severity', '?')}] {a['labels']['alertname']} "
+            f"- {a['annotations'].get('description', 'No description')} "
+            f"(namespace: {a['labels'].get('namespace', '?')})"
+        )
+    return "\n".join(formatted) or "No active alerts"
+
+@tool
+def run_kubectl(command: str) -> str:
+    """Run a read-only kubectl command.
+    ONLY supports: get, describe, top, logs.
+    Use for checking pod status, resource usage, events.
+    Args:
+        command: kubectl command WITHOUT the 'kubectl' prefix
+    """
+    allowed_verbs = ['get', 'describe', 'top', 'logs']
+    parts = command.strip().split()
+    if not parts or parts[0] not in allowed_verbs:
+        return f"ERROR: Only {allowed_verbs} commands allowed. Got: {parts[0] if parts else 'empty'}"
+
+    result = subprocess.run(
+        ['kubectl'] + parts,
+        capture_output=True, text=True, timeout=30
+    )
+    return result.stdout or result.stderr</code></pre>
+
+        <h2>The Agent Implementation</h2>
+        <pre><code>from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+SYSTEM_PROMPT = """You are an infrastructure diagnostic agent for a Kubernetes-based
+platform running on AWS EKS. You have access to tools for querying pods, metrics,
+alerts, and logs.
+
+Rules:
+1. Always check pod status and recent alerts FIRST before diving into logs.
+2. For performance issues, check metrics (CPU, memory, latency) before logs.
+3. NEVER run destructive commands. You can only read, not modify.
+4. The scale_deployment tool requires explicit user confirmation before use.
+5. If you're unsure, say so. Don't guess at root causes without evidence.
+6. Always cite the specific data that supports your conclusion.
+7. Keep responses concise — engineers want answers, not essays.
+
+Common PromQL queries:
+- CPU: rate(container_cpu_usage_seconds_total{{namespace="{ns}"}}[5m])
+- Memory: container_memory_usage_bytes{{namespace="{ns}"}}
+- Error rate: rate(http_requests_total{{status=~"5..",namespace="{ns}"}}[5m])
+- Latency p99: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{{namespace="{ns}"}}[5m]))
+"""
+
+llm = ChatOpenAI(model="gpt-4", temperature=0)
+tools = [get_pod_logs, get_metrics, scale_deployment, get_recent_alerts, run_kubectl]
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", SYSTEM_PROMPT),
+    MessagesPlaceholder("chat_history", optional=True),
+    ("human", "{input}"),
+    MessagesPlaceholder("agent_scratchpad"),
+])
+
+agent = create_openai_tools_agent(llm, tools, prompt)
+executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True,
+    max_iterations=8,       # Prevent infinite loops
+    max_execution_time=60,  # 60 second timeout
+    handle_parsing_errors=True
+)</code></pre>
+
+        <h2>Real Example: Diagnosing a CrashLoopBackOff</h2>
+        <p>Here's an actual agent session (condensed):</p>
+
+        <div class="architecture-box">
+          <h3>🧑 User: "The payment service pods keep crashing in production"</h3>
+          <p><strong>Agent Thought:</strong> I need to check pod status in the payment namespace first.</p>
+          <p><strong>Tool Call:</strong> <code>run_kubectl("get pods -n payments -o wide")</code></p>
+          <p><strong>Result:</strong> payment-api-7d4f8b-x2k9q — CrashLoopBackOff (3 restarts), payment-api-7d4f8b-m8n3p — Running</p>
+          <p><strong>Agent Thought:</strong> One pod is crash-looping. Let me check its logs.</p>
+          <p><strong>Tool Call:</strong> <code>get_pod_logs("payments", "payment-api-7d4f8b-x2k9q", 30)</code></p>
+          <p><strong>Result:</strong> <code>java.lang.OutOfMemoryError: Java heap space</code> at line 23</p>
+          <p><strong>Agent Thought:</strong> OOM error. Let me check the memory metrics and limits.</p>
+          <p><strong>Tool Call:</strong> <code>get_metrics("container_memory_usage_bytes{namespace='payments',container='payment-api'}")</code></p>
+          <p><strong>Result:</strong> 524288000 bytes (500Mi) — matches the 512Mi limit</p>
+          <p><strong>Final Answer:</strong> The payment-api pod <code>x2k9q</code> is in CrashLoopBackOff due to OOM. Memory usage hit the 512Mi limit. The JVM heap is exhausting available memory. <strong>Immediate fix:</strong> increase memory limit to 768Mi. <strong>Root cause:</strong> investigate recent code changes that increased memory footprint — check if a new dependency or data structure was added.</p>
+        </div>
+
+        <p>Total time: 14 seconds. A human doing this manually: 5-10 minutes of kubectl commands and Grafana dashboard navigation.</p>
+
+        <h2>Safety Guardrails</h2>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Critical: Read-Only by Default</div>
+          <p>The agent starts with <strong>zero write permissions</strong>. Every tool that modifies state (scale_deployment) requires explicit user confirmation and has hard limits (max 20 replicas, no scale-to-zero). We added write tools one at a time over 3 months, only after the read-only tools proved reliable.</p>
+        </div>
+
+        <ul>
+          <li><strong>kubectl whitelist</strong> — only <code>get</code>, <code>describe</code>, <code>top</code>, <code>logs</code> verbs allowed</li>
+          <li><strong>Replica limits</strong> — scale_deployment caps at 20 replicas, minimum 1</li>
+          <li><strong>Timeout</strong> — 60-second max execution time prevents runaway tool loops</li>
+          <li><strong>Iteration limit</strong> — max 8 tool calls per query prevents infinite reasoning loops</li>
+          <li><strong>Full audit log</strong> — every tool call, input, and output is logged to CloudWatch</li>
+          <li><strong>No secrets access</strong> — the agent's kubeconfig has a custom RBAC role that excludes Secrets and ConfigMaps</li>
+        </ul>
+
+        <pre><code># RBAC role for the agent (read-only, no secrets)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ai-agent-readonly
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "events", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+  # Explicitly NO access to secrets, configmaps with sensitive data</code></pre>
+
+        <h2>Cost Breakdown</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Per Interaction</th>
+              <th>Monthly (40/day)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GPT-4 (avg 3 tool calls, ~4K tokens total)</td>
+              <td>$0.12</td>
+              <td>$144</td>
+            </tr>
+            <tr>
+              <td>Compute (ECS Fargate, 0.5 vCPU)</td>
+              <td>$0.001</td>
+              <td>$35</td>
+            </tr>
+            <tr>
+              <td>CloudWatch Logs</td>
+              <td>negligible</td>
+              <td>$5</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>~$0.12</strong></td>
+              <td><strong>~$184</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><span class="cost-badge medium">Medium Cost</span> $184/month is less than 2 hours of an SRE's time. The agent saves ~30 minutes/day across the team.</p>
+
+        <h2>Lessons Learned</h2>
+
+        <div class="info-box success">
+          <h3>✅ What Worked</h3>
+          <ul>
+            <li><strong>Start with read-only tools.</strong> We ran for 6 weeks with only diagnostic tools before adding any write capability.</li>
+            <li><strong>Specific PromQL examples in the system prompt</strong> dramatically improved the agent's ability to write correct queries.</li>
+            <li><strong>Limiting to 8 iterations</strong> prevents the agent from going down rabbit holes. If it can't answer in 8 tool calls, a human should take over.</li>
+            <li><strong>Logging every tool call</strong> lets us audit what the agent did and improve the system prompt based on real failures.</li>
+          </ul>
+        </div>
+
+        <div class="info-box danger">
+          <h3>❌ What Didn't Work</h3>
+          <ul>
+            <li><strong>Giving the agent too many tools at once.</strong> With 12 tools, it got confused about which to use. 5 focused tools work better than 12 broad ones.</li>
+            <li><strong>Using GPT-3.5.</strong> It couldn't write correct PromQL queries or parse kubectl output reliably. GPT-4 is worth the cost difference.</li>
+            <li><strong>Letting the agent run kubectl with arbitrary arguments.</strong> It tried <code>kubectl delete pod</code> once during testing. The verb whitelist was added that day.</li>
+          </ul>
+        </div>
+
+        <blockquote>
+          <p>An infrastructure agent isn't about replacing engineers. It's about giving every engineer on your team the diagnostic speed of your best SRE. Start with 3 read-only tools, prove value, then expand carefully.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

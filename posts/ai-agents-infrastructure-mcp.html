@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building AI Agents for Infrastructure Automation Using MCP – Suheb Ghare</title>
+  <meta name="description" content="Production-grade AI agents that restart pods, scale services, and analyze logs using MCP. Guardrails, observability, and real implementation patterns for SREs.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI &amp; DevOps</span>
+      </div>
+      <h1 class="post-title">Building AI Agents for Infrastructure Automation Using MCP</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 April 2026</span>
+        <span class="meta-item">⏱ <span class="reading-time">20 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="ai-agents-infrastructure-mcp" data-stat="reads">0</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="ai-agents-infrastructure-mcp" data-stat="reads">0</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="ai-agents-infrastructure-mcp" data-stat="likes">0</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="ai-agents-infrastructure-mcp" data-stat="dislikes">0</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="ai-agents-infrastructure-mcp">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="ai-agents-infrastructure-mcp">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Introduction: From Chatbots to Autonomous Agents</h2>
+        <p>A year ago, I wrote about <a href="building-ai-agent-infrastructure.html">building an AI agent for infrastructure</a> using LangChain and GPT-4. That agent was essentially a chatbot with kubectl access — you asked a question, it ran some commands, and gave you an answer. Useful, but limited.</p>
+
+<figure style="margin:2.5rem 0;text-align:center;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 250"
+       style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);background:#0f172a;">
+    <defs>
+  <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+  </marker>
+  <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#06b6d4"/>
+  </marker>
+</defs><text x="500" y="30" font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">AI Agent + MCP Architecture</text><rect x="20" y="60" width="120" height="50" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="80" y="85" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">👤 Engineer</text><line x1="140" y1="85" x2="200" y2="85" stroke="85" stroke-width="2" marker-end="url(#arr)"/><rect x="200" y="55" width="160" height="60" rx="8" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="280" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">LLM Agent</text><text x="280" y="96" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(GPT-4o / Claude)</text><line x1="360" y1="85" x2="420" y2="85" stroke="85" stroke-width="2" marker-end="url(#arr)"/><rect x="420" y="55" width="140" height="60" rx="8" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="490" y="78" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">MCP Router</text><text x="490" y="96" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Tool Dispatcher</text><rect x="340" y="180" width="100" height="44" rx="8" fill="#1e3a5f" stroke="#334155" stroke-width="1.5"/><text x="390" y="202" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#93c5fd" text-anchor="middle" dominant-baseline="middle">kubectl</text><line x1="490" y1="115" x2="490" y2="180" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr)"/><rect x="460" y="180" width="100" height="44" rx="8" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="510" y="202" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">AWS CLI</text><line x1="490" y1="115" x2="490" y2="180" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr)"/><rect x="580" y="180" width="100" height="44" rx="8" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="630" y="202" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Prometheus</text><line x1="490" y1="115" x2="490" y2="180" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr)"/><rect x="700" y="180" width="100" height="44" rx="8" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="750" y="202" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#fca5a5" text-anchor="middle" dominant-baseline="middle">PagerDuty</text><line x1="490" y1="115" x2="490" y2="180" stroke="#06b6d4" stroke-width="2" marker-end="url(#arr)"/><path d="M 200,115 Q 200,150 80,150 Q 80,130 80,115" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arr)"/><text x="140" y="148" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Analysis + Actions</text><rect x="200" y="130" width="160" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="280" y="144" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">ReAct Loop: Reason → Act → Observe</text>
+  </svg>
+  <figcaption style='margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;'>The agent reasons with the LLM, dispatches tool calls via MCP, and loops until the task is resolved</figcaption>
+</figure>
+
+        <p>What we're building now is fundamentally different. MCP-based infrastructure agents don't just answer questions — they <strong>execute multi-step remediation workflows</strong>. They detect a pod in CrashLoopBackOff, correlate it with a recent deployment, check if the rollback is safe, request human approval, execute the rollback, verify the fix, and update the incident channel. All through a standardized protocol that works across any combination of tools.</p>
+
+        <p>The difference between a diagnostic chatbot and an automation agent is the <strong>action loop</strong>. This post covers how we built that loop, the guardrails that keep it from destroying production, and the observability stack that lets us trust it.</p>
+
+        <div class="grid-2">
+          <div class="info-box">
+            <h3>Diagnostic Agent (v1)</h3>
+            <ul>
+              <li>Human asks a question</li>
+              <li>Agent reads data from tools</li>
+              <li>Agent returns an answer</li>
+              <li>Human decides what to do</li>
+              <li>Human executes the fix</li>
+            </ul>
+          </div>
+          <div class="info-box success">
+            <h3>Automation Agent (v2 — MCP)</h3>
+            <ul>
+              <li>Trigger: alert, schedule, or human request</li>
+              <li>Agent reads data across multiple MCP servers</li>
+              <li>Agent proposes a remediation plan</li>
+              <li>Human approves (or auto-approved for safe actions)</li>
+              <li>Agent executes, verifies, and reports</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>Why MCP Changes the Agent Architecture</h2>
+        <p>Our v1 agent used LangChain tools — Python functions wrapping subprocess calls to kubectl and curl requests to Prometheus. It worked, but had three problems that MCP solves:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Problem</th>
+              <th>LangChain v1</th>
+              <th>MCP v2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Tool discovery</strong></td>
+              <td>Hardcoded in Python. Adding a tool = code change + redeploy.</td>
+              <td>Dynamic. Agent discovers available tools at runtime from MCP servers.</td>
+            </tr>
+            <tr>
+              <td><strong>Credential management</strong></td>
+              <td>Kubeconfig and AWS keys baked into the agent's environment.</td>
+              <td>Each MCP server manages its own credentials. Agent never sees them.</td>
+            </tr>
+            <tr>
+              <td><strong>Multi-cluster</strong></td>
+              <td>One agent per cluster. Separate deployments for prod/staging.</td>
+              <td>One agent, multiple MCP servers. Route by environment parameter.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>The architectural shift: the agent becomes a <strong>pure reasoning engine</strong>. It doesn't know how to talk to Kubernetes or AWS. It knows how to reason about problems and call tools. The MCP servers handle all the infrastructure interaction.</p>
+
+        <div class="diagram">
+          <div class="flow-step">Trigger (PagerDuty Alert / Slack Command / Cron Schedule)</div>
+          <div class="flow-step">Agent Controller (manages the reasoning loop)</div>
+          <div class="flow-step">LLM (Claude / GPT-4 — decides which tools to call)</div>
+          <div class="flow-step">MCP Client (routes tool calls to the right MCP server)</div>
+          <div class="flow-step">MCP Servers: K8s-prod | K8s-staging | AWS | Prometheus | GitHub | PagerDuty | Slack</div>
+          <div class="flow-step">Infrastructure (EKS clusters, AWS APIs, monitoring, CI/CD)</div>
+        </div>
+
+        <h2>The Agent Loop: How It Actually Works</h2>
+        <p>The core of the agent is a loop that alternates between LLM reasoning and MCP tool execution. Here's the production implementation:</p>
+
+<figure style="margin:2.5rem 0;text-align:center;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360"
+       style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);background:#0f172a;">
+    <defs>
+  <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+  </marker>
+</defs><text x="300" y="25" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">ReAct Agent Loop</text><circle cx="300" cy="100" r="55" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="300" y="92" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">THINK</text><text x="300" y="108" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">LLM reasons about</text><text x="300" y="121" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">current state</text><circle cx="520" cy="200" r="55" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="520" y="192" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">ACT</text><text x="520" y="208" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Call MCP tool</text><text x="520" y="221" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">(kubectl, AWS, etc)</text><circle cx="300" cy="300" r="55" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="300" y="292" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">OBSERVE</text><text x="300" y="308" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Parse tool output</text><text x="300" y="321" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">update context</text><circle cx="80" cy="200" r="55" fill="#3b1a1a" stroke="#334155" stroke-width="1.5"/><text x="80" y="192" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="bold" fill="#e2e8f0" text-anchor="middle" dominant-baseline="middle">DONE?</text><text x="80" y="208" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Goal achieved?</text><text x="80" y="221" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Escalate?</text><line x1="345" y1="140" x2="480" y2="165" stroke="#6366f1" stroke-width="2" marker-end="url(#arr)"/><line x1="480" y1="235" x2="345" y2="265" stroke="#6366f1" stroke-width="2" marker-end="url(#arr)"/><line x1="245" y1="265" x2="115" y2="235" stroke="#6366f1" stroke-width="2" marker-end="url(#arr)"/><line x1="80" y1="165" x2="255" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arr)"/><line x1="25" y1="200" x2="0" y2="200" stroke="#22c55e" stroke-width="2"/><text x="-30" y="200" font-family="Inter,system-ui,sans-serif" font-size="11" font-weight="normal" fill="#22c55e" text-anchor="start" dominant-baseline="middle">✓ Done</text>
+  </svg>
+  <figcaption style='margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;'>ReAct loop: the agent thinks, acts via MCP tools, observes results, and loops until the goal is met or it escalates</figcaption>
+</figure>
+
+        <pre><code>import anthropic
+from mcp import ClientSession
+from mcp.client.stdio import stdio_client
+import json, asyncio
+
+class InfraAgent:
+    def __init__(self, mcp_servers: dict[str, str]):
+        self.client = anthropic.Anthropic()
+        self.sessions: dict[str, ClientSession] = {}
+        self.server_configs = mcp_servers  # {"kubernetes": "path/to/k8s-mcp", ...}
+        self.tools = []
+        self.max_iterations = 10
+        self.action_log = []
+
+    async def connect_servers(self):
+        """Connect to all MCP servers and discover their tools."""
+        for name, cmd in self.server_configs.items():
+            session = await self._connect(name, cmd)
+            self.sessions[name] = session
+            server_tools = await session.list_tools()
+            for tool in server_tools.tools:
+                self.tools.append({
+                    "name": f"{name}__{tool.name}",  # namespace tools by server
+                    "description": tool.description,
+                    "input_schema": tool.inputSchema,
+                    "_server": name,
+                    "_tool": tool.name,
+                })
+
+    async def run(self, task: str, context: dict = None) -> dict:
+        """Execute the agent loop for a given task."""
+        messages = [{"role": "user", "content": self._build_prompt(task, context)}]
+
+        for iteration in range(self.max_iterations):
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                system=AGENT_SYSTEM_PROMPT,
+                tools=self._format_tools_for_claude(),
+                messages=messages,
+            )
+
+            # If the LLM wants to call tools
+            if response.stop_reason == "tool_use":
+                tool_results = []
+                for block in response.content:
+                    if block.type == "tool_use":
+                        result = await self._execute_tool(block)
+                        tool_results.append(result)
+
+                messages.append({"role": "assistant", "content": response.content})
+                messages.append({"role": "user", "content": tool_results})
+
+            # If the LLM is done reasoning
+            elif response.stop_reason == "end_turn":
+                final_text = next(
+                    (b.text for b in response.content if hasattr(b, "text")), ""
+                )
+                return {
+                    "result": final_text,
+                    "iterations": iteration + 1,
+                    "actions": self.action_log,
+                }
+
+        return {"result": "Agent hit max iterations", "iterations": self.max_iterations}
+
+    async def _execute_tool(self, tool_block) -> dict:
+        """Route a tool call to the correct MCP server."""
+        server_name, tool_name = tool_block.name.split("__", 1)
+        session = self.sessions[server_name]
+
+        # Classify the action
+        action_class = classify_action(server_name, tool_name, tool_block.input)
+
+        # If it's a write action, require approval
+        if action_class == "write":
+            approved = await self._request_approval(
+                server_name, tool_name, tool_block.input
+            )
+            if not approved:
+                return {"type": "tool_result", "tool_use_id": tool_block.id,
+                        "content": "Action rejected by operator. Suggest alternative."}
+
+        result = await session.call_tool(tool_name, tool_block.input)
+        self.action_log.append({
+            "server": server_name, "tool": tool_name,
+            "input": tool_block.input, "class": action_class,
+        })
+        return {"type": "tool_result", "tool_use_id": tool_block.id,
+                "content": result.content[0].text}</code></pre>
+
+        <h2>Real-World Agent Workflows</h2>
+
+        <h3>Workflow 1: Automated Pod Restart with Verification</h3>
+        <p>This is the most common automation — a pod is stuck, the agent restarts it and confirms the fix. Sounds simple, but the verification step is where most naive implementations fail.</p>
+
+        <pre><code>Agent receives: PagerDuty alert "checkout-api pod CrashLoopBackOff"
+
+Iteration 1 — Assess:
+  → kubernetes__get_pods(namespace="checkout", label_selector="app=checkout-api")
+  Result: 2/3 pods Running, 1 pod CrashLoopBackOff (12 restarts)
+
+Iteration 2 — Diagnose:
+  → kubernetes__get_pod_logs(namespace="checkout", pod="checkout-api-7f8d9-xk2m", tail=100)
+  Result: "Connection refused to redis-master.cache.svc:6379" (repeated 12 times)
+
+Iteration 3 — Check dependency:
+  → kubernetes__get_pods(namespace="cache", label_selector="app=redis-master")
+  Result: redis-master-0 Running, ready 1/1, no restarts
+
+Iteration 4 — Check network:
+  → kubernetes__get_events(namespace="cache", event_type="Warning")
+  Result: NetworkPolicy updated 8 minutes ago — "deny-all ingress applied to cache namespace"
+
+Agent conclusion: "The CrashLoopBackOff is caused by a NetworkPolicy change in the cache
+namespace that's blocking ingress from checkout. The Redis pod is healthy but unreachable.
+This is NOT a pod restart situation — restarting won't fix it.
+Recommended action: revert the NetworkPolicy change in the cache namespace."
+
+→ Agent does NOT restart the pod. Escalates to the network team instead.</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Why This Matters</div>
+          <p>A dumb automation script would have restarted the pod, watched it crash again, restarted it again, and paged the on-call engineer after 3 failed attempts. The agent diagnosed the actual root cause in 4 tool calls and escalated correctly. The difference is the <strong>reasoning loop</strong> — the agent doesn't just execute a runbook, it investigates.</p>
+        </div>
+
+        <h3>Workflow 2: Auto-Scaling Under Load</h3>
+        <pre><code>Agent receives: Prometheus alert "checkout-api p99 latency > 2s for 5 minutes"
+
+Iteration 1 — Confirm the problem:
+  → prometheus__query("histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service='checkout-api'}[5m]))")
+  Result: 3.2 seconds (threshold: 2s)
+
+Iteration 2 — Check current scale:
+  → kubernetes__describe_deployment(namespace="checkout", deployment="checkout-api")
+  Result: 5/5 replicas, CPU requests 500m, HPA max 15, current CPU utilization 89%
+
+Iteration 3 — Check if HPA is stuck:
+  → kubernetes__get_hpa(namespace="checkout", name="checkout-api")
+  Result: HPA target CPU 70%, current 89%, desired replicas: 10, but maxReplicas: 15
+         Last scale event: 2 minutes ago (scaled from 5 to 5 — FAILED)
+         Condition: "ScalingLimited" — insufficient node capacity
+
+Iteration 4 — Check node capacity:
+  → kubernetes__get_nodes(label_selector="karpenter.sh/nodepool=general")
+  Result: 8 nodes, all at 92%+ CPU allocation. No room for new pods.
+
+Iteration 5 — Propose fix (WRITE ACTION — requires approval):
+  → kubernetes__patch_nodepool(name="general", spec={"limits": {"cpu": "200"}})
+  ⚠️ APPROVAL REQUESTED: "Increase Karpenter nodepool CPU limit from 100 to 200
+     to allow new nodes to provision for checkout-api scaling.
+     Impact: Karpenter will provision up to ~12 additional nodes.
+     Estimated cost increase: ~$8.50/hour while scaled up."
+
+  ✅ Approved by @sre-oncall via Slack
+
+Iteration 6 — Verify:
+  → kubernetes__get_pods(namespace="checkout", label_selector="app=checkout-api")
+  Result: 10/10 pods Running (scaled up from 5)
+  → prometheus__query("histogram_quantile(0.99, rate(...))")
+  Result: 1.1 seconds (below 2s threshold)
+
+Agent report: "Resolved. Checkout-api latency was caused by HPA unable to scale due to
+node capacity limits. Increased Karpenter nodepool limit, 5 new nodes provisioned,
+HPA scaled to 10 replicas. P99 latency now 1.1s. Remember to review the nodepool
+limit after the traffic spike subsides."</code></pre>
+
+        <h3>Workflow 3: Log Analysis and Pattern Detection</h3>
+        <pre><code>Agent receives: Scheduled task — "Daily error pattern analysis for production"
+
+Iteration 1 — Gather error rates:
+  → prometheus__query("topk(5, sum by (service)(rate(http_requests_total{code=~'5..'}[24h])))")
+  Result:
+    search-api: 12.3 req/s
+    inventory-sync: 8.7 req/s
+    checkout-api: 0.4 req/s (normal)
+    user-api: 0.2 req/s (normal)
+    catalog-api: 0.1 req/s (normal)
+
+Iteration 2 — Investigate top offender:
+  → kubernetes__search_logs(namespace="search", container="search-api",
+      pattern="ERROR|Exception|panic", tail=500)
+  Result: 487 of 500 lines match "ConnectionTimeout: elasticsearch-master:9200"
+
+Iteration 3 — Check Elasticsearch:
+  → kubernetes__get_pods(namespace="elasticsearch", label_selector="app=elasticsearch")
+  Result: 3/3 Running, but elasticsearch-master-2 has 47 restarts in 24h
+
+Iteration 4 — Check ES pod resources:
+  → prometheus__query("container_memory_working_set_bytes{namespace='elasticsearch',pod='elasticsearch-master-2'}")
+  Result: 31.2 GB (limit: 32 GB) — 97.5% memory utilization
+
+Iteration 5 — Investigate inventory-sync:
+  → kubernetes__search_logs(namespace="inventory", container="inventory-sync",
+      pattern="ERROR", tail=200)
+  Result: "DeadlineExceeded: context deadline exceeded calling warehouse-api.external.svc"
+
+Iteration 6 — Check external dependency:
+  → aws__describe_vpc_endpoints(service="warehouse-api")
+  Result: VPC endpoint healthy, but NACLs were modified 18 hours ago
+
+Agent daily report:
+"Production Error Analysis — April 27, 2026
+
+🔴 Critical: search-api (12.3 errors/sec)
+   Root cause: elasticsearch-master-2 is OOMing (31.2/32 GB).
+   47 restarts in 24h causing connection timeouts from search-api.
+   Action: increase ES memory limit to 48GB or add a 4th data node.
+
+🟡 Warning: inventory-sync (8.7 errors/sec)
+   Root cause: NACL change 18h ago is throttling traffic to warehouse-api VPC endpoint.
+   Action: review NACL rule changes with the networking team.
+
+🟢 Normal: checkout-api, user-api, catalog-api — error rates within baseline."</code></pre>
+
+        <h2>The Guardrail System: Preventing Dangerous Actions</h2>
+        <p>This is the section that matters most. An agent with write access to production Kubernetes is a loaded gun. Here's how we make it safe.</p>
+
+        <h3>Action Classification</h3>
+        <p>Every tool call is classified before execution. The classification determines whether it runs immediately, requires approval, or is blocked entirely.</p>
+
+        <pre><code>ACTION_RULES = {
+    # READ — always allowed, no approval needed
+    "read": {
+        "kubernetes": ["get_pods", "get_events", "get_pod_logs", "describe_deployment",
+                       "get_hpa", "get_nodes", "search_logs", "get_node_capacity"],
+        "prometheus": ["query", "query_range", "get_alerts"],
+        "aws": ["describe_instances", "get_cost_breakdown", "describe_vpc_endpoints",
+                "query_cloudtrail"],
+        "pagerduty": ["get_incidents", "get_oncall"],
+        "github": ["list_recent_deployments", "get_commit", "get_pr"],
+    },
+    # WRITE — requires human approval via Slack
+    "write": {
+        "kubernetes": ["restart_deployment", "scale_deployment", "patch_hpa",
+                       "patch_nodepool"],
+        "aws": ["modify_asg_capacity"],
+        "github": ["create_issue", "trigger_workflow"],
+        "pagerduty": ["acknowledge_incident", "add_note"],
+        "slack": ["post_message"],
+    },
+    # BLOCKED — never allowed, regardless of approval
+    "blocked": {
+        "kubernetes": ["delete_pod", "delete_deployment", "delete_namespace",
+                       "apply_manifest", "exec_into_pod"],
+        "aws": ["terminate_instance", "delete_security_group", "modify_iam_role"],
+    },
+}
+
+def classify_action(server: str, tool: str, args: dict) -> str:
+    for classification, rules in ACTION_RULES.items():
+        if server in rules and tool in rules[server]:
+            return classification
+
+    # Unknown tools are blocked by default
+    return "blocked"</code></pre>
+
+        <h3>The Approval Workflow</h3>
+        <p>Write actions trigger a Slack message to the on-call channel with a 5-minute approval window:</p>
+
+        <pre><code>async def _request_approval(self, server, tool, args) -> bool:
+    """Send approval request to Slack, wait for response."""
+    approval_id = str(uuid.uuid4())[:8]
+
+    # Post to Slack with action buttons
+    await slack_client.post_message(
+        channel=ONCALL_CHANNEL,
+        blocks=[
+            {"type": "header", "text": {"type": "plain_text",
+                "text": f"🤖 Agent Action Requires Approval [{approval_id}]"}},
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"*Server:* {server}\n*Tool:* {tool}\n*Args:*\n```{json.dumps(args, indent=2)}```"}},
+            {"type": "actions", "elements": [
+                {"type": "button", "text": {"type": "plain_text", "text": "✅ Approve"},
+                 "action_id": f"approve_{approval_id}", "style": "primary"},
+                {"type": "button", "text": {"type": "plain_text", "text": "❌ Reject"},
+                 "action_id": f"reject_{approval_id}", "style": "danger"},
+            ]},
+        ],
+    )
+
+    # Wait for response (max 5 minutes)
+    result = await approval_store.wait(approval_id, timeout=300)
+    return result == "approved"</code></pre>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">Hard Rules We Never Bend</div>
+          <ul>
+            <li><strong>No delete operations. Ever.</strong> Not even with approval. Deleting a namespace, deployment, or pod is never an agent action. If something needs deleting, a human does it.</li>
+            <li><strong>No exec into pods.</strong> Shell access is a human-only operation. The agent reads logs, it doesn't open shells.</li>
+            <li><strong>No IAM modifications.</strong> The agent cannot change who has access to what. Period.</li>
+            <li><strong>No manifest applies.</strong> The agent doesn't create or modify Kubernetes resources from YAML. It uses specific, scoped operations (scale, restart, patch HPA).</li>
+            <li><strong>Unknown tools default to blocked.</strong> If a new MCP server exposes a tool the agent hasn't seen before, it's blocked until explicitly classified.</li>
+          </ul>
+        </div>
+
+        <h3>Blast Radius Limits</h3>
+        <p>Even approved write actions have hard limits to contain mistakes:</p>
+
+        <pre><code>BLAST_RADIUS_LIMITS = {
+    "scale_deployment": {
+        "max_replicas": 30,          # Can't scale above 30
+        "min_replicas": 1,           # Can't scale to 0
+        "max_change": 10,            # Can't change by more than 10 at once
+    },
+    "restart_deployment": {
+        "max_pods_affected": 20,     # Won't restart deployments with >20 pods
+        "cooldown_seconds": 300,     # 5 min between restarts of same deployment
+    },
+    "patch_nodepool": {
+        "max_cpu_limit": 500,        # Karpenter CPU limit cap
+        "max_node_count": 100,       # Absolute node ceiling
+    },
+    "modify_asg_capacity": {
+        "max_desired": 50,           # ASG desired capacity cap
+        "max_increase_pct": 100,     # Can't more than double current capacity
+    },
+}
+
+def validate_blast_radius(tool: str, args: dict) -> tuple[bool, str]:
+    limits = BLAST_RADIUS_LIMITS.get(tool)
+    if not limits:
+        return True, ""
+
+    if tool == "scale_deployment":
+        replicas = args.get("replicas", 0)
+        if replicas > limits["max_replicas"]:
+            return False, f"Replicas {replicas} exceeds max {limits['max_replicas']}"
+        if replicas < limits["min_replicas"]:
+            return False, f"Cannot scale below {limits['min_replicas']}"
+
+    return True, ""</code></pre>
+
+        <h2>Observability for AI-Driven Automation</h2>
+        <p>This is the part most MCP tutorials skip entirely. When an AI agent is making decisions about your infrastructure, you need to observe <strong>the agent itself</strong> as carefully as you observe the infrastructure it manages.</p>
+
+        <h3>What to Instrument</h3>
+        <p>We treat the agent as a service with its own SLIs:</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>What It Measures</th>
+              <th>Alert Threshold</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>agent_iterations_per_task</code></td>
+              <td>How many reasoning loops per task</td>
+              <td>&gt; 8 iterations = agent is confused</td>
+            </tr>
+            <tr>
+              <td><code>agent_tool_calls_total</code></td>
+              <td>Tool calls by server, tool, and classification</td>
+              <td>&gt; 100 write calls/hour = runaway agent</td>
+            </tr>
+            <tr>
+              <td><code>agent_approval_wait_seconds</code></td>
+              <td>Time waiting for human approval</td>
+              <td>&gt; 300s = approval expired, action dropped</td>
+            </tr>
+            <tr>
+              <td><code>agent_task_duration_seconds</code></td>
+              <td>End-to-end task completion time</td>
+              <td>&gt; 120s = something is stuck</td>
+            </tr>
+            <tr>
+              <td><code>agent_action_success_rate</code></td>
+              <td>% of write actions that achieved desired state</td>
+              <td>&lt; 80% = agent is making bad decisions</td>
+            </tr>
+            <tr>
+              <td><code>agent_hallucination_rate</code></td>
+              <td>Tool calls with invalid arguments (404s, validation errors)</td>
+              <td>&gt; 5% = prompt needs tuning</td>
+            </tr>
+            <tr>
+              <td><code>agent_cost_per_task_usd</code></td>
+              <td>LLM API cost per task</td>
+              <td>&gt; $0.50/task = model or prompt inefficiency</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>The Agent Trace: OpenTelemetry Integration</h3>
+        <p>Every agent task produces a distributed trace that connects the trigger, reasoning steps, tool calls, approvals, and outcomes:</p>
+
+        <pre><code>from opentelemetry import trace
+from opentelemetry.trace import StatusCode
+
+tracer = trace.get_tracer("infra-agent")
+
+async def run(self, task: str, context: dict = None) -> dict:
+    with tracer.start_as_current_span("agent.task") as span:
+        span.set_attribute("agent.task", task)
+        span.set_attribute("agent.trigger", context.get("trigger", "manual"))
+
+        for iteration in range(self.max_iterations):
+            with tracer.start_as_current_span(f"agent.iteration.{iteration}") as iter_span:
+                response = self.client.messages.create(...)
+
+                for block in response.content:
+                    if block.type == "tool_use":
+                        with tracer.start_as_current_span("agent.tool_call") as tool_span:
+                            tool_span.set_attribute("tool.server", server_name)
+                            tool_span.set_attribute("tool.name", tool_name)
+                            tool_span.set_attribute("tool.action_class", action_class)
+                            result = await self._execute_tool(block)
+                            tool_span.set_attribute("tool.result_size", len(str(result)))</code></pre>
+
+        <p>In Grafana, this gives us a waterfall view of every agent task:</p>
+
+        <div class="architecture-box">
+          <h3>Example Trace: Pod Restart Workflow (32 seconds total)</h3>
+          <p><code>agent.task</code> "checkout-api CrashLoopBackOff" ─────────────────── 32s</p>
+          <p>&nbsp;&nbsp;<code>agent.iteration.0</code> ──── 4s</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> kubernetes__get_pods ── 1.2s [READ]</p>
+          <p>&nbsp;&nbsp;<code>agent.iteration.1</code> ──── 5s</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> kubernetes__get_pod_logs ── 2.1s [READ]</p>
+          <p>&nbsp;&nbsp;<code>agent.iteration.2</code> ──── 3s</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> prometheus__query ── 0.8s [READ]</p>
+          <p>&nbsp;&nbsp;<code>agent.iteration.3</code> ──── 6s</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> kubernetes__restart_deployment ── 0.5s [WRITE ✅ approved]</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.approval_wait</code> ── 4.2s</p>
+          <p>&nbsp;&nbsp;<code>agent.iteration.4</code> ──── 8s</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> kubernetes__get_pods ── 1.1s [READ] (verification)</p>
+          <p>&nbsp;&nbsp;&nbsp;&nbsp;<code>agent.tool_call</code> slack__post_message ── 0.3s [WRITE auto-approved]</p>
+        </div>
+
+        <h3>The Agent Dashboard</h3>
+        <p>We built a Grafana dashboard specifically for agent observability. The four panels that matter most:</p>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">94%</div>
+            <div class="metric-label">Action Success Rate (7d)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">2.1%</div>
+            <div class="metric-label">Hallucination Rate (7d)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">$0.18</div>
+            <div class="metric-label">Avg Cost per Task</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">28s</div>
+            <div class="metric-label">Median Task Duration</div>
+          </div>
+        </div>
+
+        <pre><code># Key Prometheus queries for the agent dashboard
+
+# Action success rate (did the write action achieve desired state?)
+sum(rate(agent_action_outcome_total{outcome="success"}[7d]))
+/
+sum(rate(agent_action_outcome_total[7d]))
+
+# Hallucination rate (tool calls that returned validation errors or 404s)
+sum(rate(agent_tool_calls_total{status="invalid_args"}[7d]))
+/
+sum(rate(agent_tool_calls_total[7d]))
+
+# Cost per task (using token counts and model pricing)
+histogram_quantile(0.5,
+  sum(rate(agent_cost_per_task_usd_bucket[7d])) by (le)
+)
+
+# Runaway agent detection (too many tool calls in a short window)
+sum by (task_id)(increase(agent_tool_calls_total[5m])) > 20</code></pre>
+
+        <h2>Integration Patterns: Kubernetes, AWS, and CI/CD</h2>
+
+        <h3>Kubernetes MCP Server: Beyond Read-Only</h3>
+        <p>Our Kubernetes MCP server exposes 14 tools. The write tools use <code>rollout restart</code> and <code>scale</code> — never raw <code>apply</code> or <code>patch</code> on arbitrary resources.</p>
+
+        <pre><code># The restart tool — uses rollout restart, not pod delete
+@server.call_tool()
+async def restart_deployment(namespace: str, deployment: str) -> str:
+    """Trigger a rolling restart of a deployment."""
+    # Pre-flight checks
+    dep = apps_v1.read_namespaced_deployment(deployment, namespace)
+    total_pods = dep.spec.replicas or 0
+
+    if total_pods > BLAST_RADIUS_LIMITS["restart_deployment"]["max_pods_affected"]:
+        return f"Blocked: deployment has {total_pods} pods (max {max_pods})"
+
+    # Check cooldown
+    last_restart = restart_cooldowns.get(f"{namespace}/{deployment}")
+    if last_restart and (time.time() - last_restart) < 300:
+        return f"Blocked: deployment was restarted {int(time.time() - last_restart)}s ago (cooldown: 300s)"
+
+    # Execute rolling restart (not delete — pods are replaced gracefully)
+    now = datetime.utcnow().isoformat() + "Z"
+    apps_v1.patch_namespaced_deployment(deployment, namespace, {
+        "spec": {"template": {"metadata": {"annotations": {
+            "kubectl.kubernetes.io/restartedAt": now
+        }}}}
+    })
+    restart_cooldowns[f"{namespace}/{deployment}"] = time.time()
+    return f"Rolling restart initiated for {namespace}/{deployment} ({total_pods} pods)"</code></pre>
+
+        <h3>AWS MCP Server: Cost-Aware Actions</h3>
+        <p>The AWS MCP server wraps boto3 calls with cost estimation. Before any capacity change, the agent knows the cost impact:</p>
+
+        <pre><code>@server.call_tool()
+async def modify_asg_capacity(asg_name: str, desired: int) -> str:
+    """Modify ASG desired capacity with cost estimation."""
+    asg = autoscaling.describe_auto_scaling_groups(
+        AutoScalingGroupNames=[asg_name]
+    )["AutoScalingGroups"][0]
+
+    current = asg["DesiredCapacity"]
+    instance_type = asg["LaunchTemplate"]["InstanceType"]  # simplified
+    hourly_cost = EC2_PRICING.get(instance_type, 0.10)
+    delta = desired - current
+    monthly_impact = delta * hourly_cost * 730  # hours/month
+
+    autoscaling.set_desired_capacity(
+        AutoScalingGroupName=asg_name, DesiredCapacity=desired
+    )
+    return (f"ASG {asg_name}: {current} → {desired} instances. "
+            f"Estimated cost impact: ${monthly_impact:+.2f}/month")</code></pre>
+
+        <h3>CI/CD Integration: Triggering Rollbacks</h3>
+        <pre><code>@server.call_tool()
+async def trigger_rollback(repo: str, environment: str) -> str:
+    """Trigger a rollback via GitHub Actions workflow dispatch."""
+    # Get the last successful deployment SHA
+    runs = github.get_workflow_runs(repo, "deploy.yml", status="success", per_page=2)
+    if len(runs) < 2:
+        return "Cannot rollback: fewer than 2 successful deployments found"
+
+    previous_sha = runs[1]["head_sha"]  # second-most-recent success
+
+    github.create_workflow_dispatch(
+        repo, "deploy.yml",
+        ref="main",
+        inputs={"target_sha": previous_sha, "environment": environment}
+    )
+    return f"Rollback triggered for {repo} to {previous_sha[:8]} in {environment}"</code></pre>
+
+        <h2>Challenges and Lessons Learned</h2>
+
+        <div class="info-box danger">
+          <h3>❌ Mistakes We Made</h3>
+          <ul>
+            <li><strong>Trusting the LLM to pick the right environment.</strong> Early on, the agent defaulted to "production" when the environment wasn't specified. We lost 3 pods in staging (thought it was prod) before making environment a required, non-defaultable parameter.</li>
+            <li><strong>Not rate-limiting the reasoning loop.</strong> The agent once made 47 Prometheus queries in 90 seconds trying to "find the service with the highest error rate across all namespaces." Prometheus started dropping scrapes. Now we cap at 50 tool calls per task, period.</li>
+            <li><strong>Letting the agent write its own PromQL.</strong> LLMs are mediocre at PromQL. They confuse <code>rate()</code> with <code>increase()</code>, forget to wrap histograms in <code>histogram_quantile()</code>, and invent label names. We switched to pre-built query templates that the agent fills in with parameters — accuracy went from 72% to 96%.</li>
+            <li><strong>No verification step after write actions.</strong> The agent would restart a deployment and immediately report success — without checking if the new pods actually came up healthy. Now every write action is followed by a mandatory verification tool call with a 30-second wait.</li>
+            <li><strong>Ignoring token costs during development.</strong> Our first agent prototype used GPT-4 with full pod specs in the context (including all labels, annotations, and status conditions). Each task cost $0.80. Stripping responses to essential fields brought it to $0.18.</li>
+          </ul>
+        </div>
+
+        <div class="info-box success">
+          <h3>✅ What Worked Well</h3>
+          <ul>
+            <li><strong>The approval workflow via Slack.</strong> Engineers love that they can see exactly what the agent wants to do and approve with one click. Approval rate is 91% — meaning the agent proposes the right action most of the time.</li>
+            <li><strong>Pre-built PromQL templates.</strong> Instead of letting the LLM write raw PromQL, we expose tools like <code>get_error_rate(service, window)</code> and <code>get_latency_percentile(service, percentile, window)</code>. The agent picks the right tool; the server writes the correct query.</li>
+            <li><strong>Mandatory post-action verification.</strong> The system prompt instructs the agent to always verify after a write action. If verification fails, it reports the failure instead of silently moving on.</li>
+            <li><strong>Daily error pattern analysis.</strong> The scheduled daily report catches slow-burn issues that don't trigger alerts but degrade over time. It found an Elasticsearch memory leak 3 days before it would have caused an outage.</li>
+          </ul>
+        </div>
+
+        <h2>Cost Breakdown: Running the Agent in Production</h2>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Monthly Cost</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>LLM API (Claude Sonnet, ~80 tasks/day)</td>
+              <td>$1,100</td>
+              <td>~$0.18/task avg, mix of simple and complex</td>
+            </tr>
+            <tr>
+              <td>Agent Controller (EKS pod, 1 vCPU / 2GB)</td>
+              <td>$45</td>
+              <td>Single replica, scales to 3 during incidents</td>
+            </tr>
+            <tr>
+              <td>MCP Servers (7 servers × 2 replicas)</td>
+              <td>$210</td>
+              <td>256Mi / 100m each — lightweight</td>
+            </tr>
+            <tr>
+              <td>Redis (approval queue + cooldown tracking)</td>
+              <td>$15</td>
+              <td>ElastiCache t4g.micro</td>
+            </tr>
+            <tr>
+              <td>Observability (traces, metrics, logs)</td>
+              <td>$40</td>
+              <td>OTel collector + Grafana Cloud</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td><strong>~$1,410</strong></td>
+              <td><strong>vs. ~$6,200/month in estimated engineer time saved</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Best Practices</h2>
+        <ol>
+          <li><strong>Classify every tool before the agent can use it.</strong> Read, write, or blocked. Unknown = blocked. No exceptions.</li>
+          <li><strong>Make environment a required parameter on every tool.</strong> Never let the agent default to production. Ever.</li>
+          <li><strong>Use pre-built query templates instead of raw PromQL/SQL.</strong> LLMs are bad at query languages. Give them high-level tools and let the server handle the syntax.</li>
+          <li><strong>Every write action must be followed by verification.</strong> Bake this into the system prompt and validate it in the agent controller. If the agent skips verification, flag it.</li>
+          <li><strong>Set blast radius limits on every write tool.</strong> Max replicas, cooldown periods, capacity ceilings. These are your last line of defense against a confused LLM.</li>
+          <li><strong>Observe the agent like you observe your services.</strong> Success rate, hallucination rate, cost per task, iteration count. Build a dashboard. Set alerts.</li>
+          <li><strong>Run the agent in shadow mode first.</strong> For the first month, the agent proposes actions but doesn't execute them. Compare its proposals against what the on-call engineer actually did. Our agent agreed with the human 87% of the time before we turned on execution.</li>
+          <li><strong>Keep the system prompt under 1,000 tokens.</strong> Long system prompts waste money on every API call and don't improve reasoning. Be concise.</li>
+        </ol>
+
+        <h2>Conclusion</h2>
+        <p>We've been running MCP-based infrastructure agents in production for 5 months. The agent handles ~80 tasks per day — mostly diagnostic queries, but increasingly automated remediations. It's not replacing our SRE team. It's handling the repetitive, well-understood tasks so the team can focus on the hard problems.</p>
+
+        <p>The key insight: <strong>the guardrails are the product</strong>. Anyone can connect an LLM to kubectl. The engineering challenge is building the classification system, approval workflow, blast radius limits, verification steps, and observability that make it safe to run in production. That's where 80% of our development time went, and it's the reason we trust it with write access to production Kubernetes.</p>
+
+        <p>If you're starting from scratch: build a read-only diagnostic agent first (see my <a href="building-ai-agent-infrastructure.html">earlier post</a>). Run it for 2 months. Study the logs. Then add one write tool at a time, with approval gates and blast radius limits. The agent will earn your trust — or it won't, and you'll know exactly why from the observability data.</p>
+
+        <blockquote>
+          <p>The goal isn't autonomous infrastructure. The goal is infrastructure that's easier to operate — where the AI handles the mechanical work and humans handle the judgment calls. MCP gives us the protocol to build that safely.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

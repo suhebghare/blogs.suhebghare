@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Design Production-Grade Node Groups (Spot + OnDemand Strategy) – Suheb Ghare</title>
+  <meta name="description" content="How to Design Production-Grade Node Groups (Spot + OnDemand Strategy) – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">Kubernetes</span>
+      </div>
+      <h1 class="post-title">How to Design Production-Grade Node Groups (Spot + OnDemand Strategy)</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="production-node-groups-strategy" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="production-node-groups-strategy" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="production-node-groups-strategy" data-stat="likes">271</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="production-node-groups-strategy" data-stat="dislikes">40</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="production-node-groups-strategy">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="production-node-groups-strategy">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>Why Node Group Design Matters</h2>
+        <p>Your node group strategy determines three things: cost (spot vs on-demand mix), reliability (blast radius when a node group has issues), and operational complexity (how many configurations you maintain). Get it wrong and you're either overpaying by 40% or waking up at 3 AM because your batch jobs starved your production APIs of resources.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="../assets/images/eks-cluster.png" alt="EKS node group strategy" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Four-tier node group design for production EKS clusters</figcaption>
+</figure>
+        <p>After running EKS clusters for 4 years across 3 organizations, we settled on a 4-tier node group strategy that balances all three concerns.</p>
+
+        <h2>The 4-Tier Node Group Strategy</h2>
+
+        <div class="architecture-box">
+          <h3>Tier Overview</h3>
+          <p><strong>Tier 1 — System:</strong> On-demand, small instances, kube-system only, tainted</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 315" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">4-Tier EKS Node Group Strategy</text><rect x="20" y="50" width="175" height="180" rx="10" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="107" y="72" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">System</text><rect x="30" y="90" width="155" height="44" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="107" y="104" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">On-Demand</text><text x="107" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">m5.large</text><rect x="30" y="144" width="155" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="107" y="154" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">kube-system</text><text x="107" y="168" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">only</text><rect x="30" y="190" width="155" height="28" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="107" y="204" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Taint: CriticalAddonsOnly</text><rect x="215" y="50" width="175" height="180" rx="10" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="302" y="72" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">General</text><rect x="225" y="90" width="155" height="44" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="302" y="104" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">On-Demand+Spot</text><text x="302" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">m5/m6i family</text><rect x="225" y="144" width="155" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="302" y="154" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">App workloads</text><rect x="225" y="190" width="155" height="28" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="302" y="204" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">60% Spot target</text><rect x="410" y="50" width="175" height="180" rx="10" fill="#1a3a2a" stroke="#334155" stroke-width="1.5"/><text x="497" y="72" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Memory</text><rect x="420" y="90" width="155" height="44" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="497" y="104" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">On-Demand</text><text x="497" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">r5/r6i family</text><rect x="420" y="144" width="155" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="497" y="154" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Databases</text><text x="497" y="168" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Caches</text><rect x="420" y="190" width="155" height="28" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="497" y="204" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">No Spot (stateful)</text><rect x="605" y="50" width="175" height="180" rx="10" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="692" y="72" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Spot-Batch</text><rect x="615" y="90" width="155" height="44" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="692" y="104" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Spot only</text><text x="692" y="118" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">any family</text><rect x="615" y="144" width="155" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="692" y="154" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">CI runners</text><text x="692" y="168" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Batch jobs</text><rect x="615" y="190" width="155" height="28" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1.5"/><text x="692" y="204" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Taint: batch=true</text><rect x="20" y="250" width="760" height="44" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="400" y="272" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">60% Spot usage across cluster = 45% total cost reduction vs all On-Demand</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Separate node groups by workload type — taints prevent accidental scheduling on wrong tier</figcaption></figure>
+
+          <p><strong>Tier 2 — General Workload:</strong> Mixed on-demand + spot, m5/m6i family</p>
+          <p><strong>Tier 3 — Memory-Optimized:</strong> r5/r6i for databases and caches</p>
+          <p><strong>Tier 4 — Spot-Only:</strong> For batch jobs and CI runners</p>
+        </div>
+
+        <h3>Tier 1: System Node Group</h3>
+        <p>This node group runs only kube-system components: CoreDNS, kube-proxy, aws-node (VPC CNI), metrics-server, and cluster-critical add-ons. It's tainted so application workloads never land here.</p>
+<pre><code>resource "aws_eks_node_group" "system" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "system-on-demand"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "ON_DEMAND"
+  instance_types  = ["t3.large", "t3a.large"]
+
+  scaling_config {
+    desired_size = 2
+    min_size     = 2
+    max_size     = 4
+  }
+
+  taint {
+    key    = "CriticalAddonsOnly"
+    value  = "true"
+    effect = "NO_SCHEDULE"
+  }
+
+  labels = {
+    "node-group" = "system"
+    "workload"   = "kube-system"
+  }
+}</code></pre>
+        <p><strong>Why on-demand:</strong> If your system nodes go down, DNS resolution fails, networking breaks, and the entire cluster is effectively dead. Never run system components on spot.</p>
+        <p><strong>Why small instances:</strong> kube-system pods are lightweight. 2 x t3.large (2 vCPU, 8GB each) is more than enough for clusters up to 100 nodes. Smaller instances also mean faster replacement if one fails.</p>
+
+        <h3>Tier 2: General Workload Node Group</h3>
+        <p>This is where 70% of your application pods run. We use a mix of on-demand (for baseline capacity) and spot (for elastic scaling).</p>
+<pre><code>resource "aws_eks_node_group" "general_on_demand" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "general-on-demand"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "ON_DEMAND"
+  instance_types  = ["m6i.xlarge", "m5.xlarge", "m6a.xlarge"]
+
+  scaling_config {
+    desired_size = 6
+    min_size     = 4
+    max_size     = 8
+  }
+
+  labels = {
+    "node-group" = "general"
+    "capacity"   = "on-demand"
+  }
+}
+
+resource "aws_eks_node_group" "general_spot" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "general-spot"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "SPOT"
+  instance_types  = ["m6i.xlarge", "m5.xlarge", "m6a.xlarge",
+                     "m5a.xlarge", "m7i.xlarge"]
+
+  scaling_config {
+    desired_size = 8
+    min_size     = 2
+    max_size     = 25
+  }
+
+  labels = {
+    "node-group" = "general"
+    "capacity"   = "spot"
+  }
+}</code></pre>
+
+        <h3>Tier 3: Memory-Optimized Node Group</h3>
+        <p>For workloads that need high memory-to-CPU ratios: Redis, Elasticsearch, in-memory caches, and data processing pipelines.</p>
+<pre><code>resource "aws_eks_node_group" "memory_optimized" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "memory-optimized-on-demand"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "ON_DEMAND"
+  instance_types  = ["r6i.xlarge", "r5.xlarge", "r6a.xlarge"]
+
+  scaling_config {
+    desired_size = 3
+    min_size     = 2
+    max_size     = 6
+  }
+
+  taint {
+    key    = "workload"
+    value  = "memory-optimized"
+    effect = "NO_SCHEDULE"
+  }
+
+  labels = {
+    "node-group" = "memory-optimized"
+  }
+}</code></pre>
+
+        <h3>Tier 4: Spot-Only (Batch & CI)</h3>
+<pre><code>resource "aws_eks_node_group" "spot_batch" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "batch-spot"
+  node_role_arn   = aws_iam_role.node.arn
+  subnet_ids      = var.private_subnet_ids
+  capacity_type   = "SPOT"
+  instance_types  = ["m5.xlarge", "m5a.xlarge", "m6i.xlarge",
+                     "m6a.xlarge", "c5.xlarge", "c5a.xlarge"]
+
+  scaling_config {
+    desired_size = 2
+    min_size     = 0
+    max_size     = 20
+  }
+
+  taint {
+    key    = "dedicated"
+    value  = "batch"
+    effect = "NO_SCHEDULE"
+  }
+
+  labels = {
+    "node-group" = "batch"
+    "capacity"   = "spot"
+  }
+}</code></pre>
+
+        <h2>Taints and Tolerations Strategy</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Node Group</th><th>Taint</th><th>Who Tolerates</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>System</td><td><code>CriticalAddonsOnly=true:NoSchedule</code></td><td>CoreDNS, kube-proxy, VPC CNI, metrics-server</td></tr>
+            <tr><td>General (on-demand)</td><td>None</td><td>All workloads (default landing zone)</td></tr>
+            <tr><td>General (spot)</td><td>None</td><td>All workloads (default landing zone)</td></tr>
+            <tr><td>Memory-optimized</td><td><code>workload=memory-optimized:NoSchedule</code></td><td>Redis, Elasticsearch, data pipelines</td></tr>
+            <tr><td>Batch/CI (spot)</td><td><code>dedicated=batch:NoSchedule</code></td><td>CI runners, cron jobs, batch processors</td></tr>
+          </tbody>
+        </table>
+
+        <p>Example toleration in a Redis deployment:</p>
+<pre><code>spec:
+  tolerations:
+    - key: "workload"
+      operator: "Equal"
+      value: "memory-optimized"
+      effect: "NoSchedule"
+  nodeSelector:
+    node-group: memory-optimized</code></pre>
+
+        <h2>Instance Type Diversification</h2>
+        <div class="callout callout-warning">
+          <div class="callout-title">⚠️ Never Use a Single Instance Type</div>
+          <p>If you only specify <code>m5.xlarge</code> in a spot node group and AWS reclaims all m5.xlarge capacity in your AZ, your node group can't scale. Always specify 3+ instance types from different families (m5, m6i, m6a) and generations.</p>
+        </div>
+        <p>Our rule: minimum 3 instance types per node group, spanning at least 2 instance families. For spot groups, we go to 5-6 types for maximum availability.</p>
+
+        <h2>Managed vs Self-Managed vs Karpenter NodePools</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Feature</th><th>Managed Node Groups</th><th>Self-Managed</th><th>Karpenter</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>AMI updates</td><td>Automatic (EKS-optimized)</td><td>Manual</td><td>Automatic</td></tr>
+            <tr><td>Scaling</td><td>ASG-based</td><td>ASG-based</td><td>Direct EC2 API</td></tr>
+            <tr><td>Launch template</td><td>Optional customization</td><td>Full control</td><td>EC2NodeClass</td></tr>
+            <tr><td>Node drain</td><td>Graceful (managed)</td><td>Manual</td><td>Graceful (built-in)</td></tr>
+            <tr><td>Spot handling</td><td>Basic (ASG)</td><td>Basic (ASG)</td><td>Advanced (fleet API)</td></tr>
+            <tr><td>Best for</td><td>Most teams</td><td>Custom AMI needs</td><td>Dynamic, cost-optimized</td></tr>
+          </tbody>
+        </table>
+        <p>We use managed node groups for Tier 1 (system) and Tier 3 (memory-optimized) where stability matters. Karpenter NodePools for Tier 2 (general) and Tier 4 (batch) where cost optimization and fast scaling matter.</p>
+
+        <h2>Launch Template Customization</h2>
+        <p>Key customizations we apply via launch templates:</p>
+<pre><code>resource "aws_launch_template" "eks_nodes" {
+  name_prefix = "eks-node-"
+
+  # EBS optimization
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 100
+      volume_type           = "gp3"
+      iops                  = 3000
+      throughput            = 125
+      encrypted             = true
+      delete_on_termination = true
+    }
+  }
+
+  # IMDSv2 enforced — prevents SSRF attacks
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
+  # User data for custom kubelet config
+  user_data = base64encode(templatefile("userdata.sh.tpl", {
+    cluster_name = var.cluster_name
+    max_pods     = 58  # for m5.xlarge with prefix delegation
+  }))
+}</code></pre>
+
+        <h2>Cost Breakdown: The Impact of 60% Spot Usage</h2>
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">60%</div>
+            <div class="metric-label">Spot instance usage across cluster</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">45%</div>
+            <div class="metric-label">Cost reduction vs all on-demand</div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Node Group</th><th>Instances</th><th>Capacity</th><th>Monthly Cost</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>System</td><td>2 x t3.large</td><td>On-demand</td><td><span class="cost-badge low">$122</span></td></tr>
+            <tr><td>General (on-demand)</td><td>6 x m6i.xlarge</td><td>On-demand</td><td><span class="cost-badge high">$1,382</span></td></tr>
+            <tr><td>General (spot)</td><td>8 x m6i.xlarge</td><td>Spot (~65% discount)</td><td><span class="cost-badge medium">$645</span></td></tr>
+            <tr><td>Memory-optimized</td><td>3 x r6i.xlarge</td><td>On-demand</td><td><span class="cost-badge medium">$760</span></td></tr>
+            <tr><td>Batch/CI (spot)</td><td>4 x m5.xlarge (avg)</td><td>Spot</td><td><span class="cost-badge low">$280</span></td></tr>
+            <tr><td colspan="3"><strong>Total</strong></td><td><strong>$3,189/mo</strong></td></tr>
+            <tr><td colspan="3"><em>All on-demand equivalent</em></td><td><em>$5,800/mo</em></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Node Group Sizing: Min/Max/Desired Strategy</h2>
+        <div class="info-box">
+          <p><strong>Min:</strong> Set to the number of nodes needed to survive a single AZ failure. For 3-AZ clusters, min = desired / 3 × 2 (lose one AZ, keep running).</p>
+        </div>
+        <div class="info-box warning">
+          <p><strong>Max:</strong> Set to 3-4x your normal desired count. This gives headroom for traffic spikes without requiring Terraform changes. But set billing alerts — a runaway HPA can scale your cluster to max in minutes.</p>
+        </div>
+        <div class="info-box success">
+          <p><strong>Desired:</strong> Set to your normal steady-state. Let the autoscaler (CA or Karpenter) adjust from there. Don't hardcode desired in Terraform if you're using autoscaling — use <code>lifecycle { ignore_changes = [scaling_config[0].desired_size] }</code>.</p>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">✅ Key Takeaway</div>
+          <p>A well-designed node group strategy isn't about having the most groups — it's about having the right isolation boundaries. System components get their own on-demand nodes. Memory-heavy workloads get right-sized instances. Batch jobs get cheap spot nodes. Everything else lands on the general tier. Four tiers, clear taints, 60% spot usage, 45% cost savings.</p>
+        </div>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

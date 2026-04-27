@@ -1,0 +1,9 @@
+# Blog stats - don't commit counter data
+blog-stats.json
+
+# Temp migration scripts (can be deleted after migration)
+migrate.sh
+upgrade-posts.py
+
+# IDE
+.idea/

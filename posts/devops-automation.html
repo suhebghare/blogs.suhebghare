@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevOps Automation & CI/CD Pipelines – Suheb Ghare</title>
+  <meta name="description" content="DevOps Automation & CI/CD Pipelines – DevOps, SRE, and Cloud Infrastructure insights by Suheb Ghare.">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=1400&q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">CI/CD</span>
+      </div>
+      <h1 class="post-title">DevOps Automation & CI/CD Pipelines</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 2024</span>
+        <span class="meta-item">⏱ <span class="reading-time">10 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="devops-automation" data-stat="reads">500</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item">
+          <span>👁️</span>
+          <span data-blog="devops-automation" data-stat="reads">500</span>
+          <span>reads</span>
+        </div>
+        <div class="stat-item">
+          <span>👍</span>
+          <span data-blog="devops-automation" data-stat="likes">294</span>
+          <span>likes</span>
+        </div>
+        <div class="stat-item">
+          <span>👎</span>
+          <span data-blog="devops-automation" data-stat="dislikes">40</span>
+          <span>dislikes</span>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="devops-automation">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="devops-automation">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2>What to Automate First</h2>
+        <p>Every team has a list of things they want to automate. The mistake is starting with the most technically interesting one instead of the highest ROI one. Here's the framework we use: <strong>frequency × time-per-occurrence × error-rate</strong>.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=900&q=85" alt="DevOps automation pipeline" style="max-width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <figcaption style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); font-style:italic;">Deployment frequency: 2/week → 15/day after full pipeline automation</figcaption>
+</figure>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Frequency</th>
+              <th>Time Each</th>
+              <th>Error Rate</th>
+              <th>Monthly Cost</th>
+              <th>Automate?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Deploy to production</td>
+              <td>10/week</td>
+              <td>45 min</td>
+              <td>8%</td>
+              <td>30 hours</td>
+              <td><strong>Yes — first</strong></td>
+            </tr>
+            <tr>
+              <td>Provision new service</td>
+              <td>3/month</td>
+              <td>4 hours</td>
+              <td>15%</td>
+              <td>12 hours</td>
+              <td>Yes — second</td>
+            </tr>
+            <tr>
+              <td>DR failover test</td>
+              <td>1/month</td>
+              <td>8 hours</td>
+              <td>25%</td>
+              <td>8 hours</td>
+              <td>Yes — high error rate</td>
+            </tr>
+            <tr>
+              <td>SSL cert renewal</td>
+              <td>4/year</td>
+              <td>30 min</td>
+              <td>5%</td>
+              <td>0.5 hours</td>
+              <td>Yes — outage risk</td>
+            </tr>
+            <tr>
+              <td>One-off data migration</td>
+              <td>1/year</td>
+              <td>2 days</td>
+              <td>10%</td>
+              <td>1.3 hours</td>
+              <td>No — too rare</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>The Automation Pyramid</h2>
+        <p>Automate bottom-up. Each layer depends on the one below it being solid:</p>
+<figure style="margin:2.5rem 0;text-align:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 325" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);background:#0f172a;"><defs>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#6366f1"/></marker>
+  <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#06b6d4"/></marker>
+  <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22c55e"/></marker>
+</defs><text x="400" y="26" font-family="Inter,system-ui,sans-serif" font-size="15" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">DevOps Automation Pyramid</text><rect x="250" y="55" width="300" height="34" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="400" y="67" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Operations</text><text x="400" y="81" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Auto-scaling · Cert renewal · Log rotation</text><rect x="200" y="95" width="400" height="34" rx="6" fill="#3b1f5e" stroke="#334155" stroke-width="1.5"/><text x="400" y="107" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle" dominant-baseline="middle">Deployment</text><text x="400" y="121" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Helm · ArgoCD · Argo Rollouts</text><rect x="150" y="135" width="500" height="34" rx="6" fill="#0c4a6e" stroke="#334155" stroke-width="1.5"/><text x="400" y="147" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#67e8f9" text-anchor="middle" dominant-baseline="middle">Testing</text><text x="400" y="161" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Unit · Integration · E2E</text><rect x="100" y="175" width="600" height="34" rx="6" fill="#312e81" stroke="#334155" stroke-width="1.5"/><text x="400" y="187" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">CI/CD Pipelines</text><text x="400" y="201" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">GitHub Actions · Reusable templates</text><rect x="50" y="215" width="700" height="34" rx="6" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="400" y="227" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Infrastructure</text><text x="400" y="241" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Terraform · CloudFormation</text><text x="80" y="140" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">← Lower ROI</text><text x="720" y="220" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#64748b" text-anchor="middle" dominant-baseline="middle">Highest ROI →</text><rect x="20" y="265" width="370" height="44" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/><text x="205" y="280" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#a5b4fc" text-anchor="middle" dominant-baseline="middle">Deploy freq: 2/week → 15/day</text><text x="205" y="296" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Lead time: 2 weeks → 45 min</text><rect x="410" y="265" width="370" height="44" rx="8" fill="#14532d" stroke="#334155" stroke-width="1.5"/><text x="595" y="280" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="bold" fill="#86efac" text-anchor="middle" dominant-baseline="middle">Failure rate: 8% → 1.2%</text><text x="595" y="296" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="normal" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">Recovery: 4 hours → 15 min</text></svg><figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Start from the base: automate infrastructure first for highest ROI, then work up the pyramid</figcaption></figure>
+
+
+        <div class="diagram">
+          <div class="flow-step">Layer 5: Operational Automation (auto-scaling, self-healing)</div>
+          <div class="flow-step">Layer 4: Deployment Automation (GitOps, canary, rollback)</div>
+          <div class="flow-step">Layer 3: Testing Automation (unit, integration, e2e, security)</div>
+          <div class="flow-step">Layer 2: CI/CD Pipelines (build, scan, package)</div>
+          <div class="flow-step">Layer 1: Infrastructure Provisioning (IaC, GitOps)</div>
+        </div>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Don't skip layers</div>
+          <p>We've seen teams try to build auto-scaling (Layer 5) before they have reliable deployments (Layer 4). The auto-scaler scales up broken code. Fix the foundation first.</p>
+        </div>
+
+        <h2>Real Automation Wins</h2>
+
+        <h3>Win 1: Automated DR Testing — Saves 8 Hours/Month</h3>
+        <p>Our DR test used to be a manual, all-hands event. Now it runs every Sunday at 3am:</p>
+
+        <pre><code># .github/workflows/dr-test.yml
+name: DR Failover Test
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Every Sunday 3am UTC
+  workflow_dispatch:       # Manual trigger option
+
+jobs:
+  dr-test:
+    runs-on: self-hosted
+    environment: dr-test
+    steps:
+      - name: Failover database to replica
+        run: |
+          aws rds failover-db-cluster \
+            --db-cluster-identifier production-cluster \
+            --target-db-instance-identifier production-replica-1
+
+      - name: Wait for failover
+        run: |
+          aws rds wait db-instance-available \
+            --db-instance-identifier production-replica-1
+          sleep 60
+
+      - name: Run health checks
+        run: |
+          for endpoint in checkout payments inventory; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://${endpoint}.internal.company.com/health")
+            if [ "$status" != "200" ]; then
+              echo "FAIL: ${endpoint} returned ${status}"
+              exit 1
+            fi
+            echo "PASS: ${endpoint} healthy"
+          done
+
+      - name: Run synthetic transactions
+        run: |
+          python scripts/synthetic_checkout.py --env dr-test
+          python scripts/synthetic_payment.py --env dr-test
+
+      - name: Failback to primary
+        if: always()
+        run: |
+          aws rds failover-db-cluster \
+            --db-cluster-identifier production-cluster \
+            --target-db-instance-identifier production-primary
+
+      - name: Report results
+        if: always()
+        run: |
+          python scripts/post_dr_report.py \
+            --status ${{ job.status }} \
+            --slack-channel "#sre-alerts" \
+            --pagerduty-service dr-testing</code></pre>
+
+        <div class="info-box success">
+          <h3>✅ Result</h3>
+          <p>DR test went from a stressful 8-hour manual process (that we skipped 40% of the time) to an automated weekly test that runs while we sleep. We've caught 3 failover issues that would have been outages.</p>
+        </div>
+
+        <h3>Win 2: Automated Dependency Updates — CVEs Caught in 24h vs 3 Months</h3>
+        <p>We use Renovate Bot to automatically create PRs for dependency updates. The key is the automerge config for patch versions:</p>
+
+        <pre><code>// renovate.json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["every weekday"],
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "description": "Auto-merge patch updates if tests pass",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "requiredStatusChecks": ["build", "test", "security-scan"]
+    },
+    {
+      "description": "Group minor updates weekly",
+      "matchUpdateTypes": ["minor"],
+      "groupName": "minor-updates",
+      "schedule": ["before 9am on monday"]
+    },
+    {
+      "description": "Major updates need manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["major-update", "needs-review"]
+    },
+    {
+      "description": "Security updates get priority",
+      "matchCategories": ["security"],
+      "automerge": true,
+      "schedule": ["at any time"],
+      "prPriority": 10,
+      "labels": ["security"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "vulnerability"]
+  }
+}</code></pre>
+
+        <h3>Win 3: GitHub Actions Reusable Workflows</h3>
+        <p>Instead of copying CI configs across 47 repos, we maintain reusable workflows that all services inherit:</p>
+
+        <pre><code># .github/workflows/reusable-build.yml (in shared repo)
+name: Reusable Build & Deploy
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+        default: staging
+      run_e2e:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ inputs.service_name }}:${{ github.sha }}
+            ${{ env.ECR_REGISTRY }}/${{ inputs.service_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ inputs.service_name }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+  deploy:
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Update ArgoCD application
+        run: |
+          argocd app set ${{ inputs.service_name }} \
+            --parameter image.tag=${{ github.sha }}
+          argocd app sync ${{ inputs.service_name }} --async</code></pre>
+
+        <p>Each service's workflow is now 10 lines:</p>
+
+        <pre><code># In each service repo: .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: our-org/shared-workflows/.github/workflows/reusable-build.yml@main
+    with:
+      service_name: checkout-service
+      environment: production
+      run_e2e: true
+    secrets: inherit</code></pre>
+
+        <h2>Infrastructure Automation: Terraform + Atlantis</h2>
+        <p>All infrastructure changes go through GitOps with Atlantis. No one runs <code>terraform apply</code> locally:</p>
+
+        <div class="diagram">
+          <div class="flow-step">Engineer opens PR with Terraform changes</div>
+          <div class="flow-step">Atlantis runs terraform plan automatically</div>
+          <div class="flow-step">Plan output posted as PR comment</div>
+          <div class="flow-step">2 approvals required</div>
+          <div class="flow-step">Comment "atlantis apply" to deploy</div>
+          <div class="flow-step">State locked during apply</div>
+        </div>
+
+        <pre><code># atlantis.yaml (repo-level config)
+version: 3
+projects:
+  - name: production-vpc
+    dir: terraform/vpc
+    workspace: production
+    autoplan:
+      when_modified: ["*.tf", "*.tfvars"]
+      enabled: true
+    apply_requirements: [approved, mergeable]
+
+  - name: production-eks
+    dir: terraform/eks
+    workspace: production
+    autoplan:
+      when_modified: ["*.tf", "*.tfvars"]
+      enabled: true
+    apply_requirements: [approved, mergeable]</code></pre>
+
+        <h2>Operational Automation</h2>
+
+        <h3>Auto-Scaling Schedules</h3>
+        <p>Our traffic is predictable: 3x during business hours, 0.5x at night. Instead of reactive HPA alone, we use scheduled scaling:</p>
+
+        <pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: checkout-service
+  annotations:
+    keda.sh/scaled-object: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: checkout-service
+  minReplicas: 3
+  maxReplicas: 30
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# KEDA ScaledObject for scheduled scaling
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: checkout-scheduled
+spec:
+  scaleTargetRef:
+    name: checkout-service
+  triggers:
+    - type: cron
+      metadata:
+        timezone: America/New_York
+        start: "0 8 * * 1-5"   # 8am weekdays
+        end: "0 20 * * 1-5"    # 8pm weekdays
+        desiredReplicas: "10"   # Pre-scale for business hours</code></pre>
+
+        <h2>Automation Anti-Patterns</h2>
+
+        <div class="icon-list cross">
+          <div class="icon-list-item">
+            <span>❌</span>
+            <div>
+              <strong>Automating broken processes</strong>
+              <p>If your deploy process is flaky, automating it just makes it fail faster. Fix the process first, then automate it.</p>
+            </div>
+          </div>
+          <div class="icon-list-item">
+            <span>❌</span>
+            <div>
+              <strong>No runbook for when automation fails</strong>
+              <p>Every automated process needs a manual fallback. When Atlantis is down, can you still deploy Terraform? When Renovate creates a broken PR, who notices?</p>
+            </div>
+          </div>
+          <div class="icon-list-item">
+            <span>❌</span>
+            <div>
+              <strong>No alerting on automation failure</strong>
+              <p>Our DR test ran silently for 3 weeks with a broken health check script. Nobody noticed because we weren't alerting on test failures. Now every automation has a "did it run and succeed?" alert.</p>
+            </div>
+          </div>
+          <div class="icon-list-item">
+            <span>❌</span>
+            <div>
+              <strong>Automating without measuring</strong>
+              <p>If you can't measure the before/after, you can't prove the automation was worth building. Track time saved, error rate reduction, and frequency.</p>
+            </div>
+          </div>
+        </div>
+
+        <h2>Results</h2>
+
+        <div class="grid-2">
+          <div class="metric-card">
+            <div class="metric-value">2/week → 15/day</div>
+            <div class="metric-label">Deployment frequency</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">8% → 1.2%</div>
+            <div class="metric-label">Change failure rate</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">4 hours → 12 min</div>
+            <div class="metric-label">Lead time for changes</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">47 min → 8 min</div>
+            <div class="metric-label">Mean time to recovery</div>
+          </div>
+        </div>
+
+        <h2>Where to Start</h2>
+        <ol>
+          <li><strong>Audit your team's time.</strong> For one week, track every manual task. Categorize by frequency and time spent.</li>
+          <li><strong>Pick the top 3 by ROI.</strong> Use the frequency × time × error-rate formula.</li>
+          <li><strong>Automate one thing end-to-end.</strong> Don't half-automate 5 things. Fully automate 1 thing, prove value, then move to the next.</li>
+          <li><strong>Add monitoring to every automation.</strong> Alert on failure, track success rate, measure time saved.</li>
+          <li><strong>Write the manual fallback.</strong> Before automating, document the manual process. That document becomes your runbook for when automation breaks.</li>
+        </ol>
+
+        <blockquote>
+          <p>The goal of automation isn't to eliminate humans from the loop. It's to eliminate the boring, repetitive, error-prone parts so humans can focus on the interesting problems. Automate the toil, not the thinking.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps & SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Specializing in Kubernetes, AWS, CI/CD, and platform engineering. Currently helping teams ship faster and more reliably.</div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.875rem; font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary); font-size:0.875rem; font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps & SRE Engineer writing about cloud infrastructure, Kubernetes, and automation.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://portfolio.suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD & Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud & AWS</a>
+        <a href="../index.html">AI & DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>
