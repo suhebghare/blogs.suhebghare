@@ -21,7 +21,7 @@ jobs:
       - name: Download existing stats from S3
         run: |
           aws s3 cp s3://${{ secrets.S3_BUCKET }}/blog-stats.json ./blog-stats.json \
-            || echo "No existing stats found, using defaults"
+            || echo "{}" > ./blog-stats.json
 
       - name: Sync to S3
         run: |
