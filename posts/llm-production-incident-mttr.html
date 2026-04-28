@@ -4,7 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Using LLMs to Analyze Production Incidents and Reduce MTTR – Suheb Ghare</title>
-  <meta name="description" content="How to feed logs, metrics, and traces into LLMs to build an AI incident assistant for SRE teams on Kubernetes and AWS. Real architecture, real trade-offs.">
+  <meta name="description" content="Using LLMs to analyze production incidents and reduce MTTR from 41 to 11 minutes. Multi-signal architecture: Prometheus, Loki, CloudWatch, traces. Real Python code, cost trade-offs, PII concerns.">
+  <meta name="keywords" content="llm incident analysis, reduce mttr ai, ai sre incident response, gpt4 prometheus logs, llm devops production">
+  <meta name="author" content="Suheb Ghare">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://blogs.suhebghare.tech/posts/llm-production-incident-mttr.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Using LLMs to Analyze Production Incidents and Reduce MTTR">
+  <meta property="og:description" content="Using LLMs to analyze production incidents and reduce MTTR from 41 to 11 minutes. Multi-signal architecture: Prometheus, Loki, CloudWatch, traces. Real Python code, cost trade-offs, PII concerns.">
+  <meta property="og:url" content="https://blogs.suhebghare.tech/posts/llm-production-incident-mttr.html">
+  <meta property="og:site_name" content="Suheb Ghare – DevOps & SRE Blog">
+  <meta property="og:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property='article:published_time' content='2025-04-27T00:00:00+05:30'>
+  <meta property='article:author' content='Suheb Ghare'>
+  <meta property='article:section' content='AI & DevOps'>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Using LLMs to Analyze Production Incidents and Reduce MTTR">
+  <meta name="twitter:description" content="Using LLMs to analyze production incidents and reduce MTTR from 41 to 11 minutes. Multi-signal architecture: Prometheus, Loki, CloudWatch, traces. Real Python code, cost trade-offs, PII concerns.">
+  <meta name="twitter:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta name="twitter:creator" content="@suhebghare">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Using LLMs to Analyze Production Incidents and Reduce MTTR",
+  "description": "Using LLMs to analyze production incidents and reduce MTTR from 41 to 11 minutes. Multi-signal architecture: Prometheus, Loki, CloudWatch, traces. Real Python code, cost trade-offs, PII concerns.",
+  "author": {
+    "@type": "Person",
+    "name": "Suheb Ghare",
+    "url": "https://suhebghare.tech"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "Suheb Ghare"
+  },
+  "datePublished": "2025-04-27T00:00:00+05:30",
+  "dateModified": "2025-04-27T00:00:00+05:30",
+  "url": "https://blogs.suhebghare.tech/posts/llm-production-incident-mttr.html",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://blogs.suhebghare.tech/posts/llm-production-incident-mttr.html"
+  },
+  "keywords": "llm incident analysis, reduce mttr ai, ai sre incident response, gpt4 prometheus logs, llm devops production",
+  "articleSection": "AI & DevOps",
+  "image": "https://blogs.suhebghare.tech/assets/images/og-default.png",
+  "inLanguage": "en-US"
+}</script>
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://blogs.suhebghare.tech/sitemap.xml
+
+# Block CI/CD and config files
+Disallow: /.github/
+Disallow: /.gitignore
+Disallow: /Dockerfile
+Disallow: /deploy.sh

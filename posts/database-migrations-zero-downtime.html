@@ -4,7 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zero-Downtime Database Migrations on Live Production Systems – Suheb Ghare</title>
-  <meta name="description" content="The expand-contract pattern, safe migration strategies for adding columns, renaming fields, and adding constraints — plus a real incident where ALTER TABLE locked production for 8 minutes.">
+  <meta name="description" content="Zero-downtime database migrations on live systems. Expand-contract pattern, column renames, NOT NULL without locking, and the ALTER TABLE that locked prod for 8 minutes.">
+  <meta name="keywords" content="zero downtime database migration, postgres migration production, expand contract pattern, gh-ost pt-osc, alter table lock">
+  <meta name="author" content="Suheb Ghare">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://blogs.suhebghare.tech/posts/database-migrations-zero-downtime.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Zero-Downtime Database Migrations on Live Production Systems">
+  <meta property="og:description" content="Zero-downtime database migrations on live systems. Expand-contract pattern, column renames, NOT NULL without locking, and the ALTER TABLE that locked prod for 8 minutes.">
+  <meta property="og:url" content="https://blogs.suhebghare.tech/posts/database-migrations-zero-downtime.html">
+  <meta property="og:site_name" content="Suheb Ghare – DevOps & SRE Blog">
+  <meta property="og:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property='article:published_time' content='2025-01-08T00:00:00+05:30'>
+  <meta property='article:author' content='Suheb Ghare'>
+  <meta property='article:section' content='Observability'>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Zero-Downtime Database Migrations on Live Production Systems">
+  <meta name="twitter:description" content="Zero-downtime database migrations on live systems. Expand-contract pattern, column renames, NOT NULL without locking, and the ALTER TABLE that locked prod for 8 minutes.">
+  <meta name="twitter:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta name="twitter:creator" content="@suhebghare">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Zero-Downtime Database Migrations on Live Production Systems",
+  "description": "Zero-downtime database migrations on live systems. Expand-contract pattern, column renames, NOT NULL without locking, and the ALTER TABLE that locked prod for 8 minutes.",
+  "author": {
+    "@type": "Person",
+    "name": "Suheb Ghare",
+    "url": "https://suhebghare.tech"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "Suheb Ghare"
+  },
+  "datePublished": "2025-01-08T00:00:00+05:30",
+  "dateModified": "2025-01-08T00:00:00+05:30",
+  "url": "https://blogs.suhebghare.tech/posts/database-migrations-zero-downtime.html",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://blogs.suhebghare.tech/posts/database-migrations-zero-downtime.html"
+  },
+  "keywords": "zero downtime database migration, postgres migration production, expand contract pattern, gh-ost pt-osc, alter table lock",
+  "articleSection": "Observability",
+  "image": "https://blogs.suhebghare.tech/assets/images/og-default.png",
+  "inLanguage": "en-US"
+}</script>
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>

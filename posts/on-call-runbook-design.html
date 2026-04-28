@@ -4,7 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Writing On-Call Runbooks That Actually Work at 3am – Suheb Ghare</title>
-  <meta name="description" content="How to write on-call runbooks that engineers can actually follow at 3am — decision trees, real templates, common alert playbooks, and how to keep runbooks fresh.">
+  <meta name="description" content="Writing on-call runbooks that work at 3am. Decision-tree format, CrashLoopBackOff example, and how we cut MTTR from 47 to 12 minutes.">
+  <meta name="keywords" content="on call runbook, runbook template, sre runbook, incident runbook, on call engineering">
+  <meta name="author" content="Suheb Ghare">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://blogs.suhebghare.tech/posts/on-call-runbook-design.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Writing On-Call Runbooks That Actually Work at 3am">
+  <meta property="og:description" content="Writing on-call runbooks that work at 3am. Decision-tree format, CrashLoopBackOff example, and how we cut MTTR from 47 to 12 minutes.">
+  <meta property="og:url" content="https://blogs.suhebghare.tech/posts/on-call-runbook-design.html">
+  <meta property="og:site_name" content="Suheb Ghare – DevOps & SRE Blog">
+  <meta property="og:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property='article:published_time' content='2024-12-28T00:00:00+05:30'>
+  <meta property='article:author' content='Suheb Ghare'>
+  <meta property='article:section' content='Observability'>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Writing On-Call Runbooks That Actually Work at 3am">
+  <meta name="twitter:description" content="Writing on-call runbooks that work at 3am. Decision-tree format, CrashLoopBackOff example, and how we cut MTTR from 47 to 12 minutes.">
+  <meta name="twitter:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta name="twitter:creator" content="@suhebghare">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Writing On-Call Runbooks That Actually Work at 3am",
+  "description": "Writing on-call runbooks that work at 3am. Decision-tree format, CrashLoopBackOff example, and how we cut MTTR from 47 to 12 minutes.",
+  "author": {
+    "@type": "Person",
+    "name": "Suheb Ghare",
+    "url": "https://suhebghare.tech"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "Suheb Ghare"
+  },
+  "datePublished": "2024-12-28T00:00:00+05:30",
+  "dateModified": "2024-12-28T00:00:00+05:30",
+  "url": "https://blogs.suhebghare.tech/posts/on-call-runbook-design.html",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://blogs.suhebghare.tech/posts/on-call-runbook-design.html"
+  },
+  "keywords": "on call runbook, runbook template, sre runbook, incident runbook, on call engineering",
+  "articleSection": "Observability",
+  "image": "https://blogs.suhebghare.tech/assets/images/og-default.png",
+  "inLanguage": "en-US"
+}</script>
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
