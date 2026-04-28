@@ -3,60 +3,76 @@
 A static tech blog focused on DevOps, SRE, Cloud Infrastructure, and Automation — built with pure HTML/CSS and deployed on AWS S3 + CloudFront.
 
 **Live:** [https://blogs.suhebghare.tech](https://blogs.suhebghare.tech)  
-**Portfolio:** [https://portfolio.suhebghare.tech](https://portfolio.suhebghare.tech)
+**Portfolio:** [https://suhebghare.tech](https://suhebghare.tech)
 
 ---
 
-## Blog Posts (37 Articles)
+## Blog Posts (53 Articles)
 
-### CI/CD & Platform Engineering
-- [Designing Reusable CI/CD Templates](reusable-cicd-templates.html)
-- [Secrets Management Across Environments](secrets-management-environments.html)
-- [Argo Rollouts & Canary Deployments](argo-rollouts-canary-deployments.html)
-- [Self-Hosted Runners on EKS – Architecture & Pitfalls](self-hosted-runners-eks.html)
-- [Platform Engineering vs DevOps – What's the Difference?](platform-engineering-vs-devops.html)
-- [Building an Internal Developer Platform](building-internal-developer-platform.html)
-- [DevOps Automation & CI/CD](devops-automation.html)
+### CI/CD & Platform Engineering (9)
+- [Designing Reusable CI/CD Templates](posts/reusable-cicd-templates.html)
+- [Secrets Management Across Environments](posts/secrets-management-environments.html)
+- [Argo Rollouts & Canary Deployments](posts/argo-rollouts-canary-deployments.html)
+- [Self-Hosted Runners on EKS – Architecture & Pitfalls](posts/self-hosted-runners-eks.html)
+- [Platform Engineering vs DevOps – What's the Difference?](posts/platform-engineering-vs-devops.html)
+- [Building an Internal Developer Platform](posts/building-internal-developer-platform.html)
+- [DevOps Automation & CI/CD](posts/devops-automation.html)
+- [Zero-Downtime Deployments: The Complete Playbook](posts/zero-downtime-deployments.html)
+- [GitOps with ArgoCD: From Zero to Production-Grade](posts/gitops-with-argocd.html)
 
-### AI & DevOps
-- [How AI Can Help SREs Reduce Alert Fatigue](ai-reduce-alert-fatigue.html)
-- [Using LLMs to Analyze Incident Logs](llm-analyze-incident-logs.html)
-- [AI for AWS Cost Anomaly Detection](ai-aws-cost-anomaly-detection.html)
-- [Can AI Replace On-Call Engineers?](can-ai-replace-oncall-engineers.html)
-- [Building an AI Agent for Your Infrastructure](building-ai-agent-infrastructure.html)
-- [MCP Servers and the Future of DevOps Automation](mcp-servers-devops-automation.html)
-- [ChatGPT + Terraform – Is It Safe?](chatgpt-terraform-safety.html)
+### AI & DevOps (13)
+- [How AI Can Help SREs Reduce Alert Fatigue](posts/ai-reduce-alert-fatigue.html)
+- [Using LLMs to Analyze Incident Logs](posts/llm-analyze-incident-logs.html)
+- [AI for AWS Cost Anomaly Detection](posts/ai-aws-cost-anomaly-detection.html)
+- [Can AI Replace On-Call Engineers?](posts/can-ai-replace-oncall-engineers.html)
+- [Building an AI Agent for Your Infrastructure](posts/building-ai-agent-infrastructure.html)
+- [MCP Servers and the Future of DevOps Automation](posts/mcp-servers-devops-automation.html)
+- [How MCP Can Transform DevOps Workflows](posts/mcp-transform-devops-workflows.html)
+- [Building AI Agents for Infrastructure Automation Using MCP](posts/ai-agents-infrastructure-mcp.html)
+- [Integrating LLMs into Production Backend Systems](posts/llms-production-backend-systems.html)
+- [How Vector Databases (Qdrant) Power AI Search in Production](posts/vector-databases-qdrant-ai-search.html)
+- [ChatGPT + Terraform – Is It Safe?](posts/chatgpt-terraform-safety.html)
+- [Using LLMs to Analyze Production Incidents and Reduce MTTR](posts/llm-production-incident-mttr.html)
+- [LLMs and MCP: The Complete Guide for Developers and DevOps Engineers](posts/llm-vs-mcp-complete-guide.html)
 
-### Security
-- [Designing WAF Rules That Stop Bots](waf-rules-bot-protection.html)
-- [Geo-Blocking vs Rate Limiting – What Works?](geo-blocking-vs-rate-limiting.html)
-- [Handling Credential Stuffing Attacks in AWS](credential-stuffing-aws.html)
-- [Secure Architecture Patterns for E-commerce](secure-ecommerce-architecture.html)
-- [ISO 27001 Controls for DevOps Engineers](iso27001-devops-controls.html)
-- [CloudFront + WAF Best Practices](cloudfront-waf-best-practices.html)
-- [Preventing API Abuse in Kubernetes](api-abuse-prevention-kubernetes.html)
-- [Security Best Practices](security-best-practices.html)
+### Security (8)
+- [Designing WAF Rules That Stop Bots](posts/waf-rules-bot-protection.html)
+- [Geo-Blocking vs Rate Limiting – What Works?](posts/geo-blocking-vs-rate-limiting.html)
+- [Handling Credential Stuffing Attacks in AWS](posts/credential-stuffing-aws.html)
+- [Secure Architecture Patterns for E-commerce](posts/secure-ecommerce-architecture.html)
+- [ISO 27001 Controls for DevOps Engineers](posts/iso27001-devops-controls.html)
+- [CloudFront + WAF Best Practices](posts/cloudfront-waf-best-practices.html)
+- [Preventing API Abuse in Kubernetes](posts/api-abuse-prevention-kubernetes.html)
+- [Security Best Practices](posts/security-best-practices.html)
 
-### Kubernetes
-- [Reduced Black Friday AWS Spend by 52%](black-friday-aws-cost-reduction.html)
-- [Production-Grade Node Groups Strategy](production-node-groups-strategy.html)
-- [PodDisruptionBudgets: Common Misconfigurations](pod-disruption-budgets-guide.html)
-- [Running StatefulSets in Production](statefulsets-production-lessons.html)
-- [Karpenter vs Cluster Autoscaler](karpenter-vs-cluster-autoscaler.html)
-- [Multi-Environment EKS Design](multi-environment-eks.html)
-- [Kubernetes in Modern Infrastructure](kubernetes-guide.html)
+### Kubernetes (8)
+- [Reduced Black Friday AWS Spend by 52%](posts/black-friday-aws-cost-reduction.html)
+- [Production-Grade Node Groups Strategy](posts/production-node-groups-strategy.html)
+- [PodDisruptionBudgets: Common Misconfigurations](posts/pod-disruption-budgets-guide.html)
+- [Running StatefulSets in Production](posts/statefulsets-production-lessons.html)
+- [Karpenter vs Cluster Autoscaler](posts/karpenter-vs-cluster-autoscaler.html)
+- [Multi-Environment EKS Design](posts/multi-environment-eks.html)
+- [Kubernetes in Modern Infrastructure](posts/kubernetes-guide.html)
+- [EKS Networking Deep Dive: VPC CNI, Security Groups, and Network Policies](posts/eks-networking-deep-dive.html)
 
-### Cloud & Infrastructure
-- [Cloud Cost Optimization](cloud-cost-optimization.html)
-- [Infrastructure as Code](infrastructure-as-code.html)
-- [AWS Serverless Architecture](aws-serverless-architecture.html)
-- [AWS Compute Types & Cost Optimization](aws-compute-types.html)
-- [AWS Storage Types & Optimization](aws-storage-types.html)
-- [Linux for Server Management](linux-server-management.html)
+### Cloud & Infrastructure (8)
+- [Cloud Cost Optimization](posts/cloud-cost-optimization.html)
+- [Infrastructure as Code](posts/infrastructure-as-code.html)
+- [AWS Serverless Architecture](posts/aws-serverless-architecture.html)
+- [AWS Compute Types & Cost Optimization](posts/aws-compute-types.html)
+- [AWS Storage Types & Optimization](posts/aws-storage-types.html)
+- [Linux for Server Management](posts/linux-server-management.html)
+- [Terraform at Scale: Managing 500+ Resources Without Losing Your Mind](posts/terraform-at-scale.html)
+- [AWS Cost Allocation: The Tagging Strategy That Actually Scales](posts/cost-allocation-tagging-strategy.html)
 
-### Observability & Incident Response
-- [Observability & Monitoring](observability-monitoring.html)
-- [Incident Response & Postmortems](incident-response-postmortems.html)
+### Observability & SRE (7)
+- [Observability & Monitoring](posts/observability-monitoring.html)
+- [Incident Response & Postmortems](posts/incident-response-postmortems.html)
+- [SLOs, SLIs, and Error Budgets That Actually Work in Production](posts/sre-error-budgets-slos.html)
+- [Writing On-Call Runbooks That Actually Work at 3am](posts/on-call-runbook-design.html)
+- [Chaos Engineering in Production: How We Break Things on Purpose](posts/chaos-engineering-production.html)
+- [Zero-Downtime Database Migrations on Live Production Systems](posts/database-migrations-zero-downtime.html)
+- [Prometheus Alerting Rules That Don't Page You for Nothing](posts/prometheus-alerting-rules.html)
 
 ---
 
@@ -83,27 +99,34 @@ A static tech blog focused on DevOps, SRE, Cloud Infrastructure, and Automation 
 │   └── workflows/
 │       ├── deploy.yml                          # S3 + CloudFront deployment
 │       └── argocd-deploy.yml                   # ArgoCD/EKS deployment
-├── images/                                     # Blog post images & diagrams
-│   ├── app-sec1.jpg
-│   ├── eks-cluster.png
-│   ├── finops-1.png, finops-2.png, finops-3.png
-│   ├── grafana1.svg
-│   ├── k8s-cluster.svg
-│   ├── k8s-hpa-vs-vpa.gif
-│   ├── olly1.jpg
-│   ├── otel1.png
-│   └── waf1.png
+├── assets/
+│   ├── css/
+│   │   └── style.css                           # Global stylesheet
+│   ├── images/                                 # Blog post images & diagrams
+│   │   ├── app-sec1.jpg
+│   │   ├── eks-cluster.png
+│   │   ├── finops-1.png, finops-2.png, finops-3.png
+│   │   ├── grafana1.svg
+│   │   ├── k8s-cluster.svg
+│   │   ├── k8s-hpa-vs-vpa.gif
+│   │   ├── mcp1.jpg, mcp2.png
+│   │   ├── og-default.png
+│   │   ├── olly1.jpg
+│   │   ├── otel1.png
+│   │   └── waf1.png
+│   └── js/
+│       └── main.js                             # Client-side JS (search, theme, stats)
+├── posts/                                      # 53 blog post HTML pages
 ├── index.html                                  # Homepage with blog index
-├── styles.css                                  # Global stylesheet
-├── blog-stats.js                               # Client-side stats loader
 ├── blog-stats.json                             # Stats data (gitignored)
+├── sitemap.xml                                 # XML sitemap for SEO
+├── robots.txt                                  # Crawler directives
 ├── deploy.sh                                   # Manual deployment script
 ├── Dockerfile                                  # Nginx container for K8s deployment
 ├── .dockerignore
 ├── .gitignore
 ├── STATS_README.md                             # Blog stats system documentation
-├── README.md                                   # This file
-└── *.html                                      # 37 blog post pages
+└── README.md                                   # This file
 ```
 
 ---
@@ -245,7 +268,7 @@ TTL: 300
 - Stats (reads, likes, dislikes) are stored in `blog-stats.json` on S3
 - The file is **gitignored** to avoid overwriting live counters
 - During deployment, stats are downloaded from S3 first, then re-uploaded after sync
-- Client-side JavaScript (`blog-stats.js`) loads stats dynamically on page load
+- Client-side JavaScript (`assets/js/main.js`) loads stats dynamically on page load
 - Like/Dislike buttons update the display in-memory (static site — no backend persistence)
 
 > For production-grade analytics, consider AWS API Gateway + Lambda + DynamoDB or Google Analytics.
@@ -272,10 +295,11 @@ docker run -p 8080:80 blog
 
 ## Features
 
-- Responsive design with clean, modern UI
-- 37 in-depth blog posts across 6 categories
+- Responsive design with dark/light theme toggle
+- 53 in-depth blog posts across 6 categories
+- Article search and category filtering
 - Blog stats (reads, likes, dislikes) per post
-- SEO-friendly static HTML/CSS
+- SEO-optimised — Open Graph, Twitter Cards, JSON-LD, sitemap.xml, robots.txt
 - Fast loading — no JavaScript frameworks
 - CloudFront CDN for global performance
 - HTTPS via ACM
