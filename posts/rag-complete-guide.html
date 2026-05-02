@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Complete Guide: Retrieval-Augmented Generation for AI Apps - Suheb Ghare</title>
+  <meta name="description" content="A beginner-friendly RAG guide for AI applications: why hallucinations happen, how retrieval fixes context gaps, core architecture, components, RAG types, real use cases, and DevOps/SRE production concerns.">
+  <meta name="keywords" content="rag complete guide, retrieval augmented generation, rag architecture, ai hallucination, vector database, embeddings, llm, rag devops, rag sre, ai applications">
+  <meta name="author" content="Suheb Ghare">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <link rel="canonical" href="https://blogs.suhebghare.tech/posts/rag-complete-guide.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="RAG Complete Guide: Retrieval-Augmented Generation for AI Apps">
+  <meta property="og:description" content="Learn RAG through a practical AI story: hallucinations, private knowledge, latest data, architecture, components, types, production tradeoffs, and real-world applications.">
+  <meta property="og:url" content="https://blogs.suhebghare.tech/posts/rag-complete-guide.html">
+  <meta property="og:image" content="https://blogs.suhebghare.tech/assets/images/og-default.png">
+  <meta property="article:published_time" content="2026-05-02T00:00:00+05:30">
+  <meta property="article:section" content="AI & DevOps">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="reading-progress"></div>
+  <header>
+    <nav>
+      <a href="../index.html" class="logo">Suheb Ghare</a>
+      <div class="nav-links" id="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">Articles</a>
+        <a href="https://suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+      </div>
+      <button id="menu-toggle" class="hamburger" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="post-hero" style="background-image: url('https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=1400&amp;q=80')">
+    <div class="post-hero-content">
+      <div class="post-hero-tags">
+        <span class="tag">AI &amp; DevOps</span>
+        <span class="tag" style="margin-left:8px;">Complete Guide</span>
+      </div>
+      <h1 class="post-title">RAG Complete Guide: The AI Pattern That Makes LLMs Useful With Your Data</h1>
+      <div class="post-meta">
+        <span class="meta-item">📅 May 2, 2026</span>
+        <span class="meta-item">⏱ <span class="reading-time">45 min read</span></span>
+        <span class="meta-item">👁 <span data-blog="rag-complete-guide" data-stat="reads">1240</span> reads</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-layout">
+    <article>
+      <div class="post-stats">
+        <div class="stat-item"><span>👁️</span><span data-blog="rag-complete-guide" data-stat="reads">1240</span><span>reads</span></div>
+        <div class="stat-item"><span>👍</span><span data-blog="rag-complete-guide" data-stat="likes">312</span><span>likes</span></div>
+        <div class="stat-item"><span>👎</span><span data-blog="rag-complete-guide" data-stat="dislikes">18</span><span>dislikes</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="reaction-btn like-btn" data-blog="rag-complete-guide">👍 Like</button>
+          <button class="reaction-btn dislike-btn" data-blog="rag-complete-guide">👎 Dislike</button>
+        </div>
+      </div>
+
+      <div class="post-content">
+        <h2 id="the-real-problem">The Real Problem RAG Solves</h2>
+
+        <p>Most people first meet AI through a chat window. You ask a question, it answers in clean English, and it feels like the model knows everything. That feeling is dangerous.</p>
+
+        <p>An LLM is excellent at generating language. It is not automatically connected to your company documents, your production logs, your product catalog, your latest pricing, your current incidents, or your customer policies. When it does not have the right information, it still tries to be helpful. That is where trouble starts.</p>
+
+        <p>Imagine this support conversation on an e-commerce site:</p>
+
+        <div class="callout callout-danger">
+          <div class="callout-title">The AI Hallucination Problem</div>
+          <p>A customer asks, "Can I return this phone after opening the box?" The AI answers, "Yes, opened electronics are returnable for 30 days." It sounds confident. It sounds helpful. But your real policy says opened electronics are only eligible for replacement if defective. Now the customer has a screenshot, support has an escalation, and your team has a trust problem.</p>
+        </div>
+
+        <p>That is a hallucination: the model creates an answer that looks real but is not grounded in your actual source of truth. In AI demos, hallucination is embarrassing. In production AI systems, hallucination creates refunds, wrong runbook steps, compliance risk, security mistakes, and broken customer trust.</p>
+
+        <p><strong>RAG solves the context problem.</strong> Instead of asking the LLM to answer from memory, you first retrieve relevant facts from trusted sources, then ask the LLM to answer using those facts.</p>
+
+        <div class="grid-3">
+          <div class="metric-card">
+            <div class="metric-value">Grounded</div>
+            <div class="metric-label">Answers use retrieved sources, not only model memory</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Current</div>
+            <div class="metric-label">You can index latest docs, tickets, APIs, and inventory</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">Private</div>
+            <div class="metric-label">Works with internal knowledge the model never trained on</div>
+          </div>
+        </div>
+
+        <h2 id="what-is-rag">What Is RAG?</h2>
+
+        <p>RAG means <strong>Retrieval-Augmented Generation</strong>. The name is heavy, but each word explains one part of the system.</p>
+
+        <blockquote>
+          <p>Before the AI writes an answer, the system searches trusted knowledge and gives the best results to the model as context.</p>
+        </blockquote>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>R = Retrieval</h3>
+            <p>Retrieval means finding the right information before the AI answers. The system searches your trusted sources: docs, databases, APIs, tickets, product catalog, logs, runbooks, or policies.</p>
+            <p>This is the "open the book first" part of RAG. Instead of making the LLM guess, retrieval brings evidence into the conversation.</p>
+          </div>
+
+          <div class="card">
+            <h3>A = Augmented</h3>
+            <p>Augmented means the LLM is improved with extra context. The model is still the same model, but now it receives useful facts that were not in its original training data.</p>
+            <p>This is why RAG works well for private or latest data. You do not need to retrain the LLM every time a policy, price, incident, or product spec changes.</p>
+          </div>
+
+          <div class="card">
+            <h3>G = Generation</h3>
+            <p>Generation is the final answer written by the LLM. The model takes the user's question plus retrieved context and turns it into a helpful response.</p>
+            <p>The LLM is responsible for explaining, summarizing, formatting, and reasoning, but the answer should be grounded in the retrieved material.</p>
+          </div>
+        </div>
+
+        <p>So the full meaning is: <strong>retrieve relevant knowledge, augment the LLM with that knowledge, then generate a grounded answer</strong>.</p>
+
+        <h3>How RAG Is Related to LLMs</h3>
+
+        <p>RAG is not a replacement for an LLM. RAG is a pattern that makes an LLM more useful in real applications. The LLM still writes the answer, but RAG controls what context the LLM sees before it writes.</p>
+
+        <p>Think of an LLM as a brilliant intern on day one. It can write clearly, summarize quickly, and reason through a problem. But it does not know your internal systems yet. RAG gives that intern the exact runbook, support policy, product spec, or incident report before asking for the final answer.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Without RAG</th>
+              <th>With RAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>The LLM answers from training data and conversation history.</td>
+              <td>The LLM answers from retrieved company or product context.</td>
+            </tr>
+            <tr>
+              <td>The model may not know latest policies, prices, incidents, or inventory.</td>
+              <td>The model can use freshly indexed documents, APIs, and databases.</td>
+            </tr>
+            <tr>
+              <td>The answer may sound confident even when the model is guessing.</td>
+              <td>The answer can be grounded with source citations and confidence signals.</td>
+            </tr>
+            <tr>
+              <td>Good for general reasoning, writing, explanation, and summarization.</td>
+              <td>Good for AI apps that must answer from specific, trusted knowledge.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>In a RAG system, the LLM is usually the final reasoning and writing layer. Retrieval gives it the raw evidence. The prompt tells it how to use that evidence. The LLM then produces the answer in a form a user can understand.</p>
+
+        <p>This is why RAG is one of the most common patterns behind practical AI applications: customer support bots, internal knowledge assistants, product Q&amp;A, codebase assistants, SRE debug copilots, legal search, healthcare assistants, and AI search experiences.</p>
+
+        <h2 id="hallucinations">How Hallucinations Create Real Issues</h2>
+
+        <p>Hallucination is not just "AI made a typo". It happens when a model fills missing context with a likely-sounding answer. The answer often has polished grammar, confident tone, and enough truth around the edges to feel believable.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>AI Scenario</th>
+              <th>Hallucinated Answer</th>
+              <th>Real-World Damage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Customer support</strong></td>
+              <td>"Your refund is approved under our 30-day policy."</td>
+              <td>Wrong promise, escalation, revenue leakage, angry customer.</td>
+            </tr>
+            <tr>
+              <td><strong>SRE assistant</strong></td>
+              <td>"Restart the database primary to clear the lock."</td>
+              <td>Potential outage if the actual runbook requires failover checks first.</td>
+            </tr>
+            <tr>
+              <td><strong>Security helper</strong></td>
+              <td>"This IAM policy is least privilege."</td>
+              <td>Over-permissive access reaches production.</td>
+            </tr>
+            <tr>
+              <td><strong>E-commerce Q&amp;A</strong></td>
+              <td>"This charger supports your laptop model."</td>
+              <td>Wrong purchase, return, bad product experience.</td>
+            </tr>
+            <tr>
+              <td><strong>Compliance assistant</strong></td>
+              <td>"This control is not required for your audit."</td>
+              <td>Audit evidence gap and last-minute remediation work.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>RAG does not make hallucinations impossible, but it reduces the main cause: missing or stale context. It gives the model a grounded workspace and tells it, "Use this information. If the answer is not here, say you do not know."</p>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">The AI Product Rule</div>
+          <p>If the answer must be accurate, current, private, or auditable, do not rely on the LLM's memory alone. Use retrieval, citations, guardrails, and evaluation.</p>
+        </div>
+
+        <h2 id="basic-architecture">Basic Architecture: The Human Flow</h2>
+
+        <p>Let us walk through RAG like a story, not a textbook diagram.</p>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 300" role="img" aria-label="RAG end to end flow from user question to grounded answer" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#0f172a;">
+            <defs>
+              <marker id="rag-flow-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L0,9 L9,4.5 z" fill="#38bdf8"/>
+              </marker>
+            </defs>
+            <text x="490" y="34" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" fill="#e2e8f0" text-anchor="middle">RAG in One Picture: Search First, Then Answer</text>
+            <rect x="35" y="92" width="150" height="92" rx="10" fill="#312e81" stroke="#818cf8" stroke-width="1.6"/>
+            <text x="110" y="122" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#c7d2fe" text-anchor="middle">User</text>
+            <text x="110" y="146" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">asks a natural</text>
+            <text x="110" y="164" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">AI question</text>
+
+            <line x1="185" y1="138" x2="240" y2="138" stroke="#38bdf8" stroke-width="3" marker-end="url(#rag-flow-arrow)"/>
+            <rect x="240" y="92" width="150" height="92" rx="10" fill="#164e63" stroke="#22d3ee" stroke-width="1.6"/>
+            <text x="315" y="122" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#a5f3fc" text-anchor="middle">Retriever</text>
+            <text x="315" y="146" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">searches trusted</text>
+            <text x="315" y="164" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">knowledge</text>
+
+            <line x1="390" y1="138" x2="445" y2="138" stroke="#38bdf8" stroke-width="3" marker-end="url(#rag-flow-arrow)"/>
+            <rect x="445" y="92" width="150" height="92" rx="10" fill="#14532d" stroke="#4ade80" stroke-width="1.6"/>
+            <text x="520" y="122" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#bbf7d0" text-anchor="middle">Top Context</text>
+            <text x="520" y="146" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">best chunks go</text>
+            <text x="520" y="164" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">to the model</text>
+
+            <line x1="595" y1="138" x2="650" y2="138" stroke="#38bdf8" stroke-width="3" marker-end="url(#rag-flow-arrow)"/>
+            <rect x="650" y="92" width="150" height="92" rx="10" fill="#581c87" stroke="#c084fc" stroke-width="1.6"/>
+            <text x="725" y="122" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#e9d5ff" text-anchor="middle">LLM</text>
+            <text x="725" y="146" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">writes using</text>
+            <text x="725" y="164" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">that context</text>
+
+            <line x1="800" y1="138" x2="855" y2="138" stroke="#38bdf8" stroke-width="3" marker-end="url(#rag-flow-arrow)"/>
+            <rect x="855" y="92" width="90" height="92" rx="10" fill="#7f1d1d" stroke="#fca5a5" stroke-width="1.6"/>
+            <text x="900" y="122" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#fecaca" text-anchor="middle">Answer</text>
+            <text x="900" y="146" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">grounded</text>
+            <text x="900" y="164" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">in facts</text>
+
+            <rect x="245" y="222" width="490" height="44" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+            <text x="490" y="249" font-family="Inter,system-ui,sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Without retrieval, the LLM guesses. With RAG, the LLM has evidence.</text>
+          </svg>
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">The simplest mental model: RAG turns a raw AI question into a source-grounded answer.</figcaption>
+        </figure>
+
+        <p>A user opens your AI support assistant and asks:</p>
+
+        <div class="callout">
+          <p><strong>"My payment succeeded, but the order is still pending. What should I do?"</strong></p>
+        </div>
+
+        <div class="story-flow">
+          <div class="story-step">
+            <h3>1. User Asks a Question</h3>
+            <p>The user asks naturally. They do not know your database schema, service names, queue names, or support macros. They just describe the problem.</p>
+          </div>
+
+          <div class="story-step">
+            <h3>2. System Searches Relevant Documents</h3>
+            <p>The system searches payment docs, support FAQs, order-state runbooks, recent incidents, and known error patterns. It looks for meaning, not just exact keywords.</p>
+          </div>
+
+          <div class="story-step">
+            <h3>3. Top Results Are Sent to the LLM</h3>
+            <p>The retriever sends the best chunks to the model: "payment captured but order pending", "order reconciliation job", "manual retry policy", and "customer-facing response template".</p>
+          </div>
+
+          <div class="story-step">
+            <h3>4. LLM Answers Using That Context</h3>
+            <p>The LLM writes a helpful answer using the retrieved material. It can explain what happened, what the customer should expect, and when support needs to intervene.</p>
+          </div>
+        </div>
+
+        <pre><code>User question:
+"My payment succeeded, but the order is still pending. What should I do?"
+
+Retrieved context:
+1. Payment service runbook: captured payments can wait for order reconciliation
+2. Support FAQ: tell customer to wait 15 minutes before escalation
+3. Incident note: retry job failed last week due to queue lag
+4. Policy: never ask customer to pay again if payment is captured
+
+Grounded answer:
+"Your payment appears captured, so please do not pay again. Orders can remain
+pending for up to 15 minutes while our reconciliation job updates the status.
+If it is still pending after that, support should check the order retry queue."</code></pre>
+
+        <p>That is the heart of RAG: <strong>question -> retrieve trusted context -> generate grounded answer</strong>.</p>
+
+        <h2 id="core-components">Core Components of a RAG System</h2>
+
+        <p>A RAG application has five core blocks. Once you understand these blocks, every RAG architecture becomes easier to reason about.</p>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" role="img" aria-label="Core RAG components and their relationships" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#0f172a;">
+            <defs>
+              <marker id="component-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L0,9 L9,4.5 z" fill="#a78bfa"/>
+              </marker>
+            </defs>
+            <text x="490" y="34" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" fill="#e2e8f0" text-anchor="middle">How RAG Components Connect</text>
+
+            <rect x="44" y="84" width="190" height="110" rx="10" fill="#1e293b" stroke="#64748b" stroke-width="1.4"/>
+            <text x="139" y="114" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0" text-anchor="middle">Data Sources</text>
+            <text x="139" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">PDFs, docs, DBs, APIs</text>
+            <text x="139" y="160" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">tickets, product catalog</text>
+
+            <rect x="294" y="84" width="190" height="110" rx="10" fill="#312e81" stroke="#818cf8" stroke-width="1.4"/>
+            <text x="389" y="114" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#c7d2fe" text-anchor="middle">Embedding Model</text>
+            <text x="389" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">turns text into vectors</text>
+            <text x="389" y="160" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">meaning-based search</text>
+
+            <rect x="544" y="84" width="190" height="110" rx="10" fill="#164e63" stroke="#22d3ee" stroke-width="1.4"/>
+            <text x="639" y="114" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#a5f3fc" text-anchor="middle">Vector Database</text>
+            <text x="639" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Pinecone, Weaviate</text>
+            <text x="639" y="160" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Qdrant, pgvector</text>
+
+            <rect x="294" y="264" width="190" height="110" rx="10" fill="#14532d" stroke="#4ade80" stroke-width="1.4"/>
+            <text x="389" y="294" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#bbf7d0" text-anchor="middle">Retriever</text>
+            <text x="389" y="320" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">finds relevant chunks</text>
+            <text x="389" y="340" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">applies filters</text>
+
+            <rect x="544" y="264" width="190" height="110" rx="10" fill="#581c87" stroke="#c084fc" stroke-width="1.4"/>
+            <text x="639" y="294" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#e9d5ff" text-anchor="middle">LLM</text>
+            <text x="639" y="320" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">generates final answer</text>
+            <text x="639" y="340" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">with citations</text>
+
+            <rect x="794" y="264" width="142" height="110" rx="10" fill="#7f1d1d" stroke="#fca5a5" stroke-width="1.4"/>
+            <text x="865" y="294" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#fecaca" text-anchor="middle">User Answer</text>
+            <text x="865" y="320" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">specific</text>
+            <text x="865" y="340" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">grounded</text>
+
+            <line x1="234" y1="139" x2="294" y2="139" stroke="#a78bfa" stroke-width="3" marker-end="url(#component-arrow)"/>
+            <line x1="484" y1="139" x2="544" y2="139" stroke="#a78bfa" stroke-width="3" marker-end="url(#component-arrow)"/>
+            <line x1="639" y1="194" x2="639" y2="230" stroke="#a78bfa" stroke-width="3"/>
+            <line x1="639" y1="230" x2="389" y2="230" stroke="#a78bfa" stroke-width="3"/>
+            <line x1="389" y1="230" x2="389" y2="264" stroke="#a78bfa" stroke-width="3" marker-end="url(#component-arrow)"/>
+            <line x1="484" y1="319" x2="544" y2="319" stroke="#a78bfa" stroke-width="3" marker-end="url(#component-arrow)"/>
+            <line x1="734" y1="319" x2="794" y2="319" stroke="#a78bfa" stroke-width="3" marker-end="url(#component-arrow)"/>
+
+            <text x="490" y="224" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Stored vectors are searched at question time</text>
+          </svg>
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">RAG is not just an LLM. It is a chain of data, embeddings, search, retrieval, and generation.</figcaption>
+        </figure>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>1. Data Source</h3>
+            <p>This is the knowledge your AI should use. It can be structured or unstructured.</p>
+            <ul>
+              <li>PDFs, policy files, SOPs, manuals, onboarding docs</li>
+              <li>Databases such as PostgreSQL, MySQL, MongoDB, or product catalogs</li>
+              <li>APIs for CRM, billing, inventory, logistics, alerts, or incidents</li>
+              <li>Docs from Confluence, Notion, Google Drive, GitHub, Jira, Zendesk</li>
+            </ul>
+            <p>RAG quality starts here. If your source data is stale, duplicated, or contradictory, your AI will inherit that confusion.</p>
+          </div>
+
+          <div class="card">
+            <h3>2. Embeddings</h3>
+            <p>Embeddings convert text into vectors. A vector is a list of numbers that captures meaning.</p>
+            <p>Beginner version: embeddings make <strong>meaning-based search</strong> possible. "Forgot password", "cannot login", and "reset my access" can be found together even though the words are different.</p>
+            <pre><code>"forgot password" -> [0.18, -0.42, 0.77, ...]
+"reset login"     -> [0.20, -0.39, 0.74, ...]
+"track shipment"  -> [-0.61, 0.12, 0.08, ...]</code></pre>
+          </div>
+
+          <div class="card">
+            <h3>3. Vector Database</h3>
+            <p>A vector database stores embeddings and finds similar vectors quickly. Common options:</p>
+            <ul>
+              <li><strong>Pinecone:</strong> managed service, fastest path for teams that want less operations work</li>
+              <li><strong>Weaviate:</strong> strong search features, open-source and managed options</li>
+              <li><strong>Qdrant:</strong> fast, practical, good self-hosted option for Kubernetes teams</li>
+              <li><strong>pgvector:</strong> useful when PostgreSQL is already your operational comfort zone</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>4. Retriever</h3>
+            <p>The retriever decides what context the LLM receives. It embeds the user's query, searches the vector database, applies filters, and returns the best chunks.</p>
+            <p>This is one of the most important parts of RAG. If retrieval is wrong, the final answer will probably be wrong too.</p>
+          </div>
+
+          <div class="card">
+            <h3>5. LLM</h3>
+            <p>The LLM generates the final response. Examples include OpenAI models, Claude, Gemini, and self-hosted Llama-based models.</p>
+            <p>The model should be instructed to answer from context, cite sources when available, and admit when context is insufficient.</p>
+          </div>
+        </div>
+
+        <h2 id="chunking">Chunking: The Hidden Skill Behind Good RAG</h2>
+
+        <p>Chunking means splitting a large document into smaller pieces before creating embeddings. It sounds like a small implementation detail, but in RAG it is one of the biggest quality levers.</p>
+
+        <p>Why? Because the retriever does not usually send an entire 80-page PDF to the LLM. It sends a few chunks. If your chunks are clean, focused, and complete, the LLM gets useful context. If your chunks are messy, incomplete, or too broad, the LLM gets confusing evidence and may generate a weak or wrong answer.</p>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Bad Chunking Creates Bad AI Answers</div>
+          <p>If a return policy is split so one chunk says "opened electronics are not returnable" and another chunk separately says "exceptions apply for defective products", the retriever may return only the first chunk. The AI then gives an incomplete answer. Chunking decides what facts stay together.</p>
+        </div>
+
+        <h3>What Makes a Good Chunk?</h3>
+
+        <p>A good chunk should be small enough to retrieve precisely, but large enough to carry the full meaning. The chunk should answer one clear idea, procedure, product, policy, or incident point.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Chunk Quality</th>
+              <th>What It Looks Like</th>
+              <th>RAG Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Too small</strong></td>
+              <td>One sentence, missing surrounding rules or examples.</td>
+              <td>Retriever finds fragments. LLM lacks full context.</td>
+            </tr>
+            <tr>
+              <td><strong>Too large</strong></td>
+              <td>Several pages mixed together: refund, shipping, warranty, escalation.</td>
+              <td>Retriever returns noisy context. LLM may focus on the wrong part.</td>
+            </tr>
+            <tr>
+              <td><strong>Just right</strong></td>
+              <td>One complete section: "Opened electronics return policy" with exceptions.</td>
+              <td>Retriever returns focused evidence. LLM answers accurately.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Common Chunking Methods</h3>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>1. Fixed-Size Chunking</h3>
+            <p>Split text every fixed number of characters or tokens, such as 500 tokens per chunk.</p>
+            <p><strong>Best for:</strong> quick prototypes, plain text, homogeneous documents.</p>
+            <p><strong>Weakness:</strong> it can cut a sentence, table, warning, or procedure in the middle.</p>
+          </div>
+
+          <div class="card">
+            <h3>2. Fixed-Size With Overlap</h3>
+            <p>Split text into fixed-size chunks but repeat a small part of the previous chunk in the next chunk.</p>
+            <p><strong>Example:</strong> 800-token chunks with 100-token overlap.</p>
+            <p><strong>Why it helps:</strong> if a key idea crosses a boundary, overlap reduces the chance of losing context.</p>
+          </div>
+
+          <div class="card">
+            <h3>3. Paragraph-Based Chunking</h3>
+            <p>Split by paragraphs instead of arbitrary token count.</p>
+            <p><strong>Best for:</strong> articles, support docs, policy pages, and documentation written in clean paragraphs.</p>
+            <p><strong>Weakness:</strong> some paragraphs are too short or too long, so you may still need merging or splitting rules.</p>
+          </div>
+
+          <div class="card">
+            <h3>4. Heading-Based Chunking</h3>
+            <p>Split by headings such as H2/H3 sections in Markdown, HTML, Confluence, or Notion.</p>
+            <p><strong>Best for:</strong> structured documentation, runbooks, API docs, security policies.</p>
+            <p><strong>Why it works:</strong> headings usually represent human meaning. A section titled "Rollback Procedure" should stay together.</p>
+          </div>
+
+          <div class="card">
+            <h3>5. Semantic Chunking</h3>
+            <p>Use meaning changes to decide chunk boundaries. The system groups sentences that discuss the same idea and splits when the topic changes.</p>
+            <p><strong>Best for:</strong> long knowledge articles, mixed-topic docs, research content.</p>
+            <p><strong>Tradeoff:</strong> better quality, but more complex and slower during ingestion.</p>
+          </div>
+
+          <div class="card">
+            <h3>6. Domain-Aware Chunking</h3>
+            <p>Split based on the type of data, not just text length.</p>
+            <p><strong>Examples:</strong> one product per chunk, one runbook step group per chunk, one incident timeline per chunk, one API endpoint per chunk.</p>
+            <p><strong>Best for:</strong> production systems where accuracy matters more than quick setup.</p>
+          </div>
+        </div>
+
+        <h3>Chunking Examples by Data Type</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data Type</th>
+              <th>Recommended Chunking</th>
+              <th>Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Support articles</strong></td>
+              <td>Heading-based chunks with policy title and URL metadata.</td>
+              <td>Users ask about one policy or procedure at a time.</td>
+            </tr>
+            <tr>
+              <td><strong>E-commerce products</strong></td>
+              <td>One product or product variant per chunk.</td>
+              <td>Keep title, specs, price, reviews summary, compatibility, and return notes together.</td>
+            </tr>
+            <tr>
+              <td><strong>Runbooks</strong></td>
+              <td>Procedure-based chunks with warnings included.</td>
+              <td>The LLM must see prerequisites, commands, rollback steps, and danger notes together.</td>
+            </tr>
+            <tr>
+              <td><strong>Incident reports</strong></td>
+              <td>Chunk by summary, timeline, impact, root cause, and action items.</td>
+              <td>SRE questions usually target a specific part of the incident.</td>
+            </tr>
+            <tr>
+              <td><strong>API docs</strong></td>
+              <td>One endpoint per chunk, including request, response, auth, and error codes.</td>
+              <td>Developers need complete endpoint context, not random paragraphs.</td>
+            </tr>
+            <tr>
+              <td><strong>Logs</strong></td>
+              <td>Chunk by request ID, trace ID, time window, incident, or service boundary.</td>
+              <td>Random log-line chunks lose causal context.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Chunk Metadata Matters</h3>
+
+        <p>A chunk should not only contain text. It should also contain metadata. Metadata helps filtering, citations, debugging, and access control.</p>
+
+        <pre><code>{
+  "chunk_id": "return-policy-004",
+  "source": "support_center",
+  "document_title": "Electronics Return Policy",
+  "section": "Opened Box Exceptions",
+  "url": "https://help.example.com/electronics-return-policy",
+  "updated_at": "2026-04-22",
+  "tenant": "public",
+  "language": "en",
+  "text": "Opened electronics are not returnable unless defective..."
+}</code></pre>
+
+        <p>Metadata lets you answer questions like: "Only search public support docs", "Only search documents updated this year", "Only search this customer's tenant", or "Show the source URL in the final answer".</p>
+
+        <h2 id="embedding-strategy">Embeddings and Chunking Strategy</h2>
+
+        <p>Embeddings and chunking are tightly connected. The embedding model does not understand your original document structure unless you preserve it in the text you embed. If you feed the model weak chunks, you get weak vectors. If you feed it clear, complete chunks, the vector database can retrieve better matches.</p>
+
+        <h3>What Should You Embed?</h3>
+
+        <p>Do not blindly embed raw text exactly as it appears. In many RAG systems, you should create a <strong>retrieval text</strong>: a clean text representation designed for search.</p>
+
+        <pre><code># Raw product data
+name: "TrailMax Pro"
+category: "Hiking Shoes"
+features: ["waterproof", "rubber grip", "ankle support"]
+reviews_summary: "Good for rain and wet trails. Not warm enough for heavy snow."
+
+# Retrieval text sent to embedding model
+"Product: TrailMax Pro. Category: Hiking Shoes.
+Features: waterproof, rubber grip, ankle support.
+Customer reviews say it works well for rain and wet trails,
+but it is not warm enough for heavy snow."</code></pre>
+
+        <p>This matters because embedding models work on the text you give them. If your product record only embeds "TrailMax Pro", the model does not know it is waterproof, useful for hiking, or weak for heavy snow. Rich text produces a more useful vector.</p>
+
+        <h3>Embedding Methods in RAG</h3>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>How It Works</th>
+              <th>Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Single-vector per chunk</strong></td>
+              <td>Create one embedding for each chunk.</td>
+              <td>Most RAG systems. Simple, fast, and effective.</td>
+            </tr>
+            <tr>
+              <td><strong>Multi-vector per document</strong></td>
+              <td>Create embeddings for multiple sections of the same document.</td>
+              <td>Long docs where different sections answer different questions.</td>
+            </tr>
+            <tr>
+              <td><strong>Title + body embedding</strong></td>
+              <td>Include title, heading, and body text in the embedded representation.</td>
+              <td>Documentation, policies, product pages, support articles.</td>
+            </tr>
+            <tr>
+              <td><strong>Question-style embeddings</strong></td>
+              <td>Generate likely questions for a chunk and embed those too.</td>
+              <td>FAQ bots and support search where users ask predictable questions.</td>
+            </tr>
+            <tr>
+              <td><strong>Separate embeddings by field</strong></td>
+              <td>Embed product description, reviews, specs, and FAQs separately.</td>
+              <td>E-commerce and search systems where fields carry different meaning.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Chunk Size: Practical Starting Points</h3>
+
+        <p>There is no universal perfect chunk size. Start with a reasonable default, test real queries, then tune.</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Use Case</th>
+              <th>Starting Chunk Size</th>
+              <th>Overlap</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Support docs</strong></td>
+              <td>400-800 tokens</td>
+              <td>50-100 tokens</td>
+              <td>Keep policy exceptions with the main rule.</td>
+            </tr>
+            <tr>
+              <td><strong>Runbooks</strong></td>
+              <td>600-1,200 tokens</td>
+              <td>100-150 tokens</td>
+              <td>Keep warnings, commands, verification, and rollback near each other.</td>
+            </tr>
+            <tr>
+              <td><strong>Product catalog</strong></td>
+              <td>One product record</td>
+              <td>Usually none</td>
+              <td>Use metadata for category, brand, price, stock, region.</td>
+            </tr>
+            <tr>
+              <td><strong>API docs</strong></td>
+              <td>One endpoint</td>
+              <td>Small overlap</td>
+              <td>Include auth, request, response, and common errors.</td>
+            </tr>
+            <tr>
+              <td><strong>Incident reports</strong></td>
+              <td>Section-based</td>
+              <td>Optional</td>
+              <td>Use metadata for service, severity, date, owner, tags.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Common Embedding and Chunking Mistakes</h3>
+
+        <ul>
+          <li><strong>Embedding entire PDFs as one vector:</strong> the vector becomes too broad and retrieval becomes vague.</li>
+          <li><strong>Embedding tiny fragments:</strong> the retriever finds text that matches but lacks enough information to answer.</li>
+          <li><strong>Losing headings:</strong> a paragraph means more when it carries its parent title and section name.</li>
+          <li><strong>Ignoring metadata:</strong> without metadata, filtering by tenant, product category, document freshness, or permission becomes hard.</li>
+          <li><strong>Mixing unrelated topics:</strong> a chunk containing refund policy, login troubleshooting, and shipping rules creates a noisy embedding.</li>
+          <li><strong>Not re-indexing after chunking changes:</strong> if you change chunking strategy, old embeddings no longer represent your new retrieval design.</li>
+        </ul>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">Practical Rule</div>
+          <p>Design chunks around the answer you want the AI to give. If a human needs the title, warning, exception, or table to answer correctly, keep that information in the chunk or attach it as metadata.</p>
+        </div>
+
+        <h2 id="vector-database-deep-dive">Vector Database: Why It Matters in RAG</h2>
+
+        <p>A vector database is the search index that lets RAG find meaning, not just matching words. It stores embeddings for your chunks and quickly returns the chunks closest to the user's question.</p>
+
+        <p>Traditional databases are still useful for exact filters such as tenant, product category, region, or permissions. The vector database adds semantic search on top. For example, a user may ask "comfortable shoes for warehouse work" even though your product copy says "anti-fatigue sole, arch support, slip-resistant outsole". Vector search can connect those meanings.</p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>What It Stores</h3>
+            <p>A vector DB stores the embedding, the original chunk or a pointer to it, and metadata such as source URL, document title, tenant, category, language, permissions, and updated date.</p>
+          </div>
+
+          <div class="card">
+            <h3>Why It Is Important</h3>
+            <p>It controls what evidence reaches the LLM. If retrieval is weak, the LLM receives weak context. If retrieval is strong, the LLM can produce a grounded and useful answer.</p>
+          </div>
+
+          <div class="card">
+            <h3>Common Choices</h3>
+            <p>Pinecone, Weaviate, Qdrant, Milvus, pgvector, Elasticsearch, and OpenSearch can all be used depending on scale, budget, team skill, and operational preference.</p>
+          </div>
+
+          <div class="card">
+            <h3>Features to Care About</h3>
+            <p>Look for metadata filtering, hybrid search, score thresholds, backups, replication, observability, and access-control support. These matter more in production than benchmark numbers alone.</p>
+          </div>
+        </div>
+
+        <pre><code>User question:
+"How do I return a damaged phone?"
+
+Nearest chunks from vector database:
+1. "Damaged electronics replacement policy"      score: 0.89
+2. "Opened-box electronics return restrictions"  score: 0.82
+3. "How support should handle DOA devices"       score: 0.79</code></pre>
+
+        <p>The main rule: use the vector database to retrieve the best evidence, then let the LLM explain that evidence clearly. RAG fails when the vector database retrieves the wrong chunks, stale chunks, or chunks the user should not be allowed to see.</p>
+
+        <h2 id="rag-pipeline">The RAG Pipeline</h2>
+
+        <p>RAG has two major flows: ingestion and answering.</p>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <img src="../assets/images/rag1.png" alt="RAG pipeline showing PDF extraction, chunking, embeddings, semantic index, query search, ranked results, LLM context, and final answer" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#fff;">
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">A practical RAG pipeline: documents become chunks, chunks become embeddings, embeddings build a searchable knowledge base, and user questions retrieve ranked context for the LLM.</figcaption>
+        </figure>
+
+        <p>The diagram above shows RAG in two connected paths. The top path is the ingestion path: PDFs or documents are parsed, useful data is extracted, text is split into chunks, and each chunk is converted into an embedding through an embedding API. Those embeddings are stored in a semantic index or knowledge base such as ChromaDB, Pinecone, FAISS, Azure AI Search, or another vector store.</p>
+
+        <p>The bottom path is the user-query path. A user asks a question, the question is also converted into an embedding, and semantic search compares that query embedding with stored document embeddings. The most similar chunks are returned as ranked results. Those ranked results become the context sent to the LLM, and the LLM generates the final answer for the user.</p>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 440" role="img" aria-label="RAG ingestion and query time pipeline" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#0f172a;">
+            <defs>
+              <marker id="pipeline-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L0,9 L9,4.5 z" fill="#22c55e"/>
+              </marker>
+              <marker id="query-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L0,9 L9,4.5 z" fill="#38bdf8"/>
+              </marker>
+            </defs>
+            <text x="490" y="34" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" fill="#e2e8f0" text-anchor="middle">RAG Has Two Pipelines: Indexing and Answering</text>
+
+            <rect x="35" y="74" width="910" height="140" rx="12" fill="#052e16" stroke="#16a34a" stroke-width="1.5"/>
+            <text x="70" y="104" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#bbf7d0">Offline / Background: Prepare Knowledge</text>
+            <rect x="65" y="128" width="130" height="52" rx="8" fill="#14532d" stroke="#4ade80"/>
+            <text x="130" y="158" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Raw docs</text>
+            <line x1="195" y1="154" x2="250" y2="154" stroke="#22c55e" stroke-width="3" marker-end="url(#pipeline-arrow)"/>
+            <rect x="250" y="128" width="130" height="52" rx="8" fill="#14532d" stroke="#4ade80"/>
+            <text x="315" y="158" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Clean &amp; chunk</text>
+            <line x1="380" y1="154" x2="435" y2="154" stroke="#22c55e" stroke-width="3" marker-end="url(#pipeline-arrow)"/>
+            <rect x="435" y="128" width="130" height="52" rx="8" fill="#14532d" stroke="#4ade80"/>
+            <text x="500" y="158" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Create embeddings</text>
+            <line x1="565" y1="154" x2="620" y2="154" stroke="#22c55e" stroke-width="3" marker-end="url(#pipeline-arrow)"/>
+            <rect x="620" y="128" width="130" height="52" rx="8" fill="#14532d" stroke="#4ade80"/>
+            <text x="685" y="158" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Store vectors</text>
+            <line x1="750" y1="154" x2="805" y2="154" stroke="#22c55e" stroke-width="3" marker-end="url(#pipeline-arrow)"/>
+            <rect x="805" y="128" width="105" height="52" rx="8" fill="#14532d" stroke="#4ade80"/>
+            <text x="857" y="158" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Ready index</text>
+
+            <rect x="35" y="244" width="910" height="150" rx="12" fill="#082f49" stroke="#0284c7" stroke-width="1.5"/>
+            <text x="70" y="274" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#bae6fd">Online / User Request: Answer With Context</text>
+            <rect x="65" y="300" width="130" height="52" rx="8" fill="#164e63" stroke="#22d3ee"/>
+            <text x="130" y="330" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">User question</text>
+            <line x1="195" y1="326" x2="250" y2="326" stroke="#38bdf8" stroke-width="3" marker-end="url(#query-arrow)"/>
+            <rect x="250" y="300" width="130" height="52" rx="8" fill="#164e63" stroke="#22d3ee"/>
+            <text x="315" y="330" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Embed query</text>
+            <line x1="380" y1="326" x2="435" y2="326" stroke="#38bdf8" stroke-width="3" marker-end="url(#query-arrow)"/>
+            <rect x="435" y="300" width="130" height="52" rx="8" fill="#164e63" stroke="#22d3ee"/>
+            <text x="500" y="330" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Search index</text>
+            <line x1="565" y1="326" x2="620" y2="326" stroke="#38bdf8" stroke-width="3" marker-end="url(#query-arrow)"/>
+            <rect x="620" y="300" width="130" height="52" rx="8" fill="#164e63" stroke="#22d3ee"/>
+            <text x="685" y="330" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Build prompt</text>
+            <line x1="750" y1="326" x2="805" y2="326" stroke="#38bdf8" stroke-width="3" marker-end="url(#query-arrow)"/>
+            <rect x="805" y="300" width="105" height="52" rx="8" fill="#164e63" stroke="#22d3ee"/>
+            <text x="857" y="330" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">LLM answer</text>
+          </svg>
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Ingestion prepares the searchable knowledge base. Query time retrieves context and generates the answer.</figcaption>
+        </figure>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Flow</th>
+              <th>What Happens</th>
+              <th>AI Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Ingestion</strong></td>
+              <td>Collect data, clean it, split into chunks, create embeddings, store vectors.</td>
+              <td>Index product docs, support tickets, return policy, and product reviews.</td>
+            </tr>
+            <tr>
+              <td><strong>Retrieval</strong></td>
+              <td>Embed the user question and search the vector database for relevant chunks.</td>
+              <td>Find the refund policy and similar support cases for a customer question.</td>
+            </tr>
+            <tr>
+              <td><strong>Generation</strong></td>
+              <td>Send question plus retrieved context to the LLM and generate the final answer.</td>
+              <td>Answer with policy-aware wording and source links.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code># Simplified RAG flow
+question = "Can I return opened electronics?"
+
+query_vector = embedding_model.embed(question)
+chunks = vector_db.search(query_vector, top_k=5, filters={"source": "support_docs"})
+
+context = "\n\n".join(chunk.text for chunk in chunks)
+
+prompt = f"""
+You are a support AI. Answer using only the context below.
+If the context is missing the answer, say you do not have enough information.
+Cite the policy name when possible.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+answer = llm.generate(prompt)</code></pre>
+
+        <h2 id="when-to-use-rag">When to Use RAG</h2>
+
+        <p>Use RAG when a plain LLM is too disconnected from the real world. If the AI needs facts that live outside the model, RAG is usually the right architecture.</p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Use RAG When You Need Latest Data</h3>
+            <p>Model training data is not your live production state. Use RAG when answers depend on current docs, pricing, inventory, policies, incidents, tickets, or API responses.</p>
+            <p><strong>Real example:</strong> an e-commerce AI assistant asks, "Is this phone available in Mumbai, and can it be delivered tomorrow?" A normal LLM cannot know live inventory, warehouse location, delivery SLA, or current offers. RAG can retrieve inventory API data, logistics rules, and product availability before the LLM answers.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the LLM is good at explaining the answer, but the live facts must come from your systems.</p>
+          </div>
+
+          <div class="card">
+            <h3>Use RAG When You Have Private Data</h3>
+            <p>Your internal runbooks, architecture docs, customer contracts, Slack decisions, Jira tickets, and audit evidence are not inside a public LLM. Retrieval brings that private context into the answer safely when access control is implemented.</p>
+            <p><strong>Real example:</strong> a new engineer asks, "How do we deploy the payments service to production?" A general LLM can explain CI/CD, but it does not know your GitHub workflow, approval process, rollback command, PagerDuty owner, or database migration rule.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the model can write a clear deployment explanation only after retrieval gives it your actual internal process.</p>
+          </div>
+
+          <div class="card">
+            <h3>Use RAG to Reduce Hallucination</h3>
+            <p>If an answer must be grounded in facts, policies, logs, or source documents, RAG is the right starting pattern. It gives the model evidence instead of asking it to guess.</p>
+            <p><strong>Real example:</strong> a support AI asks whether opened electronics can be returned. Without RAG, the LLM may invent a friendly refund policy. With RAG, it retrieves the exact return policy, exceptions, warranty language, and escalation rule.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the model's writing ability is useful, but policy accuracy must come from trusted documents.</p>
+          </div>
+
+          <div class="card">
+            <h3>Use RAG When You Need Citations</h3>
+            <p>For legal, compliance, customer support, and engineering operations, citations matter. A useful AI answer should say where the answer came from.</p>
+            <p><strong>Real example:</strong> an audit assistant answers, "Which ISO 27001 control requires access reviews?" The answer must point to the internal control mapping, evidence document, ticket, or policy section.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the LLM can summarize the control, but RAG provides the source trail that humans can verify.</p>
+          </div>
+
+          <div class="card">
+            <h3>Use RAG for AI Search Experiences</h3>
+            <p>Search users do not always know the right keywords. They describe intent: "gift for a 10-year-old who likes space", "warm shoes for snow trekking", or "why did checkout latency spike after deploy?"</p>
+            <p><strong>Real example:</strong> an AI shopping assistant retrieves products, reviews, size guides, return policy, and stock before the LLM recommends options in plain language.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the model understands language, but the catalog, reviews, and availability must come from retrieval.</p>
+          </div>
+
+          <div class="card">
+            <h3>Use RAG for DevOps and SRE Assistants</h3>
+            <p>Incident response depends on live context: logs, metrics, recent deploys, alerts, ownership, and past postmortems. A general LLM cannot know what happened in your cluster five minutes ago.</p>
+            <p><strong>Real example:</strong> an SRE asks, "Why is checkout-api returning 500s after the last release?" RAG can retrieve Grafana links, Loki logs, deployment history, runbooks, and similar incidents before the LLM summarizes likely causes.</p>
+            <p><strong>Why the LLM needs RAG:</strong> the LLM is useful for correlation and explanation, but retrieval provides the operational evidence.</p>
+          </div>
+        </div>
+
+        <h3>When Not to Use RAG</h3>
+
+        <div class="callout callout-warning">
+          <p>Do not add RAG just because it is popular. If your task is creative writing, simple summarization of already-provided text, generic Q&amp;A, or extremely low-latency autocomplete, RAG may add unnecessary cost and complexity.</p>
+        </div>
+
+        <h2 id="benefits">Benefits of RAG</h2>
+
+        <div class="grid-3">
+          <div class="metric-card"><div class="metric-value">Trust</div><div class="metric-label">Answers can be traced to source documents</div></div>
+          <div class="metric-card"><div class="metric-value">Freshness</div><div class="metric-label">Update knowledge without retraining the model</div></div>
+          <div class="metric-card"><div class="metric-value">Private AI</div><div class="metric-label">Use internal data with the right access controls</div></div>
+          <div class="metric-card"><div class="metric-value">Lower Risk</div><div class="metric-label">Less unsupported guessing from the LLM</div></div>
+          <div class="metric-card"><div class="metric-value">Better UX</div><div class="metric-label">Users ask naturally instead of searching manually</div></div>
+          <div class="metric-card"><div class="metric-value">Reusable</div><div class="metric-label">Same retrieval layer can power bots, search, and agents</div></div>
+        </div>
+
+        <h2 id="types">Types of RAG Architecture</h2>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" role="img" aria-label="Types of RAG architecture comparison chart" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#0f172a;">
+            <text x="490" y="34" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" fill="#e2e8f0" text-anchor="middle">RAG Architecture Types: Start Simple, Add Power When Needed</text>
+
+            <rect x="50" y="82" width="260" height="108" rx="10" fill="#1e293b" stroke="#64748b" stroke-width="1.3"/>
+            <text x="180" y="112" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0" text-anchor="middle">Naive RAG</text>
+            <text x="180" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Question -> Search -> Answer</text>
+            <rect x="78" y="158" width="204" height="14" rx="7" fill="#334155"/>
+            <rect x="78" y="158" width="65" height="14" rx="7" fill="#22c55e"/>
+            <text x="180" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">Complexity: low</text>
+
+            <rect x="360" y="82" width="260" height="108" rx="10" fill="#312e81" stroke="#818cf8" stroke-width="1.3"/>
+            <text x="490" y="112" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#c7d2fe" text-anchor="middle">Advanced RAG</text>
+            <text x="490" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Rewrite, filter, rerank, cite</text>
+            <rect x="388" y="158" width="204" height="14" rx="7" fill="#334155"/>
+            <rect x="388" y="158" width="118" height="14" rx="7" fill="#818cf8"/>
+            <text x="490" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#c7d2fe" text-anchor="middle">Complexity: medium</text>
+
+            <rect x="670" y="82" width="260" height="108" rx="10" fill="#164e63" stroke="#22d3ee" stroke-width="1.3"/>
+            <text x="800" y="112" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#a5f3fc" text-anchor="middle">Hybrid RAG</text>
+            <text x="800" y="140" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">BM25 keywords + vectors</text>
+            <rect x="698" y="158" width="204" height="14" rx="7" fill="#334155"/>
+            <rect x="698" y="158" width="145" height="14" rx="7" fill="#22d3ee"/>
+            <text x="800" y="184" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#a5f3fc" text-anchor="middle">Complexity: medium-high</text>
+
+            <rect x="205" y="238" width="260" height="108" rx="10" fill="#14532d" stroke="#4ade80" stroke-width="1.3"/>
+            <text x="335" y="268" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#bbf7d0" text-anchor="middle">Graph RAG</text>
+            <text x="335" y="296" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">Entities and relationships</text>
+            <rect x="233" y="314" width="204" height="14" rx="7" fill="#334155"/>
+            <rect x="233" y="314" width="165" height="14" rx="7" fill="#4ade80"/>
+            <text x="335" y="340" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#bbf7d0" text-anchor="middle">Best for connected knowledge</text>
+
+            <rect x="515" y="238" width="260" height="108" rx="10" fill="#581c87" stroke="#c084fc" stroke-width="1.3"/>
+            <text x="645" y="268" font-family="Inter,system-ui,sans-serif" font-size="14" font-weight="700" fill="#e9d5ff" text-anchor="middle">Agentic RAG</text>
+            <text x="645" y="296" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#e2e8f0" text-anchor="middle">AI chooses searches and tools</text>
+            <rect x="543" y="314" width="204" height="14" rx="7" fill="#334155"/>
+            <rect x="543" y="314" width="190" height="14" rx="7" fill="#c084fc"/>
+            <text x="645" y="340" font-family="Inter,system-ui,sans-serif" font-size="10" fill="#e9d5ff" text-anchor="middle">Most powerful, most operational risk</text>
+
+            <text x="490" y="390" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Rule of thumb: use the simplest architecture that meets your accuracy, latency, and cost needs.</text>
+          </svg>
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">RAG architectures differ mainly in retrieval sophistication, operational cost, and control.</figcaption>
+        </figure>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>How It Works</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Naive RAG</strong></td>
+              <td>Search top chunks and send them to the LLM.</td>
+              <td>FAQ bot for 200 support articles.</td>
+            </tr>
+            <tr>
+              <td><strong>Advanced RAG</strong></td>
+              <td>Uses query rewriting, metadata filters, better chunking, and re-ranking.</td>
+              <td>Internal AI assistant that avoids stale runbooks.</td>
+            </tr>
+            <tr>
+              <td><strong>Hybrid RAG</strong></td>
+              <td>Combines BM25 keyword search with vector search.</td>
+              <td>E-commerce product Q&amp;A where SKU and brand exact matches matter.</td>
+            </tr>
+            <tr>
+              <td><strong>Graph RAG</strong></td>
+              <td>Uses relationships between entities, documents, services, owners, and incidents.</td>
+              <td>SRE assistant linking service, dashboard, alert, owner, deploy, and postmortem.</td>
+            </tr>
+            <tr>
+              <td><strong>Agentic RAG</strong></td>
+              <td>An AI agent decides what to retrieve, which tools to call, and whether more context is needed.</td>
+              <td>Debug assistant that checks logs, then searches runbooks, then inspects recent deploys.</td>
+            </tr>
+            <tr>
+              <td><strong>Multi-modal RAG</strong></td>
+              <td>Retrieves from text, screenshots, diagrams, transcripts, or product images.</td>
+              <td>AI support for device setup using manuals, images, and troubleshooting videos.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="use-cases">Real-World AI Applications</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Customer Support Bots</h3>
+            <p>RAG lets support AI answer from your latest help center, policies, product docs, and historical tickets. The bot can cite the policy instead of inventing one.</p>
+          </div>
+
+          <div class="card">
+            <h3>Internal Knowledge Search</h3>
+            <p>Employees ask "how do we rotate payment service keys?" and get an answer from runbooks, GitHub docs, Jira tickets, and incident notes.</p>
+          </div>
+
+          <div class="card">
+            <h3>E-commerce Product Q&amp;A</h3>
+            <p>Customers ask "which laptop is good for video editing under my budget?" The AI retrieves product specs, reviews, stock, offers, and compatibility notes before answering.</p>
+          </div>
+
+          <div class="card">
+            <h3>Log and Debug Assistants</h3>
+            <p>For DevOps and SRE, RAG can pull similar incidents, runbook steps, deployment history, log patterns, and Grafana dashboard links into one AI explanation.</p>
+          </div>
+
+          <div class="card">
+            <h3>AI Codebase Assistants</h3>
+            <p>Developers can ask where a feature is implemented, why a test fails, or how an internal library should be used. Retrieval gives the model relevant files instead of making it guess.</p>
+          </div>
+
+          <div class="card">
+            <h3>Compliance and Audit AI</h3>
+            <p>Teams can search controls, evidence, policies, exceptions, and audit reports. Citations are critical because "the AI said so" is not audit evidence.</p>
+          </div>
+        </div>
+
+        <h2 id="limitations">Limitations of RAG</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Retrieval Can Return Wrong Context</h3>
+            <p>If the retriever finds a similar but wrong document, the model may produce a wrong answer. Relevance testing is mandatory.</p>
+          </div>
+
+          <div class="card">
+            <h3>Chunking Matters a Lot</h3>
+            <p>Bad chunking can split a policy from its exception, a runbook step from its warning, or a product spec from its compatibility note.</p>
+          </div>
+
+          <div class="card">
+            <h3>Latency Increases</h3>
+            <p>RAG adds embedding, search, optional re-ranking, and a larger LLM prompt. Better answers usually cost more time.</p>
+          </div>
+
+          <div class="card">
+            <h3>Not Perfect Accuracy</h3>
+            <p>RAG can still fail because of stale data, bad prompts, missing permissions, weak retrieval, or model misinterpretation. High-risk flows still need human review.</p>
+          </div>
+        </div>
+
+        <h2 id="advanced-topics">Advanced Topics</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Hybrid Search: BM25 + Vector</h3>
+            <p>BM25 is good for exact words like SKUs, service names, error codes, and customer IDs. Vector search is good for meaning. Combining both improves retrieval for real users.</p>
+            <pre><code>final_score = (0.65 * vector_score) + (0.35 * bm25_score)</code></pre>
+          </div>
+
+          <div class="card">
+            <h3>Re-ranking</h3>
+            <p>Retrieve 30 to 100 candidates quickly, then use a stronger model to sort the best 5. This improves precision when wrong context is expensive.</p>
+            <pre><code>candidates = retriever.search(query, limit=50)
+top_context = reranker.rank(query, candidates)[:5]</code></pre>
+          </div>
+
+          <div class="card">
+            <h3>Chunking Strategies</h3>
+            <p>Use heading-based chunks for documentation, product-level chunks for catalogs, procedure-level chunks for runbooks, and incident-level chunks for postmortems. Add overlap when context crosses boundaries.</p>
+          </div>
+
+          <div class="card">
+            <h3>Caching</h3>
+            <p>Cache common embeddings, retrieval results, and safe final answers. Caching reduces token cost and improves latency, but never cache private answers across users or tenants.</p>
+          </div>
+        </div>
+
+        <h2 id="devops-sre">DevOps and SRE Production Concerns</h2>
+
+        <p>RAG is AI, but production RAG is also infrastructure. If your RAG assistant becomes part of support, incident response, or product search, it needs operational maturity.</p>
+
+        <figure style="margin:2.5rem 0;text-align:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 430" role="img" aria-label="Production RAG observability and scaling diagram" style="max-width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.16);background:#0f172a;">
+            <defs>
+              <marker id="prod-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L0,9 L9,4.5 z" fill="#f59e0b"/>
+              </marker>
+            </defs>
+            <text x="490" y="34" font-family="Inter,system-ui,sans-serif" font-size="18" font-weight="700" fill="#e2e8f0" text-anchor="middle">Production RAG: What SREs Need to See</text>
+
+            <rect x="50" y="90" width="150" height="70" rx="10" fill="#312e81" stroke="#818cf8"/>
+            <text x="125" y="120" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#c7d2fe" text-anchor="middle">App / API</text>
+            <text x="125" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#e2e8f0" text-anchor="middle">user request</text>
+
+            <line x1="200" y1="125" x2="250" y2="125" stroke="#f59e0b" stroke-width="3" marker-end="url(#prod-arrow)"/>
+            <rect x="250" y="90" width="150" height="70" rx="10" fill="#164e63" stroke="#22d3ee"/>
+            <text x="325" y="120" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#a5f3fc" text-anchor="middle">Retriever</text>
+            <text x="325" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#e2e8f0" text-anchor="middle">top-k, score</text>
+
+            <line x1="400" y1="125" x2="450" y2="125" stroke="#f59e0b" stroke-width="3" marker-end="url(#prod-arrow)"/>
+            <rect x="450" y="90" width="150" height="70" rx="10" fill="#14532d" stroke="#4ade80"/>
+            <text x="525" y="120" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#bbf7d0" text-anchor="middle">Vector DB</text>
+            <text x="525" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#e2e8f0" text-anchor="middle">latency, memory</text>
+
+            <line x1="600" y1="125" x2="650" y2="125" stroke="#f59e0b" stroke-width="3" marker-end="url(#prod-arrow)"/>
+            <rect x="650" y="90" width="150" height="70" rx="10" fill="#581c87" stroke="#c084fc"/>
+            <text x="725" y="120" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#e9d5ff" text-anchor="middle">LLM</text>
+            <text x="725" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#e2e8f0" text-anchor="middle">tokens, cost</text>
+
+            <line x1="800" y1="125" x2="850" y2="125" stroke="#f59e0b" stroke-width="3" marker-end="url(#prod-arrow)"/>
+            <rect x="850" y="90" width="90" height="70" rx="10" fill="#7f1d1d" stroke="#fca5a5"/>
+            <text x="895" y="120" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#fecaca" text-anchor="middle">Answer</text>
+            <text x="895" y="142" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#e2e8f0" text-anchor="middle">quality</text>
+
+            <rect x="70" y="238" width="180" height="98" rx="10" fill="#1e293b" stroke="#64748b"/>
+            <text x="160" y="268" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0" text-anchor="middle">Logs</text>
+            <text x="160" y="292" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">query, doc IDs</text>
+            <text x="160" y="310" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">scores, model</text>
+
+            <rect x="290" y="238" width="180" height="98" rx="10" fill="#1e293b" stroke="#64748b"/>
+            <text x="380" y="268" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0" text-anchor="middle">Traces</text>
+            <text x="380" y="292" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">embedding -> search</text>
+            <text x="380" y="310" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">rerank -> LLM</text>
+
+            <rect x="510" y="238" width="180" height="98" rx="10" fill="#1e293b" stroke="#64748b"/>
+            <text x="600" y="268" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0" text-anchor="middle">Metrics</text>
+            <text x="600" y="292" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">p95 latency, tokens</text>
+            <text x="600" y="310" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">cost, cache hit rate</text>
+
+            <rect x="730" y="238" width="180" height="98" rx="10" fill="#1e293b" stroke="#64748b"/>
+            <text x="820" y="268" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#e2e8f0" text-anchor="middle">Dashboards</text>
+            <text x="820" y="292" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Grafana alerts</text>
+            <text x="820" y="310" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">quality evals</text>
+
+            <line x1="325" y1="160" x2="160" y2="238" stroke="#64748b" stroke-width="2" stroke-dasharray="5 5"/>
+            <line x1="525" y1="160" x2="380" y2="238" stroke="#64748b" stroke-width="2" stroke-dasharray="5 5"/>
+            <line x1="725" y1="160" x2="600" y2="238" stroke="#64748b" stroke-width="2" stroke-dasharray="5 5"/>
+            <line x1="895" y1="160" x2="820" y2="238" stroke="#64748b" stroke-width="2" stroke-dasharray="5 5"/>
+
+            <rect x="160" y="370" width="660" height="38" rx="8" fill="#451a03" stroke="#f59e0b"/>
+            <text x="490" y="394" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#fed7aa" text-anchor="middle">If you cannot trace retrieval quality, latency, and token cost, your RAG app is not production-ready.</text>
+          </svg>
+          <figcaption style="margin-top:10px;font-size:.85rem;color:var(--text-muted);font-style:italic;">Production RAG needs observability across retrieval, vector search, LLM calls, cost, and answer quality.</figcaption>
+        </figure>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Concern</th>
+              <th>What to Watch</th>
+              <th>Practical Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cost</strong></td>
+              <td>Vector DB storage, embedding calls, LLM input tokens, output tokens, re-ranking.</td>
+              <td>Top-k limits, caching, smaller chunks, cheaper embedding models, token budgets.</td>
+            </tr>
+            <tr>
+              <td><strong>Latency</strong></td>
+              <td>Embedding time, vector search time, re-ranking time, LLM generation time.</td>
+              <td>Trace each stage, cache hot queries, avoid unnecessary re-ranking for simple questions.</td>
+            </tr>
+            <tr>
+              <td><strong>Scaling</strong></td>
+              <td>Bulk ingestion, vector index growth, memory pressure, tenant isolation.</td>
+              <td>Batch embeddings, async indexing, sharding, read replicas, rate limits.</td>
+            </tr>
+            <tr>
+              <td><strong>Observability</strong></td>
+              <td>Bad retrieval, token spikes, slow responses, low confidence answers.</td>
+              <td>OpenTelemetry traces, Grafana dashboards, logs for retrieved doc IDs and scores.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code># Example OpenTelemetry span attributes for a RAG request
+rag.query.id = "req-8f12"
+rag.retrieval.top_k = 5
+rag.retrieval.min_score = 0.74
+rag.vector_db.latency_ms = 31
+rag.llm.input_tokens = 4200
+rag.llm.output_tokens = 380
+rag.total.latency_ms = 1840
+rag.answer.has_citations = true</code></pre>
+
+        <h2 id="security">Security and Governance</h2>
+
+        <p>RAG often touches private documents and customer data. Treat it like a production data system, not just an AI experiment.</p>
+
+        <ul>
+          <li><strong>Access control:</strong> users should only retrieve documents they are allowed to read.</li>
+          <li><strong>Tenant filtering:</strong> customer A should never retrieve customer B's documents.</li>
+          <li><strong>PII handling:</strong> redact, mask, or avoid indexing sensitive fields unless needed.</li>
+          <li><strong>Prompt injection defense:</strong> retrieved documents are data, not instructions. The LLM must not obey hidden instructions inside a document.</li>
+          <li><strong>Auditability:</strong> log user question, retrieved source IDs, model version, token usage, and answer ID.</li>
+        </ul>
+
+        <h2 id="getting-started">Getting Started Roadmap</h2>
+
+        <div class="story-flow">
+          <div class="story-step">
+            <h3>Week 1: Build the Smallest Useful RAG</h3>
+            <p>Pick one AI use case and 20 to 50 trusted documents. Build ingestion, embeddings, vector search, and a simple grounded prompt.</p>
+          </div>
+
+          <div class="story-step">
+            <h3>Week 2: Test Real Questions</h3>
+            <p>Collect real questions from support, engineering, or product users. Tune chunking, filters, top-k, and prompts. Add citations.</p>
+          </div>
+
+          <div class="story-step">
+            <h3>Month 1: Make It Production Ready</h3>
+            <p>Add authentication, authorization filters, caching, logging, traces, rate limits, cost dashboards, and offline evaluation.</p>
+          </div>
+        </div>
+
+        <h2 id="quick-checklist">Quick Checklist</h2>
+
+        <div class="callout callout-success">
+          <ul>
+            <li>Start with a real AI problem where wrong answers hurt.</li>
+            <li>Choose trusted data sources before choosing tools.</li>
+            <li>Use embeddings for meaning-based search.</li>
+            <li>Store vectors in Pinecone, Weaviate, Qdrant, or pgvector.</li>
+            <li>Keep answers grounded with clear prompts and citations.</li>
+            <li>Evaluate retrieval quality with real questions.</li>
+            <li>Monitor cost, latency, retrieval scores, token usage, and user feedback.</li>
+            <li>Add Grafana dashboards, traces, and logs before broad rollout.</li>
+          </ul>
+        </div>
+
+        <h2 id="conclusion">Conclusion</h2>
+
+        <p>RAG matters because it turns a generic AI model into an AI application that understands your business. It gives the model the missing context: your policies, products, incidents, logs, runbooks, support tickets, architecture docs, and APIs.</p>
+
+        <p>The most important thing to remember is simple: <strong>LLMs generate; RAG grounds.</strong> The LLM still writes the answer, but retrieval gives it the facts it should use. That is how you reduce hallucination, improve trust, and build AI systems that are useful outside a demo.</p>
+
+        <blockquote>
+          <p>Good AI products are not built by asking the model to know everything. They are built by giving the model the right context at the right time.</p>
+        </blockquote>
+      </div>
+
+      <div class="author-card">
+        <div class="author-avatar">SG</div>
+        <div class="author-info">
+          <div class="author-name">Suheb Ghare</div>
+          <div class="author-bio">Senior DevOps &amp; SRE Engineer with 8+ years of experience building and scaling cloud infrastructure. Writing about Kubernetes, AWS, platform engineering, observability, and practical AI systems.</div>
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <a href="https://suhebghare.tech" target="_blank" rel="noopener" style="color:var(--primary);font-size:0.875rem;font-weight:600;">🌐 Portfolio</a>
+            <a href="../index.html" style="color:var(--primary);font-size:0.875rem;font-weight:600;">📝 All Articles</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside>
+      <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:12px;">Suheb Ghare</div>
+        <p>Senior DevOps &amp; SRE Engineer writing about cloud infrastructure, Kubernetes, automation, and AI for engineering teams.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="../index.html">Home</a>
+        <a href="../index.html#blog-index">All Articles</a>
+        <a href="https://suhebghare.tech" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+      <div class="footer-links">
+        <h4>Categories</h4>
+        <a href="../index.html">CI/CD &amp; Platform</a>
+        <a href="../index.html">Kubernetes</a>
+        <a href="../index.html">Security</a>
+        <a href="../index.html">Cloud &amp; AWS</a>
+        <a href="../index.html">AI &amp; DevOps</a>
+        <a href="../index.html">Observability</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 Suheb Ghare. All rights reserved. | <a href="https://blogs.suhebghare.tech" style="color:var(--primary);">blogs.suhebghare.tech</a></p>
+    </div>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">↑</button>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

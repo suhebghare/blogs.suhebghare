@@ -304,16 +304,38 @@
   ],
   "blog": {
     "url": "https://blogs.suhebghare.tech",
-    "total_articles": 53,
+    "total_articles": 54,
     "categories": {
       "CI/CD": 9,
       "Kubernetes": 7,
       "Cloud": 8,
       "Security": 8,
       "Observability": 7,
-      "AI & DevOps": 8
+      "AI & DevOps": 9
     },
     "articles": [
+      {
+        "slug": "rag-complete-guide",
+        "title": "RAG Complete Guide for AI Applications",
+        "description": "Beginner-friendly guide to Retrieval-Augmented Generation: hallucinations, chunking, embeddings, vector search, LLM context, diagrams, and production trade-offs.",
+        "category": "AI & DevOps",
+        "published": "2026-05-02",
+        "read_time": 45,
+        "reads": 1240,
+        "likes": 312,
+        "tags": [
+          "rag complete guide",
+          "retrieval augmented generation",
+          "rag architecture",
+          "ai hallucination",
+          "llm context",
+          "chunking",
+          "embeddings",
+          "vector database",
+          "ai devops"
+        ],
+        "url": "https://blogs.suhebghare.tech/posts/rag-complete-guide.html"
+      },
       {
         "slug": "ai-agents-infrastructure-mcp",
         "title": "Building AI Agents for Infrastructure Automation Using MCP",
