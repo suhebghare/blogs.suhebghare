@@ -714,6 +714,11 @@ Nearest chunks from vector database:
 
         <p>The main rule: use the vector database to retrieve the best evidence, then let the LLM explain that evidence clearly. RAG fails when the vector database retrieves the wrong chunks, stale chunks, or chunks the user should not be allowed to see.</p>
 
+        <div class="callout callout-tip">
+          <div class="callout-title">Want to Go Deeper on Vector Databases?</div>
+          <p>This article keeps the vector database explanation focused on RAG. If you want the production details, read my separate deep dive: <a href="vector-databases-qdrant-ai-search.html">How Vector Databases (Qdrant) Power AI Search in Production</a>. It covers Qdrant, embeddings, hybrid search, scaling, cost, and operational lessons from running vector search in production.</p>
+        </div>
+
         <h2 id="rag-pipeline">The RAG Pipeline</h2>
 
         <p>RAG has two major flows: ingestion and answering.</p>
